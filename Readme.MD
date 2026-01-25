@@ -6,6 +6,15 @@ RTX 50 系列 GPU 16-pin (12VHPWR) 電壓監控工具
 [![Avalonia](https://img.shields.io/badge/Avalonia-UI-8B5CF6)](https://avaloniaui.net/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
+> ## ⚠️ 法律免責聲明 (Legal Disclaimer)
+> 
+> 
+> **本軟體係依「現狀」(AS IS) 提供，開發者不負任何形式的擔保責任。**
+> 使用者應了解，本工具涉及對顯卡底層硬體 (NVML) 的存取與監測。此為非必要功能，在任何情況下，開發者對於因使用或無法使用本軟體而產生的任何直接、間接、附帶、特別、懲罰性或衍生性損害（包括但不限於：硬體熔毀、數據損失、系統損壞或營收損失）均不負任何賠償責任。
+> **THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY.**
+
+---
+
 ## 簡介
 
 16pin-vmon 是一款專為 NVIDIA RTX 50 系列 (Blackwell) 設計的 GPU 監控工具，主要監測 16-pin 電源連接器的電壓穩定性，在電壓異常時即時發出警報，協助預防因電壓不穩導致的硬體損壞。
@@ -37,7 +46,7 @@ RTX 50 系列 GPU 16-pin (12VHPWR) 電壓監控工具
 ### 從原始碼建置
 
 ```bash
-git clone https://github.com/user/16pin-vmon.git
+git clone https://github.com/bbfox0703/16pin-vmon.git
 cd 16pin-vmon
 dotnet build
 dotnet run --project 16pin-vmon.Desktop
