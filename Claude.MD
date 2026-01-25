@@ -89,10 +89,10 @@ Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5
 - [x] **T1-2**: Demo/Mock `IGpuProvider` for testing without GPU
 
 ### Phase 2: Hardware Database (硬體資料庫)
-- [ ] **T2-1**: Create `HardwareDbManager` class
-- [ ] **T2-2**: Create initial `gpu_mapping.json` schema and sample data
-- [ ] **T2-3**: Integrate three-tier Field ID detection into `NvmlWindowsProvider`
-- [ ] **T2-4**: Add PCI Subsystem ID reading via NVML
+- [x] **T2-1**: Create `HardwareDbManager` class
+- [x] **T2-2**: Create initial `gpu_mapping.json` schema and sample data
+- [x] **T2-3**: Integrate three-tier Field ID detection into `NvmlWindowsProvider`
+- [x] **T2-4**: Add PCI Subsystem ID reading via NVML
 
 ### Phase 3: Settings System (設定系統)
 - [x] **T3-1**: Create `ISettingsService` interface
@@ -137,3 +137,4 @@ Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5
 | T3-1/2/3 | Settings System | 2026-01-25 | ISettingsService + JsonSettingsService |
 | T0-2 | 免責聲明持久化 | 2026-01-25 | 整合 Settings System |
 | T1-1 | Dependency Injection | 2026-01-25 | ServiceLocator + Platform detection |
+| T2-1~4 | Hardware Database | 2026-01-25 | HardwareDbManager + 三段式偵測 + PCI SSID |
