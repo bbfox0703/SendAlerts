@@ -1,3 +1,4 @@
+using System;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
@@ -7,11 +8,16 @@ using _16pin_vmon.ViewModels;
 using _16pin_vmon.Views;
 using _16pin_vmon.Implementations;
 using _16pin_vmon.Core.Interfaces;
+using _16pin_vmon.Services;
+using Serilog;
 
 namespace _16pin_vmon;
 
 public partial class App : Application
 {
+    private ISettingsService? _settingsService;
+    private AppSettings? _settings;
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -23,31 +29,21 @@ public partial class App : Application
         {
             DisableAvaloniaDataAnnotationValidation();
 
-            // T0-1: Show disclaimer window first
-            var disclaimerVm = new DisclaimerViewModel();
-            var disclaimerWindow = new DisclaimerWindow(disclaimerVm);
+            // T3-1/T3-2: Initialize settings service
+            _settingsService = new JsonSettingsService();
+            _settings = _settingsService.Load();
 
-            disclaimerWindow.Closed += (_, _) =>
+            // T0-2: Check if disclaimer was already accepted
+            if (_settings.DisclaimerAccepted)
             {
-                if (disclaimerWindow.IsAccepted)
-                {
-                    // User accepted - show main window
-                    var gpuProvider = CreateGpuProvider();
-                    desktop.MainWindow = new MainWindow
-                    {
-                        DataContext = new MainViewModel(gpuProvider)
-                    };
-                    desktop.MainWindow.Show();
-                }
-                else
-                {
-                    // User declined - exit application
-                    desktop.Shutdown();
-                }
-            };
-
-            // Show disclaimer as the initial window
-            desktop.MainWindow = disclaimerWindow;
+                Log.Information("免責聲明已於 {AcceptedAt} 確認，跳過顯示", _settings.DisclaimerAcceptedAt);
+                ShowMainWindow(desktop);
+            }
+            else
+            {
+                // T0-1: Show disclaimer window first
+                ShowDisclaimerWindow(desktop);
+            }
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
         {
@@ -60,6 +56,46 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private void ShowDisclaimerWindow(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        var disclaimerVm = new DisclaimerViewModel();
+        var disclaimerWindow = new DisclaimerWindow(disclaimerVm);
+
+        disclaimerWindow.Closed += (_, _) =>
+        {
+            if (disclaimerWindow.IsAccepted)
+            {
+                // T0-2: Save disclaimer acceptance
+                if (_settings != null && _settingsService != null)
+                {
+                    _settings.DisclaimerAccepted = true;
+                    _settings.DisclaimerAcceptedAt = DateTime.Now;
+                    _settingsService.Save(_settings);
+                    Log.Information("使用者已確認免責聲明");
+                }
+
+                ShowMainWindow(desktop);
+            }
+            else
+            {
+                Log.Information("使用者拒絕免責聲明，應用程式結束");
+                desktop.Shutdown();
+            }
+        };
+
+        desktop.MainWindow = disclaimerWindow;
+    }
+
+    private void ShowMainWindow(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        var gpuProvider = CreateGpuProvider();
+        desktop.MainWindow = new MainWindow
+        {
+            DataContext = new MainViewModel(gpuProvider)
+        };
+        desktop.MainWindow.Show();
     }
 
     /// <summary>
