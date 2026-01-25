@@ -72,6 +72,7 @@
 * **Debug Mode**：除錯模式下，具破壞性的 Alert actions，例如強制切掉電源、執行 command line 等，變成只有產生 debug log 但是沒有動作
 
 ## 硬體相容性與探索策略 (Hardware Probing Strategy)
+先讀取 **硬體映射 JSON 結構資料庫**，使用 **三段式 Field ID 判定邏輯**，和現行顯示卡進行比對來取得 Field ID，如果沒有資料：
 1. **動態探針 (Dynamic Probing):** - 由於 RTX 50 系列不同廠商 (AIB) 可能定義不同 Field ID，程式啟動時需對 NVML 進行電壓軌掃描。
 2. **數據校驗:** - 僅當數值符合 $11.2V < V < 12.6V$ 時，方判定為有效的 16-pin 監控對象。
 3. **Fallback 模式:** - 若無法鎖定 Field ID，應嘗試讀取 GPU 全域功耗 (Total Power) 換算為預估值，並於 Status Bar 顯示「警告：電壓數據為預估值」。
