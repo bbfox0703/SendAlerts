@@ -1,0 +1,70 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:_16pin_vmon.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="550" d:DesignHeight="400"
+        x:Class="_16pin_vmon.Views.DisclaimerWindow"
+        x:DataType="vm:DisclaimerViewModel"
+        Title="16pin-vmon - Disclaimer"
+        Width="550" Height="420"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        SystemDecorations="Full">
+
+    <Design.DataContext>
+        <vm:DisclaimerViewModel />
+    </Design.DataContext>
+
+    <Border Padding="24">
+        <Grid RowDefinitions="Auto,*,Auto,Auto">
+
+            <!-- Title -->
+            <TextBlock Grid.Row="0"
+                       Text="{Binding DisclaimerTitle}"
+                       FontSize="20"
+                       FontWeight="Bold"
+                       Foreground="Orange"
+                       Margin="0,0,0,16"/>
+
+            <!-- Disclaimer Content -->
+            <Border Grid.Row="1"
+                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                    CornerRadius="8"
+                    Padding="16"
+                    Margin="0,0,0,16">
+                <ScrollViewer>
+                    <TextBlock Text="{Binding DisclaimerText}"
+                               TextWrapping="Wrap"
+                               LineHeight="24"/>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Checkbox -->
+            <CheckBox Grid.Row="2"
+                      IsChecked="{Binding IsDisclaimerAccepted}"
+                      Margin="0,0,0,20">
+                <TextBlock Text="{Binding CheckboxText}"
+                           TextWrapping="Wrap"
+                           FontWeight="SemiBold"/>
+            </CheckBox>
+
+            <!-- Buttons -->
+            <StackPanel Grid.Row="3"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="12">
+                <Button Content="離開 / Exit"
+                        Command="{Binding DeclineCommand}"
+                        Width="120"
+                        HorizontalContentAlignment="Center"/>
+                <Button Content="確認 / Accept"
+                        Command="{Binding AcceptCommand}"
+                        Width="120"
+                        HorizontalContentAlignment="Center"
+                        Classes="accent"/>
+            </StackPanel>
+
+        </Grid>
+    </Border>
+</Window>
