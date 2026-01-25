@@ -1,9 +1,3 @@
-這是一份專門為 **Claude CLI / Gemini CLI** 量身打造的 `README.md`。它採用了「上下文注入（Context Seeding）」的寫法，能讓 AI 代理在執行 `ls -R` 掃描後，立刻理解專案的架構、目前的進度以及嚴格的抽象層規範。
-
-請將此檔案直接放在專案根目錄：`D:\Github\16pin-vmon\README.md`。
-
----
-
 # 🚀 16pin-vmon (RTX 50 GPU Monitor)
 
 你是一個專業的 .NET 開發者。本專案是一個使用 **Avalonia UI** 開發的跨平台（Windows/Linux）GPU 監測工具，核心目標是針對 **RTX 50 系列** 監控 16-pin (12VHPWR) 電壓穩定性，防止燒燬。
