@@ -1,6 +1,6 @@
 # 🚀 16pin-vmon (RTX 50 GPU Monitor)
 
-你是一個專業的 .NET 開發者。本專案是一個使用 **Avalonia UI** 開發的跨平台（Windows/Linux）GPU 監測工具，核心目標是針對 **RTX 50 系列** 監控 16-pin (12VHPWR) 電壓穩定性，防止燒燬。
+本專案是一個使用 **Avalonia UI** 開發的跨平台（Windows/Linux）GPU 監測工具，核心目標是針對 **RTX 50 系列** 監控 16-pin (12VHPWR) 電壓穩定性，防止燒燬。
 
 > [!IMPORTANT]
 > **開發核心原則：** 必須嚴格遵守 `docs/Spec.md` 中的規格。所有硬體存取與系統呼叫必須經過 **Abstraction Layer (Interface)**，嚴禁在 ViewModel 或 View 中直接寫入平台相關的 P/Invoke 代碼。
