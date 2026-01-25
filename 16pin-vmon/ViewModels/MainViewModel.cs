@@ -20,6 +20,16 @@ public partial class MainViewModel : ViewModelBase
     private readonly AlertEvaluator _voltageEvaluator;
     private readonly AlertEvaluator _tempEvaluator;
 
+    // --- 警報門檻常數 (T0-3: 供審計日誌使用) ---
+    private const float VoltageThreshold = 11.8f;
+    private const float TemperatureThreshold = 88.0f;
+    private const int AlertWindowSeconds = 3;
+    private const int AlertTriggerCount = 2;
+
+    // --- 警報狀態追蹤 (避免重複記錄) ---
+    private bool _wasVoltageAlertActive;
+    private bool _wasTempAlertActive;
+
     // --- 介面綁定屬性 ---
     [ObservableProperty] private string _gpuName = "正在偵測...";
     [ObservableProperty] private float _currentVoltage;
@@ -65,9 +75,17 @@ public partial class MainViewModel : ViewModelBase
         // 1. 初始化圖表外觀
         InitializeCharts();
 
-        // 2. 初始化警報判定器 (依規格書：3秒內2次判定)
-        _voltageEvaluator = new AlertEvaluator(seconds: 3, count: 2, threshold: 11.8f, isLowerBound: true);
-        _tempEvaluator = new AlertEvaluator(seconds: 3, count: 2, threshold: 88.0f, isLowerBound: false);
+        // 2. 初始化警報判定器 (依規格書：X秒內達到門檻Y次)
+        _voltageEvaluator = new AlertEvaluator(
+            seconds: AlertWindowSeconds,
+            count: AlertTriggerCount,
+            threshold: VoltageThreshold,
+            isLowerBound: true);
+        _tempEvaluator = new AlertEvaluator(
+            seconds: AlertWindowSeconds,
+            count: AlertTriggerCount,
+            threshold: TemperatureThreshold,
+            isLowerBound: false);
 
         // 3. 設定定時器
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
@@ -127,18 +145,72 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// T0-3: 審計日誌 - 完整記錄警報觸發瞬間，作為「程式已盡提醒義務」之證明
+    /// </summary>
     private void HandleAlertLogs()
     {
-        if (IsVoltageAlert)
+        // 電壓警報：從無到有觸發時記錄
+        if (IsVoltageAlert && !_wasVoltageAlertActive)
         {
-            Log.Warning("檢測到 RTX 50 16-pin 電壓異常降壓: {Voltage}V", CurrentVoltage);
-            // 未來在此處觸發 LINE/Telegram
+            Log.Warning(
+                "[ALERT TRIGGERED] 16-pin 電壓異常 | " +
+                "GPU: {GpuName} | " +
+                "電壓: {Voltage:F3}V | " +
+                "門檻: < {Threshold:F1}V | " +
+                "判定條件: {Window}秒內{Count}次 | " +
+                "溫度: {Temp:F1}°C",
+                GpuName,
+                CurrentVoltage,
+                VoltageThreshold,
+                AlertWindowSeconds,
+                AlertTriggerCount,
+                CurrentTemperature);
         }
 
-        if (IsTempAlert)
+        // 電壓警報解除
+        if (!IsVoltageAlert && _wasVoltageAlertActive)
         {
-            Log.Warning("檢測到 GPU 溫度過高: {Temp}°C", CurrentTemperature);
+            Log.Information(
+                "[ALERT CLEARED] 16-pin 電壓恢復正常 | " +
+                "GPU: {GpuName} | " +
+                "電壓: {Voltage:F3}V",
+                GpuName,
+                CurrentVoltage);
         }
+
+        // 溫度警報：從無到有觸發時記錄
+        if (IsTempAlert && !_wasTempAlertActive)
+        {
+            Log.Warning(
+                "[ALERT TRIGGERED] GPU 溫度過高 | " +
+                "GPU: {GpuName} | " +
+                "溫度: {Temp:F1}°C | " +
+                "門檻: > {Threshold:F1}°C | " +
+                "判定條件: {Window}秒內{Count}次 | " +
+                "電壓: {Voltage:F3}V",
+                GpuName,
+                CurrentTemperature,
+                TemperatureThreshold,
+                AlertWindowSeconds,
+                AlertTriggerCount,
+                CurrentVoltage);
+        }
+
+        // 溫度警報解除
+        if (!IsTempAlert && _wasTempAlertActive)
+        {
+            Log.Information(
+                "[ALERT CLEARED] GPU 溫度恢復正常 | " +
+                "GPU: {GpuName} | " +
+                "溫度: {Temp:F1}°C",
+                GpuName,
+                CurrentTemperature);
+        }
+
+        // 更新狀態追蹤
+        _wasVoltageAlertActive = IsVoltageAlert;
+        _wasTempAlertActive = IsTempAlert;
     }
 
     private void UpdateHistory(ObservableCollection<float> history, float newValue)
