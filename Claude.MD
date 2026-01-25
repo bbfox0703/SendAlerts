@@ -77,7 +77,7 @@ Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5
 ### Phase 0: Legal & Safety Compliance (法律與安全合規)
 - [x] **T0-1**: 啟動警告視窗 - 首次啟動時顯示免責聲明，要求勾選「我已閱讀免責聲明，並了解監控高負載硬體之風險」後才進入主畫面
 - [ ] **T0-2**: 免責聲明確認狀態持久化 - 記錄使用者已確認，下次啟動不再顯示 (依賴 T3-2)
-- [ ] **T0-3**: Audit Log 強化 - Serilog 完整紀錄警報觸發瞬間（時間戳、電壓值、溫度值、觸發門檻），作為「程式已盡提醒義務」之證明
+- [x] **T0-3**: Audit Log 強化 - Serilog 完整紀錄警報觸發瞬間（時間戳、電壓值、溫度值、觸發門檻），作為「程式已盡提醒義務」之證明
 
 ### Phase 1: Core Infrastructure (基礎架構)
 - [x] `IGpuProvider` interface definition
@@ -133,3 +133,4 @@ Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5
 | T0-1 | 啟動警告視窗 | 2026-01-25 | DisclaimerWindow + DisclaimerViewModel |
 | T1-2 | DemoGpuProvider | 2026-01-25 | Mock provider for testing without GPU |
 | - | Solution/Namespace cleanup | 2026-01-25 | Fixed sln paths, namespace consistency |
+| T0-3 | Audit Log 強化 | 2026-01-25 | Serilog File sink + rotate, alert logging |
