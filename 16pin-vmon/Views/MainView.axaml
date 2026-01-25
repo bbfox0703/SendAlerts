@@ -1,0 +1,67 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:_16pin_vmon.Core.ViewModels"
+             xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
+			 xmlns:conv="clr-namespace:_16pin_vmon.Core.Converters"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="_16pin_vmon.Core.Views.MainView"
+             x:DataType="vm:MainViewModel">
+
+  <Design.DataContext>
+    <vm:MainViewModel />
+  </Design.DataContext>
+  
+  <UserControl.Resources>
+	  <conv:AlertColorConverter x:Key="AlertColorConverter" />
+  </UserControl.Resources>
+  
+  <DockPanel>
+    <StackPanel DockPanel.Dock="Top" Height="40" Background="#2b2b2b" Orientation="Horizontal" Spacing="10">
+      <Button Content="設定" Margin="10,0,0,0" />
+      <Button Content="測試 Alert" />
+      <TextBlock Text="{Binding GpuName}" VerticalAlignment="Center" Foreground="White" FontWeight="Bold" Margin="20,0,0,0"/>
+    </StackPanel>
+
+    <Border DockPanel.Dock="Bottom" Height="30" Background="#1e1e1e" BorderBrush="#333" BorderThickness="0,1,0,0">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Text="系統就緒" Margin="10,0" VerticalAlignment="Center" Foreground="#aaa" FontSize="12"/>
+        <TextBlock Grid.Column="1" Text="v1.0.0" Margin="10,0" VerticalAlignment="Center" Foreground="#555" FontSize="12"/>
+      </Grid>
+    </Border>
+
+    <Grid RowDefinitions="*, *">
+      
+      <Border Grid.Row="0" Margin="5" Background="#1a1a1a" CornerRadius="5">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,5">
+            <TextBlock Text="16-pin Voltage" Foreground="Cyan" FontSize="14" FontWeight="Bold"/>
+			<TextBlock Text="{Binding CurrentVoltage, StringFormat=': {0:F2} V'}" 
+					   Foreground="{Binding IsVoltageAlert, Converter={StaticResource AlertColorConverter}}" 
+					   FontSize="14" 
+					   Margin="5,0"/>
+          </StackPanel>
+          <lvc:CartesianChart Series="{Binding VoltageSeries}" 
+                              XAxes="{Binding XAxes}" 
+                              YAxes="{Binding VoltageYAxes}" />
+        </DockPanel>
+      </Border>
+
+      <Border Grid.Row="1" Margin="5" Background="#1a1a1a" CornerRadius="5">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,5">
+            <TextBlock Text="GPU Temperature" Foreground="OrangeRed" FontSize="14" FontWeight="Bold"/>
+            <TextBlock Text="{Binding CurrentTemperature, StringFormat=': {0:F1} °C'}" 
+                       Foreground="{Binding IsTempAlert, Converter={StaticResource AlertColorConverter}}" 
+                       FontSize="14" Margin="5,0"/>
+          </StackPanel>
+          <lvc:CartesianChart Series="{Binding TempSeries}" 
+                              XAxes="{Binding XAxes}" 
+                              YAxes="{Binding TempYAxes}" />
+        </DockPanel>
+      </Border>
+      
+    </Grid>
+  </DockPanel>
+</UserControl>
