@@ -66,12 +66,12 @@
 
 ## ⚠️ 開發注意事項
 
-* **RTX 50 數值**：應實作動態 Field 偵測機制。優先嘗試 `NVML_FI_DEV_VOLTAGE_GRAPHICS_12V` (ID 156)，若無效則掃描鄰近 ID 或回退至 `nvmlDeviceGetPowerUsage` 換算。此ID應該是可設定的修改值，使用者可自行 clone repos 後，自行產生自適版本。
+* **RTX 50 數值**：應實作動態 Field 偵測機制。雖然預設可能是 `NVML_FI_DEV_VOLTAGE_GRAPHICS_12V` (ID 156)，但優先參考下方的 硬體相容性與探索策略 (Hardware Probing Strategy)
 * **跨平台路徑**：設定檔必須儲存在 `Environment.SpecialFolder.ApplicationData`。
 * **記憶體管理**：確保 `IGpuProvider` 的 `Dispose` 被呼叫以執行 `nvmlShutdown`。
 * **Debug Mode**：除錯模式下，具破壞性的 Alert actions，例如強制切掉電源、執行 command line 等，變成只有產生 debug log 但是沒有動作
 
 ## 硬體相容性與探索策略 (Hardware Probing Strategy)
 1. **動態探針 (Dynamic Probing):** - 由於 RTX 50 系列不同廠商 (AIB) 可能定義不同 Field ID，程式啟動時需對 NVML 進行電壓軌掃描。
-2. **數據校驗:** - 僅當數值符合 $11.0V < V < 12.6V$ 時，方判定為有效的 16-pin 監控對象。
+2. **數據校驗:** - 僅當數值符合 $11.2V < V < 12.6V$ 時，方判定為有效的 16-pin 監控對象。
 3. **Fallback 模式:** - 若無法鎖定 Field ID，應嘗試讀取 GPU 全域功耗 (Total Power) 換算為預估值，並於 Status Bar 顯示「警告：電壓數據為預估值」。
