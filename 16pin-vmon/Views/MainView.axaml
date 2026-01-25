@@ -2,11 +2,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:vm="clr-namespace:_16pin_vmon.Core.ViewModels"
+             xmlns:vm="clr-namespace:_16pin_vmon.ViewModels"
              xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
-			 xmlns:conv="clr-namespace:_16pin_vmon.Core.Converters"
+             xmlns:conv="clr-namespace:_16pin_vmon.Converters"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
-             x:Class="_16pin_vmon.Core.Views.MainView"
+             x:Class="_16pin_vmon.Views.MainView"
              x:DataType="vm:MainViewModel">
 
   <Design.DataContext>

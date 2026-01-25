@@ -1,4 +1,5 @@
-// File: /16pin_vmon.Core/Interfaces/IGpuProvider.cs
+using System;
+
 namespace _16pin_vmon.Core.Interfaces;
 
 public record GpuReading(float Voltage16Pin, float Temperature, DateTime Timestamp);

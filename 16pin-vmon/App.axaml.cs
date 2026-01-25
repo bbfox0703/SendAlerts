@@ -1,11 +1,12 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using System.Linq;
 using Avalonia.Markup.Xaml;
 using _16pin_vmon.ViewModels;
 using _16pin_vmon.Views;
+using _16pin_vmon.Implementations;
+using _16pin_vmon.Core.Interfaces;
 
 namespace _16pin_vmon;
 
@@ -20,32 +21,63 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
-            // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
             DisableAvaloniaDataAnnotationValidation();
-            desktop.MainWindow = new MainWindow
+
+            // T0-1: Show disclaimer window first
+            var disclaimerVm = new DisclaimerViewModel();
+            var disclaimerWindow = new DisclaimerWindow(disclaimerVm);
+
+            disclaimerWindow.Closed += (_, _) =>
             {
-                DataContext = new MainViewModel()
+                if (disclaimerWindow.IsAccepted)
+                {
+                    // User accepted - show main window
+                    var gpuProvider = CreateGpuProvider();
+                    desktop.MainWindow = new MainWindow
+                    {
+                        DataContext = new MainViewModel(gpuProvider)
+                    };
+                    desktop.MainWindow.Show();
+                }
+                else
+                {
+                    // User declined - exit application
+                    desktop.Shutdown();
+                }
             };
+
+            // Show disclaimer as the initial window
+            desktop.MainWindow = disclaimerWindow;
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
         {
+            // For mobile/browser - skip disclaimer for now, use demo provider
+            var gpuProvider = new DemoGpuProvider();
             singleViewPlatform.MainView = new MainView
             {
-                DataContext = new MainViewModel()
+                DataContext = new MainViewModel(gpuProvider)
             };
         }
 
         base.OnFrameworkInitializationCompleted();
     }
 
-    private void DisableAvaloniaDataAnnotationValidation()
+    /// <summary>
+    /// Creates the appropriate IGpuProvider based on platform.
+    /// TODO (T1-1): Replace with proper DI container setup.
+    /// </summary>
+    private static IGpuProvider CreateGpuProvider()
     {
-        // Get an array of plugins to remove
+        // For now, use DemoGpuProvider
+        // In the future, this will check RuntimeInformation and create NvmlWindowsProvider on Windows
+        return new DemoGpuProvider();
+    }
+
+    private static void DisableAvaloniaDataAnnotationValidation()
+    {
         var dataValidationPluginsToRemove =
             BindingPlugins.DataValidators.OfType<DataAnnotationsValidationPlugin>().ToArray();
 
-        // remove each entry found
         foreach (var plugin in dataValidationPluginsToRemove)
         {
             BindingPlugins.DataValidators.Remove(plugin);

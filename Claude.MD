@@ -75,8 +75,8 @@ Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5
 > 本專案會在多台 PC 上開發，以下 TODO 用於追蹤進度。完成項目後請更新狀態。
 
 ### Phase 0: Legal & Safety Compliance (法律與安全合規)
-- [ ] **T0-1**: 啟動警告視窗 - 首次啟動時顯示免責聲明，要求勾選「我已閱讀免責聲明，並了解監控高負載硬體之風險」後才進入主畫面
-- [ ] **T0-2**: 免責聲明確認狀態持久化 - 記錄使用者已確認，下次啟動不再顯示
+- [x] **T0-1**: 啟動警告視窗 - 首次啟動時顯示免責聲明，要求勾選「我已閱讀免責聲明，並了解監控高負載硬體之風險」後才進入主畫面
+- [ ] **T0-2**: 免責聲明確認狀態持久化 - 記錄使用者已確認，下次啟動不再顯示 (依賴 T3-2)
 - [ ] **T0-3**: Audit Log 強化 - Serilog 完整紀錄警報觸發瞬間（時間戳、電壓值、溫度值、觸發門檻），作為「程式已盡提醒義務」之證明
 
 ### Phase 1: Core Infrastructure (基礎架構)
@@ -86,7 +86,7 @@ Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5
 - [x] `MainViewModel` timer-driven monitoring
 - [x] LiveCharts2 dual-chart UI layout
 - [ ] **T1-1**: Dependency Injection setup in `App.axaml.cs` (use `RuntimeInformation` to inject correct provider)
-- [ ] **T1-2**: Demo/Mock `IGpuProvider` for testing without GPU
+- [x] **T1-2**: Demo/Mock `IGpuProvider` for testing without GPU
 
 ### Phase 2: Hardware Database (硬體資料庫)
 - [ ] **T2-1**: Create `HardwareDbManager` class
@@ -130,3 +130,6 @@ Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5
 | - | IGpuProvider & NvmlWindowsProvider | - | Dynamic field detection implemented |
 | - | AlertEvaluator | - | Sliding window algorithm |
 | - | MainViewModel & UI | - | LiveCharts2 integration |
+| T0-1 | 啟動警告視窗 | 2026-01-25 | DisclaimerWindow + DisclaimerViewModel |
+| T1-2 | DemoGpuProvider | 2026-01-25 | Mock provider for testing without GPU |
+| - | Solution/Namespace cleanup | 2026-01-25 | Fixed sln paths, namespace consistency |

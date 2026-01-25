@@ -1,4 +1,7 @@
-// File: /16pin_vmon.Core/Interfaces/IAlertAction.cs
+using System.Threading.Tasks;
+
+namespace _16pin_vmon.Core.Interfaces;
+
 public interface IAlertAction
 {
     string ActionName { get; }

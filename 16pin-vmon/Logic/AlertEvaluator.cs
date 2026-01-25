@@ -1,6 +1,7 @@
-// File: /16pin_vmon.Core/Logic/AlertEvaluator.cs
 using System.Collections.Generic;
 using System.Linq;
+
+namespace _16pin_vmon.Logic;
 
 public class AlertEvaluator
 {
