@@ -6,8 +6,6 @@ using System.Linq;
 using Avalonia.Markup.Xaml;
 using _16pin_vmon.ViewModels;
 using _16pin_vmon.Views;
-using _16pin_vmon.Implementations;
-using _16pin_vmon.Core.Interfaces;
 using _16pin_vmon.Services;
 using Serilog;
 
@@ -15,9 +13,6 @@ namespace _16pin_vmon;
 
 public partial class App : Application
 {
-    private ISettingsService? _settingsService;
-    private AppSettings? _settings;
-
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -29,26 +24,26 @@ public partial class App : Application
         {
             DisableAvaloniaDataAnnotationValidation();
 
-            // T3-1/T3-2: Initialize settings service
-            _settingsService = new JsonSettingsService();
-            _settings = _settingsService.Load();
+            // T1-1: Use ServiceLocator for settings (initialized by Platform Head)
+            var settingsService = ServiceLocator.SettingsService ?? new JsonSettingsService();
+            var settings = settingsService.Load();
 
             // T0-2: Check if disclaimer was already accepted
-            if (_settings.DisclaimerAccepted)
+            if (settings.DisclaimerAccepted)
             {
-                Log.Information("免責聲明已於 {AcceptedAt} 確認，跳過顯示", _settings.DisclaimerAcceptedAt);
+                Log.Information("免責聲明已於 {AcceptedAt} 確認，跳過顯示", settings.DisclaimerAcceptedAt);
                 ShowMainWindow(desktop);
             }
             else
             {
                 // T0-1: Show disclaimer window first
-                ShowDisclaimerWindow(desktop);
+                ShowDisclaimerWindow(desktop, settingsService, settings);
             }
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
         {
-            // For mobile/browser - skip disclaimer for now, use demo provider
-            var gpuProvider = new DemoGpuProvider();
+            // For mobile/browser - use ServiceLocator or fallback
+            var gpuProvider = ServiceLocator.GpuProvider ?? new Implementations.DemoGpuProvider();
             singleViewPlatform.MainView = new MainView
             {
                 DataContext = new MainViewModel(gpuProvider)
@@ -58,7 +53,10 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    private void ShowDisclaimerWindow(IClassicDesktopStyleApplicationLifetime desktop)
+    private void ShowDisclaimerWindow(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        ISettingsService settingsService,
+        AppSettings settings)
     {
         var disclaimerVm = new DisclaimerViewModel();
         var disclaimerWindow = new DisclaimerWindow(disclaimerVm);
@@ -68,13 +66,10 @@ public partial class App : Application
             if (disclaimerWindow.IsAccepted)
             {
                 // T0-2: Save disclaimer acceptance
-                if (_settings != null && _settingsService != null)
-                {
-                    _settings.DisclaimerAccepted = true;
-                    _settings.DisclaimerAcceptedAt = DateTime.Now;
-                    _settingsService.Save(_settings);
-                    Log.Information("使用者已確認免責聲明");
-                }
+                settings.DisclaimerAccepted = true;
+                settings.DisclaimerAcceptedAt = DateTime.Now;
+                settingsService.Save(settings);
+                Log.Information("使用者已確認免責聲明");
 
                 ShowMainWindow(desktop);
             }
@@ -90,23 +85,14 @@ public partial class App : Application
 
     private void ShowMainWindow(IClassicDesktopStyleApplicationLifetime desktop)
     {
-        var gpuProvider = CreateGpuProvider();
+        // T1-1: Use ServiceLocator for GPU Provider (initialized by Platform Head)
+        var gpuProvider = ServiceLocator.GpuProvider ?? new Implementations.DemoGpuProvider();
+
         desktop.MainWindow = new MainWindow
         {
             DataContext = new MainViewModel(gpuProvider)
         };
         desktop.MainWindow.Show();
-    }
-
-    /// <summary>
-    /// Creates the appropriate IGpuProvider based on platform.
-    /// TODO (T1-1): Replace with proper DI container setup.
-    /// </summary>
-    private static IGpuProvider CreateGpuProvider()
-    {
-        // For now, use DemoGpuProvider
-        // In the future, this will check RuntimeInformation and create NvmlWindowsProvider on Windows
-        return new DemoGpuProvider();
     }
 
     private static void DisableAvaloniaDataAnnotationValidation()

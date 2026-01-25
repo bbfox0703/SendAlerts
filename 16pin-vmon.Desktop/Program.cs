@@ -1,7 +1,12 @@
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using Avalonia;
 using Serilog;
+using _16pin_vmon.Core.Interfaces;
+using _16pin_vmon.Desktop.Implementations;
+using _16pin_vmon.Implementations;
+using _16pin_vmon.Services;
 
 namespace _16pin_vmon.Desktop;
 
@@ -16,6 +21,13 @@ sealed class Program
         try
         {
             Log.Information("=== 16pin-vmon 應用程式啟動 ===");
+            Log.Information("平台: {OS}, 架構: {Arch}",
+                RuntimeInformation.OSDescription,
+                RuntimeInformation.OSArchitecture);
+
+            // T1-1: Initialize services based on platform
+            InitializeServices();
+
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
         catch (Exception ex)
@@ -25,9 +37,66 @@ sealed class Program
         }
         finally
         {
+            // Cleanup
+            ServiceLocator.GpuProvider?.Dispose();
             Log.Information("=== 16pin-vmon 應用程式結束 ===");
             Log.CloseAndFlush();
         }
+    }
+
+    /// <summary>
+    /// T1-1: 根據平台初始化服務
+    /// </summary>
+    private static void InitializeServices()
+    {
+        // Settings service (cross-platform)
+        ServiceLocator.SettingsService = new JsonSettingsService();
+
+        // GPU Provider (platform-specific)
+        ServiceLocator.GpuProvider = CreateGpuProvider();
+
+        Log.Information("GPU Provider: {ProviderType}, Available: {IsAvailable}",
+            ServiceLocator.GpuProvider.GetType().Name,
+            ServiceLocator.GpuProvider.IsAvailable);
+    }
+
+    /// <summary>
+    /// T1-1: 根據平台建立適當的 IGpuProvider
+    /// </summary>
+    private static IGpuProvider CreateGpuProvider()
+    {
+        // Windows: 嘗試使用 NVML
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            try
+            {
+                var nvmlProvider = new NvmlWindowsProvider();
+                if (nvmlProvider.IsAvailable)
+                {
+                    Log.Information("使用 NVML Windows Provider");
+                    return nvmlProvider;
+                }
+                else
+                {
+                    Log.Warning("NVML 初始化失敗，切換至 Demo 模式");
+                    nvmlProvider.Dispose();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "無法載入 NVML，切換至 Demo 模式");
+            }
+        }
+
+        // Linux: 未來可實作 NvmlLinuxProvider
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            Log.Information("Linux 平台 - 目前使用 Demo 模式 (NVML Linux 支援待實作)");
+        }
+
+        // Fallback: Demo Provider
+        Log.Information("使用 Demo GPU Provider");
+        return new DemoGpuProvider();
     }
 
     private static void InitializeLogging()
