@@ -85,7 +85,7 @@ Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5
 - [x] `AlertEvaluator` sliding window logic
 - [x] `MainViewModel` timer-driven monitoring
 - [x] LiveCharts2 dual-chart UI layout
-- [ ] **T1-1**: Dependency Injection setup in `App.axaml.cs` (use `RuntimeInformation` to inject correct provider)
+- [x] **T1-1**: Dependency Injection setup (ServiceLocator + RuntimeInformation platform detection)
 - [x] **T1-2**: Demo/Mock `IGpuProvider` for testing without GPU
 
 ### Phase 2: Hardware Database (硬體資料庫)
@@ -136,3 +136,4 @@ Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5
 | T0-3 | Audit Log 強化 | 2026-01-25 | Serilog File sink + rotate, alert logging |
 | T3-1/2/3 | Settings System | 2026-01-25 | ISettingsService + JsonSettingsService |
 | T0-2 | 免責聲明持久化 | 2026-01-25 | 整合 Settings System |
+| T1-1 | Dependency Injection | 2026-01-25 | ServiceLocator + Platform detection |
