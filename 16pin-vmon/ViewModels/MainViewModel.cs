@@ -24,6 +24,8 @@ public partial class MainViewModel : ViewModelBase
     private readonly AlertEvaluator _tempEvaluator;
     private readonly List<IAlertAction> _alertActions = new();
     private CommandLineAlertAction? _commandLineAction;
+    private TelegramAlertAction? _telegramAction;
+    private LineNotifyAlertAction? _lineNotifyAction;
 
     // --- 警報門檻常數 (T0-3: 供審計日誌使用) ---
     private const float VoltageThreshold = 11.8f;
@@ -122,9 +124,25 @@ public partial class MainViewModel : ViewModelBase
             _alertActions.Add(_commandLineAction);
         }
 
+        // T4-2: Telegram Alert Action
+        _telegramAction = new TelegramAlertAction(settingsService);
+        if (_telegramAction != null)
+        {
+            _alertActions.Add(_telegramAction);
+        }
+
+        // T4-3: LINE Notify Alert Action
+        _lineNotifyAction = new LineNotifyAlertAction(settingsService);
+        if (_lineNotifyAction != null)
+        {
+            _alertActions.Add(_lineNotifyAction);
+        }
+
         var settings = settingsService.Load();
-        Log.Information("警報動作已初始化: CommandLine={Enabled}, DebugMode={Debug}",
+        Log.Information("警報動作已初始化: CommandLine={CmdEnabled}, Telegram={TgEnabled}, LINE={LineEnabled}, DebugMode={Debug}",
             settings.CommandLineAlertEnabled,
+            settings.TelegramAlertEnabled,
+            settings.LineNotifyAlertEnabled,
             settings.AlertActionsDebugMode);
     }
 
