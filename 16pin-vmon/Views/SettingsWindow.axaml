@@ -1,0 +1,157 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:_16pin_vmon.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="450" d:DesignHeight="480"
+        x:Class="_16pin_vmon.Views.SettingsWindow"
+        x:DataType="vm:SettingsViewModel"
+        Title="設定 / Settings"
+        Width="450" Height="480"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        SystemDecorations="Full">
+
+    <Design.DataContext>
+        <vm:SettingsViewModel />
+    </Design.DataContext>
+
+    <Border Padding="20">
+        <Grid RowDefinitions="Auto,*,Auto">
+
+            <!-- Title -->
+            <TextBlock Grid.Row="0"
+                       Text="監控設定"
+                       FontSize="18"
+                       FontWeight="Bold"
+                       Margin="0,0,0,16"/>
+
+            <!-- Settings Form -->
+            <ScrollViewer Grid.Row="1">
+                <StackPanel Spacing="16">
+
+                    <!-- Voltage Threshold -->
+                    <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                            CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="電壓警報門檻 (Voltage Threshold)"
+                                       FontWeight="SemiBold"/>
+                            <Grid ColumnDefinitions="*,80">
+                                <Slider Grid.Column="0"
+                                        Minimum="10" Maximum="13"
+                                        Value="{Binding VoltageThreshold}"
+                                        TickFrequency="0.1"
+                                        IsSnapToTickEnabled="True"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding VoltageThreshold, StringFormat={}{0:F1} V}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontWeight="Bold"/>
+                            </Grid>
+                            <TextBlock Text="低於此值時觸發警報"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Temperature Threshold -->
+                    <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                            CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="溫度警報門檻 (Temperature Threshold)"
+                                       FontWeight="SemiBold"/>
+                            <Grid ColumnDefinitions="*,80">
+                                <Slider Grid.Column="0"
+                                        Minimum="50" Maximum="100"
+                                        Value="{Binding TemperatureThreshold}"
+                                        TickFrequency="1"
+                                        IsSnapToTickEnabled="True"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding TemperatureThreshold, StringFormat={}{0:F0} °C}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontWeight="Bold"/>
+                            </Grid>
+                            <TextBlock Text="高於此值時觸發警報"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Alert Window -->
+                    <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                            CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="警報判定條件 (Alert Trigger)"
+                                       FontWeight="SemiBold"/>
+                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+                                <StackPanel Grid.Column="0" Grid.Row="0" Spacing="4">
+                                    <TextBlock Text="時間視窗 (秒)"/>
+                                    <NumericUpDown Value="{Binding AlertWindowSeconds}"
+                                                   Minimum="1" Maximum="30"
+                                                   Increment="1"
+                                                   FormatString="0"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Grid.Row="0" Spacing="4" Margin="8,0,0,0">
+                                    <TextBlock Text="觸發次數"/>
+                                    <NumericUpDown Value="{Binding AlertTriggerCount}"
+                                                   Minimum="1" Maximum="30"
+                                                   Increment="1"
+                                                   FormatString="0"/>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="{Binding AlertWindowSeconds, StringFormat=在 {0} 秒內超過門檻}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Sampling Interval -->
+                    <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                            CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="取樣間隔 (Sampling Interval)"
+                                       FontWeight="SemiBold"/>
+                            <Grid ColumnDefinitions="*,80">
+                                <Slider Grid.Column="0"
+                                        Minimum="1" Maximum="10"
+                                        Value="{Binding SamplingIntervalSeconds}"
+                                        TickFrequency="1"
+                                        IsSnapToTickEnabled="True"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding SamplingIntervalSeconds, StringFormat={}{0} 秒}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontWeight="Bold"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Buttons -->
+            <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,16,0,0">
+                <Button Grid.Column="0"
+                        Content="重設預設值"
+                        Command="{Binding ResetToDefaultsCommand}"
+                        HorizontalContentAlignment="Center"/>
+
+                <Button Grid.Column="2"
+                        Content="取消"
+                        Command="{Binding CancelCommand}"
+                        Width="80"
+                        HorizontalContentAlignment="Center"
+                        Margin="0,0,8,0"/>
+
+                <Button Grid.Column="3"
+                        Content="儲存"
+                        Command="{Binding SaveCommand}"
+                        Width="80"
+                        HorizontalContentAlignment="Center"
+                        Classes="accent"/>
+            </Grid>
+
+        </Grid>
+    </Border>
+</Window>

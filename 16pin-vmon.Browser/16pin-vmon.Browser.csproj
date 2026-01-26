@@ -11,6 +11,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\_16pin_vmon\_16pin_vmon.csproj" />
+    <ProjectReference Include="..\16pin-vmon\16pin-vmon.csproj" />
   </ItemGroup>
 </Project>

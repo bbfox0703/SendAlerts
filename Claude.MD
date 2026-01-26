@@ -98,7 +98,7 @@ Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5
 - [x] **T3-1**: Create `ISettingsService` interface
 - [x] **T3-2**: Implement JSON-based settings persistence
 - [x] **T3-3**: Cross-platform path management (`%AppData%` / `~/.config`)
-- [ ] **T3-4**: Settings UI (threshold values, sampling rate)
+- [x] **T3-4**: Settings UI (threshold values, sampling rate)
 
 ### Phase 4: Alert Actions (警報動作)
 - [ ] **T4-1**: `CommandLineAlertAction` - execute local commands
@@ -138,3 +138,4 @@ Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5
 | T0-2 | 免責聲明持久化 | 2026-01-25 | 整合 Settings System |
 | T1-1 | Dependency Injection | 2026-01-25 | ServiceLocator + Platform detection |
 | T2-1~4 | Hardware Database | 2026-01-25 | HardwareDbManager + 三段式偵測 + PCI SSID |
+| T3-4 | Settings UI | 2026-01-26 | SettingsWindow + SettingsViewModel |
