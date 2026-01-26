@@ -207,13 +207,25 @@ public class NvmlWindowsProvider : IGpuProvider
         }
 
         // === 第二優先：動態掃描 ===
-        Log.Information("[三段式偵測] 第二優先：開始動態掃描 Field ID 150-165...");
-        for (uint fieldId = 150; fieldId <= 165; fieldId++)
+        // 擴展掃描範圍以支援更多 GPU 型號 (包含筆電 GPU)
+        Log.Information("[三段式偵測] 第二優先：開始動態掃描 Field ID 140-180...");
+
+        // 先記錄所有有效的電壓類欄位供 Debug
+        for (uint fieldId = 140; fieldId <= 180; fieldId++)
         {
             var field = new NvmlFieldValue_t { FieldId = fieldId };
-            if (nvmlDeviceGetFieldValues(_deviceHandle, 1, ref field) == 0 && field.Status == 0)
+            var result = nvmlDeviceGetFieldValues(_deviceHandle, 1, ref field);
+            if (result == 0 && field.Status == 0)
             {
                 float value = ExtractValue(field);
+                // 記錄所有可能是電壓的數值 (0.5V - 20V 範圍)
+                if (value > 0.5f && value < 21.0f)
+                {
+                    Log.Information("[Field 掃描] ID={FieldId}, Value={Value:F3}, Type={Type}",
+                        fieldId, value, field.ValueType);
+                }
+
+                // 16-pin 電壓應在 11.0V - 13.0V 範圍
                 if (value > 11.0f && value < 13.0f)
                 {
                     _detectedVoltageFieldId = fieldId;
