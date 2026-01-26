@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using _16pin_vmon.Core.Interfaces;
@@ -187,7 +189,7 @@ public class NvmlWindowsProvider : IGpuProvider
     /// <summary>
     /// T2-3: 三段式 Field ID 偵測邏輯
     /// 1. 優先查詢硬體資料庫
-    /// 2. 動態掃描 Field ID 150-165
+    /// 2. 動態掃描 Field ID (擴展範圍 50-300)
     /// 3. Fallback 到功耗估算模式
     /// </summary>
     private void DetectVoltageFieldId()
@@ -207,23 +209,20 @@ public class NvmlWindowsProvider : IGpuProvider
         }
 
         // === 第二優先：動態掃描 ===
-        // 擴展掃描範圍以支援更多 GPU 型號 (包含筆電 GPU)
-        Log.Information("[三段式偵測] 第二優先：開始動態掃描 Field ID 140-180...");
+        // RTX 50 系列 (Blackwell) 可能使用不同的 Field ID 範圍
+        Log.Information("[三段式偵測] 第二優先：開始動態掃描 Field ID 50-300...");
 
-        // 先記錄所有有效的電壓類欄位供 Debug
-        for (uint fieldId = 140; fieldId <= 180; fieldId++)
+        // 記錄所有成功讀取的 Field，便於診斷
+        var validFields = new List<(uint fieldId, float value, int valueType, long rawSll, uint rawUi, double rawDouble)>();
+
+        for (uint fieldId = 50; fieldId <= 300; fieldId++)
         {
             var field = new NvmlFieldValue_t { FieldId = fieldId };
             var result = nvmlDeviceGetFieldValues(_deviceHandle, 1, ref field);
             if (result == 0 && field.Status == 0)
             {
                 float value = ExtractValue(field);
-                // 記錄所有可能是電壓的數值 (0.5V - 20V 範圍)
-                if (value > 0.5f && value < 20.0f)
-                {
-                    Log.Information("[Field 掃描] ID={FieldId}, Value={Value:F3}, Type={Type}",
-                        fieldId, value, field.ValueType);
-                }
+                validFields.Add((fieldId, value, field.ValueType, field.Value.SllValue, field.Value.UiValue, field.Value.DoubleValue));
 
                 // 16-pin 電壓應在 11.0V - 13.0V 範圍
                 if (value > 11.0f && value < 13.0f)
@@ -249,6 +248,33 @@ public class NvmlWindowsProvider : IGpuProvider
                 }
             }
         }
+
+        // 掃描失敗，輸出診斷資訊
+        Log.Warning("[三段式偵測] 在 50-300 範圍內未找到 11.0-13.0V 的電壓值");
+        Log.Information("[診斷] 共找到 {Count} 個有效 Field ID，列出可能的電壓候選：", validFields.Count);
+
+        // 列出所有可能是電壓的值 (mV 範圍 11000-13000 或 V 範圍 0.5-20)
+        foreach (var (fieldId, value, valueType, rawSll, rawUi, rawDouble) in validFields)
+        {
+            // 檢查各種可能的電壓格式
+            bool isPossibleVoltage =
+                (value > 0.5f && value < 20.0f) ||           // 已轉換的 V
+                (rawSll > 11000 && rawSll < 13000) ||        // mV (long)
+                (rawUi > 11000 && rawUi < 13000) ||          // mV (uint)
+                (rawSll > 11000000 && rawSll < 13000000) ||  // uV (long)
+                (rawUi > 11000000 && rawUi < 13000000);      // uV (uint)
+
+            if (isPossibleVoltage)
+            {
+                Log.Information(
+                    "[診斷] Field {FieldId}: Type={Type}, Parsed={Value:F3}, RawSll={RawSll}, RawUi={RawUi}, RawDouble={RawDouble:F6}",
+                    fieldId, valueType, value, rawSll, rawUi, rawDouble);
+            }
+        }
+
+        // 額外列出所有讀取成功的 Field ID (前 30 個)
+        Log.Information("[診斷] 所有有效 Field ID (前30個): {FieldIds}",
+            string.Join(", ", validFields.Take(30).Select(f => $"{f.fieldId}(T{f.valueType})")));
 
         // === 第三優先：Fallback 到功耗估算模式 ===
         Log.Warning("[三段式偵測] 第三優先：無法偵測電壓 Field ID，切換至功耗估算模式");

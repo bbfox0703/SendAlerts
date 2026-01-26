@@ -16,26 +16,36 @@ RTX 50 Series (Blackwell) GPU monitoring tool focused on 16-pin (12VHPWR) voltag
 
 ### Solution Structure (avalonia.xplat template)
 ```
-16pin-vmon/           (Core - cross-platform logic)
+16pin-vmon/           (Core - cross-platform logic, namespace: _16pin_vmon)
 ├── Interfaces/       IGpuProvider, IAlertAction definitions
 ├── Logic/            AlertEvaluator (sliding window algorithm)
+├── Services/         ServiceLocator, Settings, Alert Actions (Telegram, LINE, CLI)
 ├── ViewModels/       MainViewModel (MVVM data binding)
 ├── Views/            Avalonia AXAML UI layouts
 └── Converters/       UI value converters
 
-16pin-vmon.Desktop/   (Platform head - Windows/Linux)
-└── Implementations/  NvmlWindowsProvider (NVML P/Invoke)
+16pin-vmon.Desktop/   (Platform head, namespace: _16pin_vmon.Desktop)
+└── Implementations/  NvmlWindowsProvider (NVML P/Invoke), DemoGpuProvider
 ```
+
+**Note**: Namespace uses underscores: `_16pin_vmon` (not `16pin-vmon`)
+
+### Dependency Injection
+Uses `ServiceLocator` (static class) for cross-project DI. Platform head (Desktop) registers implementations at startup:
+- `ServiceLocator.GpuProvider` → `NvmlWindowsProvider` or `DemoGpuProvider`
+- `ServiceLocator.SettingsService` → `JsonSettingsService`
 
 ### Key Abstractions
 - **`IGpuProvider`**: Hardware abstraction for GPU data. Returns `GpuReading(Voltage16Pin, Temperature, Timestamp)`.
-- **`IAlertAction`**: Alert notification interface (LINE, Telegram, email, CLI commands).
+- **`IAlertAction`**: Alert notification interface. Implementations: `CommandLineAlertAction`, `TelegramAlertAction`, `LineNotifyAlertAction`.
 - **`AlertEvaluator`**: Sliding window algorithm - triggers when threshold exceeded Y times within X seconds.
+- **`ISettingsService`**: Cross-platform settings persistence (JSON at `%AppData%/16pin-vmon` or `~/.config/16pin-vmon`).
 
 ### Data Flow
 1. `DispatcherTimer` (1s interval) → `IGpuProvider.GetCurrentReading()`
 2. Values → `AlertEvaluator.PushValueAndCheckAlert()` → Alert state
 3. Values → `ObservableCollection<float>` → LiveCharts2 visualization
+4. Alert triggered → `IAlertAction.ExecuteAsync()` → Telegram/LINE/CLI notification
 
 ## Coding Standards
 
