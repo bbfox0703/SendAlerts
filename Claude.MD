@@ -101,11 +101,11 @@ Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5
 - [x] **T3-4**: Settings UI (threshold values, sampling rate)
 
 ### Phase 4: Alert Actions (警報動作)
-- [ ] **T4-1**: `CommandLineAlertAction` - execute local commands
+- [x] **T4-1**: `CommandLineAlertAction` - execute local commands
 - [ ] **T4-2**: `TelegramAlertAction` - bot API integration
 - [ ] **T4-3**: `LineNotifyAlertAction` - LINE Notify API
 - [ ] **T4-4**: Alert action configuration UI
-- [ ] **T4-5**: Debug mode - destructive actions log-only
+- [x] **T4-5**: Debug mode - destructive actions log-only
 
 ### Phase 5: Data Export (資料匯出)
 - [ ] **T5-1**: CSV export service with configurable row limit
@@ -139,3 +139,5 @@ Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5
 | T1-1 | Dependency Injection | 2026-01-25 | ServiceLocator + Platform detection |
 | T2-1~4 | Hardware Database | 2026-01-25 | HardwareDbManager + 三段式偵測 + PCI SSID |
 | T3-4 | Settings UI | 2026-01-26 | SettingsWindow + SettingsViewModel |
+| T4-1 | CommandLineAlertAction | 2026-01-26 | 變數替換、冷卻機制、跨平台 shell 支援 |
+| T4-5 | Debug Mode | 2026-01-26 | AlertActionsDebugMode 設定整合 |
