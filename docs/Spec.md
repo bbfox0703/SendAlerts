@@ -36,7 +36,11 @@ c. **第三優先：Fallback 機制**
 12.3 獨立 Mapping 工具
 * **CLI 工具功能**：支援以獨立 Command Line 模式執行，輸出目前顯卡的 PCI 資訊與偵測到的 Field ID 至 JSON 格式。要考量多顯示卡的環境中，能抓取到 nVidia GPU
 * **用途**：便於使用者回報資料，擴充 `gpu_mapping.json`。
-
+13 Windows 終極方案：NVAPI 整合
+* **觸發條件**：若 NVML 偵測不到有效 Field ID（Blackwell 架構常態）。
+* **實作方式**：載入 `nvapi64.dll`，使用 `NvAPI_GPU_GetPowerSensors` (V1/V2) 讀取硬體感測器。
+* **優點**：可精確識別 16-pin 每個 Rail 的電流與電壓，支援 RTX 50 系列所有 AIB 私板。
+ 
 ## 0. 專案願景
 
 開發一個輕量化、跨平台（Windows/Linux）的 GPU 監控工具，專注於 **12VHPWR (16-pin) 電壓穩定性** 與 **核心溫度**。透過高度抽象化的設計，確保在硬體層與作業系統層具備極佳的擴充性，並提供自動化警報反應機制。
