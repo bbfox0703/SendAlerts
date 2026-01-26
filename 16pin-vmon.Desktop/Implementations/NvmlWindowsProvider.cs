@@ -219,7 +219,7 @@ public class NvmlWindowsProvider : IGpuProvider
             {
                 float value = ExtractValue(field);
                 // 記錄所有可能是電壓的數值 (0.5V - 20V 範圍)
-                if (value > 0.5f && value < 21.0f)
+                if (value > 0.5f && value < 20.0f)
                 {
                     Log.Information("[Field 掃描] ID={FieldId}, Value={Value:F3}, Type={Type}",
                         fieldId, value, field.ValueType);
