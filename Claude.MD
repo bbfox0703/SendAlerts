@@ -102,8 +102,8 @@ Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5
 
 ### Phase 4: Alert Actions (警報動作)
 - [x] **T4-1**: `CommandLineAlertAction` - execute local commands
-- [ ] **T4-2**: `TelegramAlertAction` - bot API integration
-- [ ] **T4-3**: `LineNotifyAlertAction` - LINE Notify API
+- [x] **T4-2**: `TelegramAlertAction` - bot API integration
+- [x] **T4-3**: `LineNotifyAlertAction` - LINE Notify API
 - [ ] **T4-4**: Alert action configuration UI
 - [x] **T4-5**: Debug mode - destructive actions log-only
 
@@ -140,4 +140,6 @@ Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5
 | T2-1~4 | Hardware Database | 2026-01-25 | HardwareDbManager + 三段式偵測 + PCI SSID |
 | T3-4 | Settings UI | 2026-01-26 | SettingsWindow + SettingsViewModel |
 | T4-1 | CommandLineAlertAction | 2026-01-26 | 變數替換、冷卻機制、跨平台 shell 支援 |
+| T4-2 | TelegramAlertAction | 2026-01-26 | Telegram Bot API 整合、HTML 格式訊息 |
+| T4-3 | LineNotifyAlertAction | 2026-01-26 | LINE Notify API 整合 |
 | T4-5 | Debug Mode | 2026-01-26 | AlertActionsDebugMode 設定整合 |
