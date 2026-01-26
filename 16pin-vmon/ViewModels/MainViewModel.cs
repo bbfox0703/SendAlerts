@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using _16pin_vmon.Core.Interfaces;
 using _16pin_vmon.Logic;
+using _16pin_vmon.Services;
 using Serilog;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
@@ -19,6 +22,8 @@ public partial class MainViewModel : ViewModelBase
     private readonly DispatcherTimer _timer;
     private readonly AlertEvaluator _voltageEvaluator;
     private readonly AlertEvaluator _tempEvaluator;
+    private readonly List<IAlertAction> _alertActions = new();
+    private CommandLineAlertAction? _commandLineAction;
 
     // --- 警報門檻常數 (T0-3: 供審計日誌使用) ---
     private const float VoltageThreshold = 11.8f;
@@ -87,12 +92,40 @@ public partial class MainViewModel : ViewModelBase
             threshold: TemperatureThreshold,
             isLowerBound: false);
 
-        // 3. 設定定時器
+        // 3. 初始化警報動作 (T4-1)
+        InitializeAlertActions();
+
+        // 4. 設定定時器
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _timer.Tick += OnTimerTick;
         _timer.Start();
 
         Log.Information("16pin-vmon 監控啟動: {GpuName}", GpuName);
+    }
+
+    /// <summary>
+    /// T4-1: 初始化警報動作
+    /// </summary>
+    private void InitializeAlertActions()
+    {
+        var settingsService = ServiceLocator.SettingsService;
+        if (settingsService == null)
+        {
+            Log.Warning("SettingsService 未初始化，警報動作將無法使用");
+            return;
+        }
+
+        // T4-1: CommandLine Alert Action
+        _commandLineAction = new CommandLineAlertAction(settingsService);
+        if (_commandLineAction != null)
+        {
+            _alertActions.Add(_commandLineAction);
+        }
+
+        var settings = settingsService.Load();
+        Log.Information("警報動作已初始化: CommandLine={Enabled}, DebugMode={Debug}",
+            settings.CommandLineAlertEnabled,
+            settings.AlertActionsDebugMode);
     }
 
     private void InitializeCharts()
@@ -147,6 +180,7 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>
     /// T0-3: 審計日誌 - 完整記錄警報觸發瞬間，作為「程式已盡提醒義務」之證明
+    /// T4-1: 觸發警報動作
     /// </summary>
     private void HandleAlertLogs()
     {
@@ -166,6 +200,9 @@ public partial class MainViewModel : ViewModelBase
                 AlertWindowSeconds,
                 AlertTriggerCount,
                 CurrentTemperature);
+
+            // T4-1: 執行警報動作
+            _ = ExecuteAlertActionsAsync("Voltage", $"16-pin 電壓異常: {CurrentVoltage:F3}V");
         }
 
         // 電壓警報解除
@@ -195,6 +232,9 @@ public partial class MainViewModel : ViewModelBase
                 AlertWindowSeconds,
                 AlertTriggerCount,
                 CurrentVoltage);
+
+            // T4-1: 執行警報動作
+            _ = ExecuteAlertActionsAsync("Temperature", $"GPU 溫度過高: {CurrentTemperature:F1}°C");
         }
 
         // 溫度警報解除
@@ -211,6 +251,49 @@ public partial class MainViewModel : ViewModelBase
         // 更新狀態追蹤
         _wasVoltageAlertActive = IsVoltageAlert;
         _wasTempAlertActive = IsTempAlert;
+    }
+
+    /// <summary>
+    /// T4-1: 非同步執行所有啟用的警報動作
+    /// </summary>
+    private async Task ExecuteAlertActionsAsync(string alertType, string message)
+    {
+        // 處理 CommandLine 動作的變數替換
+        if (_commandLineAction != null && _commandLineAction.IsEnabled)
+        {
+            var substitutedCommand = _commandLineAction.SubstituteVariables(
+                _commandLineAction.Command,
+                CurrentVoltage,
+                CurrentTemperature,
+                GpuName,
+                alertType);
+
+            // 暫時替換命令
+            var originalCommand = _commandLineAction.Command;
+            _commandLineAction.Command = substitutedCommand;
+
+            try
+            {
+                await _commandLineAction.ExecuteAsync(message);
+            }
+            finally
+            {
+                _commandLineAction.Command = originalCommand;
+            }
+        }
+
+        // 執行其他警報動作（未來 T4-2, T4-3 實作）
+        foreach (var action in _alertActions.Where(a => a.IsEnabled && a != _commandLineAction))
+        {
+            try
+            {
+                await action.ExecuteAsync(message);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "執行警報動作 {ActionName} 時發生錯誤", action.ActionName);
+            }
+        }
     }
 
     private void UpdateHistory(ObservableCollection<float> history, float newValue)

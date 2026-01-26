@@ -82,4 +82,53 @@ public class AppSettings
     /// CSV 保留筆數
     /// </summary>
     public int CsvMaxRows { get; set; } = 10000;
+
+    // --- Alert Actions (T4-1~T4-5) ---
+    /// <summary>
+    /// T4-5: Debug 模式 - 所有警報動作僅記錄不執行
+    /// </summary>
+    public bool AlertActionsDebugMode { get; set; } = false;
+
+    /// <summary>
+    /// T4-1: 是否啟用命令列警報動作
+    /// </summary>
+    public bool CommandLineAlertEnabled { get; set; } = false;
+
+    /// <summary>
+    /// T4-1: 警報觸發時執行的命令
+    /// 支援變數: {voltage}, {temperature}, {gpu_name}, {alert_type}, {timestamp}
+    /// Windows 範例: powershell -c "Add-Type -AssemblyName System.Speech; (New-Object System.Speech.Synthesis.SpeechSynthesizer).Speak('Alert')"
+    /// Linux 範例: notify-send "GPU Alert" "{alert_type}: Voltage={voltage}V"
+    /// </summary>
+    public string CommandLineAlertCommand { get; set; } = string.Empty;
+
+    /// <summary>
+    /// T4-1: 命令執行冷卻時間（秒）
+    /// </summary>
+    public int CommandLineAlertCooldownSeconds { get; set; } = 30;
+
+    /// <summary>
+    /// T4-2: 是否啟用 Telegram 警報
+    /// </summary>
+    public bool TelegramAlertEnabled { get; set; } = false;
+
+    /// <summary>
+    /// T4-2: Telegram Bot Token
+    /// </summary>
+    public string TelegramBotToken { get; set; } = string.Empty;
+
+    /// <summary>
+    /// T4-2: Telegram Chat ID
+    /// </summary>
+    public string TelegramChatId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// T4-3: 是否啟用 LINE Notify 警報
+    /// </summary>
+    public bool LineNotifyAlertEnabled { get; set; } = false;
+
+    /// <summary>
+    /// T4-3: LINE Notify Access Token
+    /// </summary>
+    public string LineNotifyAccessToken { get; set; } = string.Empty;
 }
