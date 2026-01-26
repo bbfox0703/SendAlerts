@@ -23,6 +23,23 @@ public partial class SettingsViewModel : ViewModelBase
     // --- Sampling ---
     [ObservableProperty] private int _samplingIntervalSeconds;
 
+    // --- Alert Actions (T4-4) ---
+    [ObservableProperty] private bool _alertActionsDebugMode;
+
+    // CommandLine
+    [ObservableProperty] private bool _commandLineAlertEnabled;
+    [ObservableProperty] private string _commandLineAlertCommand = string.Empty;
+    [ObservableProperty] private int _commandLineAlertCooldownSeconds;
+
+    // Telegram
+    [ObservableProperty] private bool _telegramAlertEnabled;
+    [ObservableProperty] private string _telegramBotToken = string.Empty;
+    [ObservableProperty] private string _telegramChatId = string.Empty;
+
+    // LINE Notify
+    [ObservableProperty] private bool _lineNotifyAlertEnabled;
+    [ObservableProperty] private string _lineNotifyAccessToken = string.Empty;
+
     // --- State ---
     [ObservableProperty] private bool _hasChanges;
 
@@ -45,6 +62,18 @@ public partial class SettingsViewModel : ViewModelBase
         AlertWindowSeconds = _settings.AlertWindowSeconds;
         AlertTriggerCount = _settings.AlertTriggerCount;
         SamplingIntervalSeconds = _settings.SamplingIntervalSeconds;
+
+        // T4-4: Alert Actions
+        AlertActionsDebugMode = _settings.AlertActionsDebugMode;
+        CommandLineAlertEnabled = _settings.CommandLineAlertEnabled;
+        CommandLineAlertCommand = _settings.CommandLineAlertCommand;
+        CommandLineAlertCooldownSeconds = _settings.CommandLineAlertCooldownSeconds;
+        TelegramAlertEnabled = _settings.TelegramAlertEnabled;
+        TelegramBotToken = _settings.TelegramBotToken;
+        TelegramChatId = _settings.TelegramChatId;
+        LineNotifyAlertEnabled = _settings.LineNotifyAlertEnabled;
+        LineNotifyAccessToken = _settings.LineNotifyAccessToken;
+
         HasChanges = false;
     }
 
@@ -53,6 +82,17 @@ public partial class SettingsViewModel : ViewModelBase
     partial void OnAlertWindowSecondsChanged(int value) => HasChanges = true;
     partial void OnAlertTriggerCountChanged(int value) => HasChanges = true;
     partial void OnSamplingIntervalSecondsChanged(int value) => HasChanges = true;
+
+    // T4-4: Alert Actions change tracking
+    partial void OnAlertActionsDebugModeChanged(bool value) => HasChanges = true;
+    partial void OnCommandLineAlertEnabledChanged(bool value) => HasChanges = true;
+    partial void OnCommandLineAlertCommandChanged(string value) => HasChanges = true;
+    partial void OnCommandLineAlertCooldownSecondsChanged(int value) => HasChanges = true;
+    partial void OnTelegramAlertEnabledChanged(bool value) => HasChanges = true;
+    partial void OnTelegramBotTokenChanged(string value) => HasChanges = true;
+    partial void OnTelegramChatIdChanged(string value) => HasChanges = true;
+    partial void OnLineNotifyAlertEnabledChanged(bool value) => HasChanges = true;
+    partial void OnLineNotifyAccessTokenChanged(string value) => HasChanges = true;
 
     [RelayCommand]
     private void Save()
@@ -85,6 +125,12 @@ public partial class SettingsViewModel : ViewModelBase
             SamplingIntervalSeconds = Math.Clamp(SamplingIntervalSeconds, 1, 10);
         }
 
+        // Validate alert action settings
+        if (CommandLineAlertCooldownSeconds < 5)
+        {
+            CommandLineAlertCooldownSeconds = 5;
+        }
+
         // Save to settings
         _settings.VoltageThreshold = VoltageThreshold;
         _settings.TemperatureThreshold = TemperatureThreshold;
@@ -92,12 +138,27 @@ public partial class SettingsViewModel : ViewModelBase
         _settings.AlertTriggerCount = AlertTriggerCount;
         _settings.SamplingIntervalSeconds = SamplingIntervalSeconds;
 
+        // T4-4: Alert Actions
+        _settings.AlertActionsDebugMode = AlertActionsDebugMode;
+        _settings.CommandLineAlertEnabled = CommandLineAlertEnabled;
+        _settings.CommandLineAlertCommand = CommandLineAlertCommand;
+        _settings.CommandLineAlertCooldownSeconds = CommandLineAlertCooldownSeconds;
+        _settings.TelegramAlertEnabled = TelegramAlertEnabled;
+        _settings.TelegramBotToken = TelegramBotToken;
+        _settings.TelegramChatId = TelegramChatId;
+        _settings.LineNotifyAlertEnabled = LineNotifyAlertEnabled;
+        _settings.LineNotifyAccessToken = LineNotifyAccessToken;
+
         _settingsService.Save(_settings);
         HasChanges = false;
 
         Log.Information(
             "設定已儲存 | 電壓門檻: {V}V | 溫度門檻: {T}°C | 判定: {W}秒/{C}次 | 取樣: {S}秒",
             VoltageThreshold, TemperatureThreshold, AlertWindowSeconds, AlertTriggerCount, SamplingIntervalSeconds);
+
+        Log.Information(
+            "警報動作設定 | Debug: {Debug} | CommandLine: {Cmd} | Telegram: {Tg} | LINE: {Line}",
+            AlertActionsDebugMode, CommandLineAlertEnabled, TelegramAlertEnabled, LineNotifyAlertEnabled);
 
         OnSaved?.Invoke();
     }
@@ -117,6 +178,18 @@ public partial class SettingsViewModel : ViewModelBase
         AlertWindowSeconds = 3;
         AlertTriggerCount = 2;
         SamplingIntervalSeconds = 1;
+
+        // T4-4: Alert Actions defaults
+        AlertActionsDebugMode = false;
+        CommandLineAlertEnabled = false;
+        CommandLineAlertCommand = string.Empty;
+        CommandLineAlertCooldownSeconds = 30;
+        TelegramAlertEnabled = false;
+        TelegramBotToken = string.Empty;
+        TelegramChatId = string.Empty;
+        LineNotifyAlertEnabled = false;
+        LineNotifyAccessToken = string.Empty;
+
         HasChanges = true;
     }
 }

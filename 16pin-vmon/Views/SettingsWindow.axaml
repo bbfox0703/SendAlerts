@@ -3,11 +3,11 @@
         xmlns:vm="using:_16pin_vmon.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="450" d:DesignHeight="480"
+        mc:Ignorable="d" d:DesignWidth="550" d:DesignHeight="600"
         x:Class="_16pin_vmon.Views.SettingsWindow"
         x:DataType="vm:SettingsViewModel"
-        Title="設定 / Settings"
-        Width="450" Height="480"
+        Title="Settings"
+        Width="550" Height="600"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
         SystemDecorations="Full">
@@ -16,136 +16,230 @@
         <vm:SettingsViewModel />
     </Design.DataContext>
 
-    <Border Padding="20">
-        <Grid RowDefinitions="Auto,*,Auto">
+    <Border Padding="16">
+        <Grid RowDefinitions="*,Auto">
 
-            <!-- Title -->
-            <TextBlock Grid.Row="0"
-                       Text="監控設定"
-                       FontSize="18"
-                       FontWeight="Bold"
-                       Margin="0,0,0,16"/>
+            <!-- TabControl for Settings Categories -->
+            <TabControl Grid.Row="0">
 
-            <!-- Settings Form -->
-            <ScrollViewer Grid.Row="1">
-                <StackPanel Spacing="16">
+                <!-- Tab 1: Monitoring Settings -->
+                <TabItem Header="Monitoring">
+                    <ScrollViewer Margin="0,8,0,0">
+                        <StackPanel Spacing="12">
 
-                    <!-- Voltage Threshold -->
-                    <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                            CornerRadius="8" Padding="16">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="電壓警報門檻 (Voltage Threshold)"
-                                       FontWeight="SemiBold"/>
-                            <Grid ColumnDefinitions="*,80">
-                                <Slider Grid.Column="0"
-                                        Minimum="10" Maximum="13"
-                                        Value="{Binding VoltageThreshold}"
-                                        TickFrequency="0.1"
-                                        IsSnapToTickEnabled="True"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding VoltageThreshold, StringFormat={}{0:F1} V}"
-                                           VerticalAlignment="Center"
-                                           HorizontalAlignment="Right"
-                                           FontWeight="Bold"/>
-                            </Grid>
-                            <TextBlock Text="低於此值時觸發警報"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Temperature Threshold -->
-                    <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                            CornerRadius="8" Padding="16">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="溫度警報門檻 (Temperature Threshold)"
-                                       FontWeight="SemiBold"/>
-                            <Grid ColumnDefinitions="*,80">
-                                <Slider Grid.Column="0"
-                                        Minimum="50" Maximum="100"
-                                        Value="{Binding TemperatureThreshold}"
-                                        TickFrequency="1"
-                                        IsSnapToTickEnabled="True"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding TemperatureThreshold, StringFormat={}{0:F0} °C}"
-                                           VerticalAlignment="Center"
-                                           HorizontalAlignment="Right"
-                                           FontWeight="Bold"/>
-                            </Grid>
-                            <TextBlock Text="高於此值時觸發警報"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Alert Window -->
-                    <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                            CornerRadius="8" Padding="16">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="警報判定條件 (Alert Trigger)"
-                                       FontWeight="SemiBold"/>
-                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
-                                <StackPanel Grid.Column="0" Grid.Row="0" Spacing="4">
-                                    <TextBlock Text="時間視窗 (秒)"/>
-                                    <NumericUpDown Value="{Binding AlertWindowSeconds}"
-                                                   Minimum="1" Maximum="30"
-                                                   Increment="1"
-                                                   FormatString="0"/>
+                            <!-- Voltage Threshold -->
+                            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                    CornerRadius="8" Padding="16">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Voltage Threshold" FontWeight="SemiBold"/>
+                                    <Grid ColumnDefinitions="*,80">
+                                        <Slider Grid.Column="0"
+                                                Minimum="10" Maximum="13"
+                                                Value="{Binding VoltageThreshold}"
+                                                TickFrequency="0.1"
+                                                IsSnapToTickEnabled="True"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding VoltageThreshold, StringFormat={}{0:F1} V}"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Right"
+                                                   FontWeight="Bold"/>
+                                    </Grid>
+                                    <TextBlock Text="Alert when voltage drops below this value"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
                                 </StackPanel>
-                                <StackPanel Grid.Column="1" Grid.Row="0" Spacing="4" Margin="8,0,0,0">
-                                    <TextBlock Text="觸發次數"/>
-                                    <NumericUpDown Value="{Binding AlertTriggerCount}"
-                                                   Minimum="1" Maximum="30"
-                                                   Increment="1"
-                                                   FormatString="0"/>
+                            </Border>
+
+                            <!-- Temperature Threshold -->
+                            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                    CornerRadius="8" Padding="16">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Temperature Threshold" FontWeight="SemiBold"/>
+                                    <Grid ColumnDefinitions="*,80">
+                                        <Slider Grid.Column="0"
+                                                Minimum="50" Maximum="100"
+                                                Value="{Binding TemperatureThreshold}"
+                                                TickFrequency="1"
+                                                IsSnapToTickEnabled="True"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding TemperatureThreshold, StringFormat={}{0:F0} C}"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Right"
+                                                   FontWeight="Bold"/>
+                                    </Grid>
+                                    <TextBlock Text="Alert when temperature exceeds this value"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
                                 </StackPanel>
-                            </Grid>
-                            <TextBlock Text="{Binding AlertWindowSeconds, StringFormat=在 {0} 秒內超過門檻}"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-                        </StackPanel>
-                    </Border>
+                            </Border>
 
-                    <!-- Sampling Interval -->
-                    <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                            CornerRadius="8" Padding="16">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="取樣間隔 (Sampling Interval)"
-                                       FontWeight="SemiBold"/>
-                            <Grid ColumnDefinitions="*,80">
-                                <Slider Grid.Column="0"
-                                        Minimum="1" Maximum="10"
-                                        Value="{Binding SamplingIntervalSeconds}"
-                                        TickFrequency="1"
-                                        IsSnapToTickEnabled="True"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding SamplingIntervalSeconds, StringFormat={}{0} 秒}"
-                                           VerticalAlignment="Center"
-                                           HorizontalAlignment="Right"
-                                           FontWeight="Bold"/>
-                            </Grid>
-                        </StackPanel>
-                    </Border>
+                            <!-- Alert Window -->
+                            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                    CornerRadius="8" Padding="16">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Alert Trigger Condition" FontWeight="SemiBold"/>
+                                    <Grid ColumnDefinitions="*,*">
+                                        <StackPanel Grid.Column="0" Spacing="4">
+                                            <TextBlock Text="Window (sec)"/>
+                                            <NumericUpDown Value="{Binding AlertWindowSeconds}"
+                                                           Minimum="1" Maximum="30"
+                                                           Increment="1"
+                                                           FormatString="0"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Spacing="4" Margin="8,0,0,0">
+                                            <TextBlock Text="Trigger Count"/>
+                                            <NumericUpDown Value="{Binding AlertTriggerCount}"
+                                                           Minimum="1" Maximum="30"
+                                                           Increment="1"
+                                                           FormatString="0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <TextBlock Text="{Binding AlertWindowSeconds, StringFormat=Trigger when threshold exceeded within {0} seconds}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                </StackPanel>
+                            </Border>
 
-                </StackPanel>
-            </ScrollViewer>
+                            <!-- Sampling Interval -->
+                            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                    CornerRadius="8" Padding="16">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Sampling Interval" FontWeight="SemiBold"/>
+                                    <Grid ColumnDefinitions="*,80">
+                                        <Slider Grid.Column="0"
+                                                Minimum="1" Maximum="10"
+                                                Value="{Binding SamplingIntervalSeconds}"
+                                                TickFrequency="1"
+                                                IsSnapToTickEnabled="True"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding SamplingIntervalSeconds, StringFormat={}{0} sec}"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Right"
+                                                   FontWeight="Bold"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <!-- Tab 2: Alert Actions -->
+                <TabItem Header="Alert Actions">
+                    <ScrollViewer Margin="0,8,0,0">
+                        <StackPanel Spacing="12">
+
+                            <!-- Debug Mode -->
+                            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                    CornerRadius="8" Padding="16">
+                                <StackPanel Spacing="8">
+                                    <CheckBox Content="Debug Mode (log only, don't execute)"
+                                              IsChecked="{Binding AlertActionsDebugMode}"/>
+                                    <TextBlock Text="When enabled, alert actions are logged but not executed"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- CommandLine Alert -->
+                            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                    CornerRadius="8" Padding="16">
+                                <StackPanel Spacing="8">
+                                    <CheckBox Content="Command Line"
+                                              IsChecked="{Binding CommandLineAlertEnabled}"
+                                              FontWeight="SemiBold"/>
+                                    <TextBlock Text="Command to execute:"
+                                               IsEnabled="{Binding CommandLineAlertEnabled}"/>
+                                    <TextBox Text="{Binding CommandLineAlertCommand}"
+                                             Watermark="e.g., powershell -c &quot;...&quot;"
+                                             IsEnabled="{Binding CommandLineAlertEnabled}"/>
+                                    <Grid ColumnDefinitions="Auto,*">
+                                        <TextBlock Text="Cooldown:"
+                                                   VerticalAlignment="Center"
+                                                   IsEnabled="{Binding CommandLineAlertEnabled}"/>
+                                        <NumericUpDown Grid.Column="1"
+                                                       Value="{Binding CommandLineAlertCooldownSeconds}"
+                                                       Minimum="5" Maximum="300"
+                                                       Increment="5"
+                                                       FormatString="0"
+                                                       Width="100"
+                                                       Margin="8,0,0,0"
+                                                       HorizontalAlignment="Left"
+                                                       IsEnabled="{Binding CommandLineAlertEnabled}"/>
+                                    </Grid>
+                                    <TextBlock Text="Variables: {voltage}, {temperature}, {gpu_name}, {alert_type}, {timestamp}"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Telegram Alert -->
+                            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                    CornerRadius="8" Padding="16">
+                                <StackPanel Spacing="8">
+                                    <CheckBox Content="Telegram"
+                                              IsChecked="{Binding TelegramAlertEnabled}"
+                                              FontWeight="SemiBold"/>
+                                    <TextBlock Text="Bot Token:"
+                                               IsEnabled="{Binding TelegramAlertEnabled}"/>
+                                    <TextBox Text="{Binding TelegramBotToken}"
+                                             Watermark="123456789:ABC..."
+                                             PasswordChar="*"
+                                             IsEnabled="{Binding TelegramAlertEnabled}"/>
+                                    <TextBlock Text="Chat ID:"
+                                               IsEnabled="{Binding TelegramAlertEnabled}"/>
+                                    <TextBox Text="{Binding TelegramChatId}"
+                                             Watermark="-123456789"
+                                             IsEnabled="{Binding TelegramAlertEnabled}"/>
+                                    <TextBlock Text="Get token from @BotFather, Chat ID from /getUpdates API"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- LINE Notify Alert -->
+                            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                    CornerRadius="8" Padding="16">
+                                <StackPanel Spacing="8">
+                                    <CheckBox Content="LINE Notify"
+                                              IsChecked="{Binding LineNotifyAlertEnabled}"
+                                              FontWeight="SemiBold"/>
+                                    <TextBlock Text="Access Token:"
+                                               IsEnabled="{Binding LineNotifyAlertEnabled}"/>
+                                    <TextBox Text="{Binding LineNotifyAccessToken}"
+                                             Watermark="aBcDeFgHiJkLmNoP..."
+                                             PasswordChar="*"
+                                             IsEnabled="{Binding LineNotifyAlertEnabled}"/>
+                                    <TextBlock Text="Get token from notify-bot.line.me"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                </StackPanel>
+                            </Border>
+
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+            </TabControl>
 
             <!-- Buttons -->
-            <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,16,0,0">
+            <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,12,0,0">
                 <Button Grid.Column="0"
-                        Content="重設預設值"
+                        Content="Reset Defaults"
                         Command="{Binding ResetToDefaultsCommand}"
                         HorizontalContentAlignment="Center"/>
 
                 <Button Grid.Column="2"
-                        Content="取消"
+                        Content="Cancel"
                         Command="{Binding CancelCommand}"
                         Width="80"
                         HorizontalContentAlignment="Center"
                         Margin="0,0,8,0"/>
 
                 <Button Grid.Column="3"
-                        Content="儲存"
+                        Content="Save"
                         Command="{Binding SaveCommand}"
                         Width="80"
                         HorizontalContentAlignment="Center"
