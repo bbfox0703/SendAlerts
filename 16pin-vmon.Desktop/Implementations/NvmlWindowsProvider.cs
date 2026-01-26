@@ -35,16 +35,18 @@ public class NvmlWindowsProvider : IGpuProvider
         [FieldOffset(0)] public long SllValue;
     }
 
+    // NVML nvmlFieldValue_t 結構 - 根據官方 nvml.h 定義
+    // 注意: latencyUsec 是 long long (8 bytes)，不是 int (4 bytes)
     [StructLayout(LayoutKind.Sequential)]
     public struct NvmlFieldValue_t
     {
-        public uint FieldId;
-        public uint Unused;
-        public long Timestamp;
-        public int LatencyUsec;
-        public int ValueType;
-        public int Status;
-        public NvmlValue_t Value;
+        public uint FieldId;           // 4 bytes
+        public uint ScopeId;           // 4 bytes (was "Unused")
+        public long Timestamp;         // 8 bytes
+        public long LatencyUsec;       // 8 bytes (was int - FIXED!)
+        public uint ValueType;         // 4 bytes (nvmlValueType_t)
+        public uint NvmlReturn;        // 4 bytes (nvmlReturn_t, was "Status")
+        public NvmlValue_t Value;      // 8 bytes (union)
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -87,6 +89,15 @@ public class NvmlWindowsProvider : IGpuProvider
 
     [DllImport(NvmlDll, EntryPoint = "nvmlDeviceGetPowerUsage")]
     private static extern int nvmlDeviceGetPowerUsage(IntPtr device, out uint power);
+
+    [DllImport(NvmlDll, EntryPoint = "nvmlDeviceGetTotalEnergyConsumption")]
+    private static extern int nvmlDeviceGetTotalEnergyConsumption(IntPtr device, out ulong energy);
+
+    [DllImport(NvmlDll, EntryPoint = "nvmlDeviceGetPowerManagementLimit")]
+    private static extern int nvmlDeviceGetPowerManagementLimit(IntPtr device, out uint limit);
+
+    [DllImport(NvmlDll, EntryPoint = "nvmlDeviceGetEnforcedPowerLimit")]
+    private static extern int nvmlDeviceGetEnforcedPowerLimit(IntPtr device, out uint limit);
 
     public bool IsAvailable => _isInitialized;
     public bool IsEstimatedVoltage => _isEstimatedVoltage;
@@ -187,9 +198,41 @@ public class NvmlWindowsProvider : IGpuProvider
     }
 
     /// <summary>
+    /// 診斷其他電源相關 NVML API
+    /// </summary>
+    private void DiagnosePowerApis()
+    {
+        Log.Information("[診斷] === 電源相關 NVML API 測試 ===");
+
+        // Power Usage
+        if (nvmlDeviceGetPowerUsage(_deviceHandle, out uint powerMw) == 0)
+        {
+            Log.Information("[診斷] PowerUsage: {Power} mW ({PowerW:F1} W)", powerMw, powerMw / 1000.0);
+        }
+
+        // Power Management Limit
+        if (nvmlDeviceGetPowerManagementLimit(_deviceHandle, out uint powerLimit) == 0)
+        {
+            Log.Information("[診斷] PowerManagementLimit: {Limit} mW ({LimitW:F1} W)", powerLimit, powerLimit / 1000.0);
+        }
+
+        // Enforced Power Limit
+        if (nvmlDeviceGetEnforcedPowerLimit(_deviceHandle, out uint enforcedLimit) == 0)
+        {
+            Log.Information("[診斷] EnforcedPowerLimit: {Limit} mW ({LimitW:F1} W)", enforcedLimit, enforcedLimit / 1000.0);
+        }
+
+        // Total Energy Consumption
+        if (nvmlDeviceGetTotalEnergyConsumption(_deviceHandle, out ulong energy) == 0)
+        {
+            Log.Information("[診斷] TotalEnergyConsumption: {Energy} mJ", energy);
+        }
+    }
+
+    /// <summary>
     /// T2-3: 三段式 Field ID 偵測邏輯
     /// 1. 優先查詢硬體資料庫
-    /// 2. 動態掃描 Field ID (擴展範圍 50-300)
+    /// 2. 動態掃描 Field ID (擴展範圍 1-2000)
     /// 3. Fallback 到功耗估算模式
     /// </summary>
     private void DetectVoltageFieldId()
@@ -209,17 +252,20 @@ public class NvmlWindowsProvider : IGpuProvider
         }
 
         // === 第二優先：動態掃描 ===
-        // RTX 50 系列 (Blackwell) 可能使用不同的 Field ID 範圍
-        Log.Information("[三段式偵測] 第二優先：開始動態掃描 Field ID 50-300...");
+        // RTX 50 系列 (Blackwell) 可能使用不同的 Field ID 範圍，擴展到 2000
+        Log.Information("[三段式偵測] 第二優先：開始動態掃描 Field ID 1-2000...");
+
+        // 先輸出其他電源相關 API 的數據
+        DiagnosePowerApis();
 
         // 記錄所有成功讀取的 Field，便於診斷
-        var validFields = new List<(uint fieldId, float value, int valueType, long rawSll, uint rawUi, double rawDouble)>();
+        var validFields = new List<(uint fieldId, float value, uint valueType, long rawSll, uint rawUi, double rawDouble)>();
 
-        for (uint fieldId = 50; fieldId <= 300; fieldId++)
+        for (uint fieldId = 1; fieldId <= 2000; fieldId++)
         {
             var field = new NvmlFieldValue_t { FieldId = fieldId };
             var result = nvmlDeviceGetFieldValues(_deviceHandle, 1, ref field);
-            if (result == 0 && field.Status == 0)
+            if (result == 0 && field.NvmlReturn == 0)
             {
                 float value = ExtractValue(field);
                 validFields.Add((fieldId, value, field.ValueType, field.Value.SllValue, field.Value.UiValue, field.Value.DoubleValue));
@@ -249,32 +295,33 @@ public class NvmlWindowsProvider : IGpuProvider
             }
         }
 
-        // 掃描失敗，輸出診斷資訊
-        Log.Warning("[三段式偵測] 在 50-300 範圍內未找到 11.0-13.0V 的電壓值");
-        Log.Information("[診斷] 共找到 {Count} 個有效 Field ID，列出可能的電壓候選：", validFields.Count);
+        // 掃描失敗，輸出完整診斷資訊
+        Log.Warning("[三段式偵測] 在 1-2000 範圍內未找到 11.0-13.0V 的電壓值");
+        Log.Information("[診斷] 共找到 {Count} 個有效 Field ID", validFields.Count);
 
-        // 列出所有可能是電壓的值 (mV 範圍 11000-13000 或 V 範圍 0.5-20)
-        foreach (var (fieldId, value, valueType, rawSll, rawUi, rawDouble) in validFields)
+        // 統計非零值的數量
+        var nonZeroFields = validFields.Where(f => f.rawSll != 0 || f.rawUi != 0 || f.rawDouble != 0).ToList();
+        Log.Information("[診斷] 其中 {Count} 個 Field 有非零值", nonZeroFields.Count);
+
+        // 輸出所有非零值的 Field
+        if (nonZeroFields.Any())
         {
-            // 檢查各種可能的電壓格式
-            bool isPossibleVoltage =
-                (value > 0.5f && value < 20.0f) ||           // 已轉換的 V
-                (rawSll > 11000 && rawSll < 13000) ||        // mV (long)
-                (rawUi > 11000 && rawUi < 13000) ||          // mV (uint)
-                (rawSll > 11000000 && rawSll < 13000000) ||  // uV (long)
-                (rawUi > 11000000 && rawUi < 13000000);      // uV (uint)
-
-            if (isPossibleVoltage)
+            Log.Information("[診斷] === 所有非零值 Field ===");
+            foreach (var f in nonZeroFields)
             {
                 Log.Information(
-                    "[診斷] Field {FieldId}: Type={Type}, Parsed={Value:F3}, RawSll={RawSll}, RawUi={RawUi}, RawDouble={RawDouble:F6}",
-                    fieldId, valueType, value, rawSll, rawUi, rawDouble);
+                    "[Field {FieldId}] Type={Type}, Parsed={Value:F6}, Sll={RawSll}, Ui={RawUi}, Dbl={RawDouble:F10}",
+                    f.fieldId, f.valueType, f.value, f.rawSll, f.rawUi, f.rawDouble);
             }
         }
 
-        // 額外列出所有讀取成功的 Field ID (前 30 個)
-        Log.Information("[診斷] 所有有效 Field ID (前30個): {FieldIds}",
-            string.Join(", ", validFields.Take(30).Select(f => $"{f.fieldId}(T{f.valueType})")));
+        // 輸出有效 Field ID 範圍摘要
+        if (validFields.Any())
+        {
+            var minId = validFields.Min(f => f.fieldId);
+            var maxId = validFields.Max(f => f.fieldId);
+            Log.Information("[診斷] 有效 Field ID 範圍: {Min} - {Max}", minId, maxId);
+        }
 
         // === 第三優先：Fallback 到功耗估算模式 ===
         Log.Warning("[三段式偵測] 第三優先：無法偵測電壓 Field ID，切換至功耗估算模式");
@@ -282,17 +329,31 @@ public class NvmlWindowsProvider : IGpuProvider
         _detectedVoltageFieldId = 0; // 標記為使用估算模式
     }
 
+    /// <summary>
+    /// 根據 NVML ValueType 提取數值
+    /// NVML_VALUE_TYPE_DOUBLE = 0
+    /// NVML_VALUE_TYPE_UNSIGNED_INT = 1
+    /// NVML_VALUE_TYPE_UNSIGNED_LONG = 2
+    /// NVML_VALUE_TYPE_UNSIGNED_LONG_LONG = 3
+    /// NVML_VALUE_TYPE_SIGNED_LONG_LONG = 4
+    /// </summary>
     private float ExtractValue(NvmlFieldValue_t field)
     {
         return field.ValueType switch
         {
-            0 => (float)field.Value.DoubleValue,
-            3 => field.Value.SllValue / 1000.0f,
-            _ => (float)field.Value.UiValue
+            0 => (float)field.Value.DoubleValue,           // DOUBLE
+            1 => field.Value.UiValue,                      // UNSIGNED_INT
+            2 => field.Value.UiValue,                      // UNSIGNED_LONG (32-bit on Windows)
+            3 => field.Value.SllValue / 1000.0f,           // UNSIGNED_LONG_LONG (可能是 mV)
+            4 => field.Value.SllValue / 1000.0f,           // SIGNED_LONG_LONG (可能是 mV)
+            _ => field.Value.UiValue
         };
     }
 
     public string GetGpuName() => _isInitialized ? _gpuName : "N/A";
+
+    // NVML Field ID 169: GPU Core Voltage (mV)
+    private const uint NVML_FIELD_GPU_CORE_VOLTAGE = 169;
 
     public GpuReading GetCurrentReading()
     {
@@ -312,12 +373,41 @@ public class NvmlWindowsProvider : IGpuProvider
         else
         {
             var field = new NvmlFieldValue_t { FieldId = _detectedVoltageFieldId };
-            voltage = (nvmlDeviceGetFieldValues(_deviceHandle, 1, ref field) == 0 && field.Status == 0)
+            voltage = (nvmlDeviceGetFieldValues(_deviceHandle, 1, ref field) == 0 && field.NvmlReturn == 0)
                 ? ExtractValue(field)
                 : 0;
         }
 
-        return new GpuReading(voltage, temp, DateTime.Now);
+        // 讀取 GPU 核心電壓 (NVML Field 169) - RTX 50 系列可用作參考
+        float? gpuCoreVoltage = ReadGpuCoreVoltage();
+
+        return new GpuReading(voltage, temp, DateTime.Now, gpuCoreVoltage);
+    }
+
+    /// <summary>
+    /// 讀取 GPU 核心電壓 (NVML Field 169)
+    /// RTX 50 系列可用，值為 mV 需轉換為 V
+    /// </summary>
+    private float? ReadGpuCoreVoltage()
+    {
+        try
+        {
+            var field = new NvmlFieldValue_t { FieldId = NVML_FIELD_GPU_CORE_VOLTAGE };
+            if (nvmlDeviceGetFieldValues(_deviceHandle, 1, ref field) == 0 && field.NvmlReturn == 0)
+            {
+                // Field 169 回傳 mV (如 696 = 0.696V)
+                float voltageInMv = field.Value.UiValue;
+                if (voltageInMv > 0 && voltageInMv < 2000) // 合理範圍 0-2V
+                {
+                    return voltageInMv / 1000.0f; // 轉換為 V
+                }
+            }
+        }
+        catch
+        {
+            // 忽略錯誤，返回 null
+        }
+        return null;
     }
 
     /// <summary>

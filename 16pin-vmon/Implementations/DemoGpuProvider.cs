@@ -14,6 +14,7 @@ public class DemoGpuProvider : IGpuProvider
     private float _baseTemp = 65.0f;
 
     public bool IsAvailable => true;
+    public bool IsEstimatedVoltage => true; // Demo 模式的數值為模擬值
 
     public string GetGpuName() => "Demo GPU (No NVML)";
 

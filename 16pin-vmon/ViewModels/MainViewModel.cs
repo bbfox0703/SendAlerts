@@ -43,6 +43,8 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private float _currentTemperature;
     [ObservableProperty] private bool _isVoltageAlert;
     [ObservableProperty] private bool _isTempAlert;
+    [ObservableProperty] private float? _gpuCoreVoltage;
+    [ObservableProperty] private bool _isEstimatedVoltage;
 
     // --- LiveCharts2 數據結構 ---
     public ObservableCollection<float> VoltageHistory { get; } = new();
@@ -78,6 +80,7 @@ public partial class MainViewModel : ViewModelBase
     {
         _gpuProvider = gpuProvider;
         GpuName = _gpuProvider.GetGpuName();
+        IsEstimatedVoltage = _gpuProvider.IsEstimatedVoltage;
 
         // 1. 初始化圖表外觀
         InitializeCharts();
@@ -175,6 +178,7 @@ public partial class MainViewModel : ViewModelBase
             var reading = _gpuProvider.GetCurrentReading();
             CurrentVoltage = reading.Voltage16Pin;
             CurrentTemperature = reading.Temperature;
+            GpuCoreVoltage = reading.GpuCoreVoltage;
 
             // B. 警報邏輯判定 (滑動視窗)
             IsVoltageAlert = _voltageEvaluator.PushValueAndCheckAlert(CurrentVoltage);

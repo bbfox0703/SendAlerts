@@ -62,29 +62,86 @@ sealed class Program
 
     /// <summary>
     /// T1-1: 根據平台建立適當的 IGpuProvider
+    /// 優先順序: NVML (有效電壓) -> NvAPI -> NVML (估算模式) -> Demo
     /// </summary>
     private static IGpuProvider CreateGpuProvider()
     {
-        // Windows: 嘗試使用 NVML
+        // Windows: 嘗試使用 NVML，若無法讀取電壓則 fallback 到 NvAPI
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
+            NvmlWindowsProvider? nvmlProvider = null;
+
+            // 第一優先：嘗試 NVML
             try
             {
-                var nvmlProvider = new NvmlWindowsProvider();
-                if (nvmlProvider.IsAvailable)
+                nvmlProvider = new NvmlWindowsProvider();
+                if (nvmlProvider.IsAvailable && !nvmlProvider.IsEstimatedVoltage)
                 {
-                    Log.Information("使用 NVML Windows Provider");
+                    // NVML 可用且能讀取真實電壓
+                    Log.Information("使用 NVML Windows Provider (直接電壓讀取)");
                     return nvmlProvider;
-                }
-                else
-                {
-                    Log.Warning("NVML 初始化失敗，切換至 Demo 模式");
-                    nvmlProvider.Dispose();
                 }
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "無法載入 NVML，切換至 Demo 模式");
+                Log.Warning(ex, "NVML 載入失敗");
+                nvmlProvider?.Dispose();
+                nvmlProvider = null;
+            }
+
+            // 第二優先：NVML 無法讀取電壓，嘗試 NvAPI
+            if (nvmlProvider != null && nvmlProvider.IsEstimatedVoltage)
+            {
+                Log.Information("[Fallback] NVML 無法讀取電壓，嘗試 NvAPI...");
+
+                try
+                {
+                    var nvApiProvider = new NvApiWindowsProvider();
+                    if (nvApiProvider.IsAvailable)
+                    {
+                        // NvAPI 可用，釋放 NVML
+                        nvmlProvider.Dispose();
+                        Log.Information("使用 NvAPI Windows Provider");
+                        return nvApiProvider;
+                    }
+                    else
+                    {
+                        Log.Warning("NvAPI 初始化失敗");
+                        nvApiProvider.Dispose();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "NvAPI 載入失敗");
+                }
+
+                // NvAPI 也失敗，使用 NVML 估算模式
+                Log.Information("使用 NVML Windows Provider (功耗估算模式)");
+                return nvmlProvider;
+            }
+
+            // NVML 完全不可用，直接嘗試 NvAPI
+            if (nvmlProvider == null || !nvmlProvider.IsAvailable)
+            {
+                nvmlProvider?.Dispose();
+
+                try
+                {
+                    var nvApiProvider = new NvApiWindowsProvider();
+                    if (nvApiProvider.IsAvailable)
+                    {
+                        Log.Information("使用 NvAPI Windows Provider (NVML 不可用)");
+                        return nvApiProvider;
+                    }
+                    else
+                    {
+                        nvApiProvider.Dispose();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "NvAPI 載入失敗");
+                }
             }
         }
 

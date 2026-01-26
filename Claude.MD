@@ -97,6 +97,7 @@ Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5
 - [x] LiveCharts2 dual-chart UI layout
 - [x] **T1-1**: Dependency Injection setup (ServiceLocator + RuntimeInformation platform detection)
 - [x] **T1-2**: Demo/Mock `IGpuProvider` for testing without GPU
+- [x] **T1-3**: NvApiWindowsProvider - NVML fallback for RTX 50 series (Blackwell)
 
 ### Phase 2: Hardware Database (硬體資料庫)
 - [x] **T2-1**: Create `HardwareDbManager` class
@@ -154,3 +155,4 @@ Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5
 | T4-3 | LineNotifyAlertAction | 2026-01-26 | LINE Notify API 整合 |
 | T4-4 | Alert Action UI | 2026-01-26 | TabControl 分頁設定介面 |
 | T4-5 | Debug Mode | 2026-01-26 | AlertActionsDebugMode 設定整合 |
+| T1-3 | NvApiWindowsProvider | 2026-01-26 | NVML fallback, nvapi64.dll P/Invoke |

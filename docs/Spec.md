@@ -36,10 +36,34 @@ c. **第三優先：Fallback 機制**
 12.3 獨立 Mapping 工具
 * **CLI 工具功能**：支援以獨立 Command Line 模式執行，輸出目前顯卡的 PCI 資訊與偵測到的 Field ID 至 JSON 格式。要考量多顯示卡的環境中，能抓取到 nVidia GPU
 * **用途**：便於使用者回報資料，擴充 `gpu_mapping.json`。
-13 Windows 終極方案：NVAPI 整合
-* **觸發條件**：若 NVML 偵測不到有效 Field ID（Blackwell 架構常態）。
-* **實作方式**：載入 `nvapi64.dll`，使用 `NvAPI_GPU_GetPowerSensors` (V1/V2) 讀取硬體感測器。
-* **優點**：可精確識別 16-pin 每個 Rail 的電流與電壓，支援 RTX 50 系列所有 AIB 私板。
+
+13. **Windows NvAPI 整合 (NVML Fallback)**
+針對 RTX 50 系列 (Blackwell) NVML 無法讀取電壓的情況，實作 NvAPI 作為備援方案。
+13.1 觸發條件
+* NVML 初始化成功但無法偵測有效的 16-pin 電壓 Field ID（進入估算模式）。
+* 這是 Blackwell 架構的常態，NVML Field Values API 不再暴露電壓數據。
+13.2 NvAPI 實作方式
+* **DLL 載入**：透過 P/Invoke 載入 `nvapi64.dll`（64-bit Windows）。
+* **介面查詢**：使用 `nvapi_QueryInterface()` 取得函數指標（NvAPI 使用 hash ID 模式）。
+* **主要 API**：
+  - `NvAPI_Initialize` / `NvAPI_Unload`：初始化與釋放。
+  - `NvAPI_EnumPhysicalGPUs`：列舉實體 GPU。
+  - `NvAPI_GPU_GetThermalSettings`：讀取溫度。
+  - `NvAPI_GPU_GetVoltageDomainsStatus`：讀取電壓域狀態（優先）。
+  - `NvAPI_GPU_GetPstates20`：讀取 P-State 電壓資訊（備用）。
+* **參考文件**：[NVIDIA NvAPI GPU Performance State Interface](https://docs.nvidia.com/gameworks/content/gameworkslibrary/coresdk/nvapi/group__gpupstate.html)
+13.3 Provider 選擇邏輯
+優先順序：`NVML (直接電壓)` → `NvAPI` → `NVML (估算模式)` → `Demo`
+```
+if (NVML 可用 && 有效電壓 Field ID) → 使用 NvmlWindowsProvider
+else if (NvAPI 可用) → 使用 NvApiWindowsProvider
+else if (NVML 可用) → 使用 NvmlWindowsProvider (估算模式)
+else → 使用 DemoGpuProvider
+```
+13.4 優點
+* 可精確讀取 GPU Core 電壓（微伏精度）。
+* 支援 RTX 50 系列所有 AIB 廠商私板。
+* 不依賴 NVML Field ID 的硬體映射。
  
 ## 0. 專案願景
 

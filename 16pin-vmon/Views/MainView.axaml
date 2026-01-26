@@ -37,10 +37,22 @@
         <DockPanel>
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,5">
             <TextBlock Text="16-pin Voltage" Foreground="Cyan" FontSize="14" FontWeight="Bold"/>
-			<TextBlock Text="{Binding CurrentVoltage, StringFormat=': {0:F2} V'}" 
-					   Foreground="{Binding IsVoltageAlert, Converter={StaticResource AlertColorConverter}}" 
-					   FontSize="14" 
-					   Margin="5,0"/>
+            <TextBlock Text="{Binding CurrentVoltage, StringFormat=': {0:F2} V'}"
+                       Foreground="{Binding IsVoltageAlert, Converter={StaticResource AlertColorConverter}}"
+                       FontSize="14"
+                       Margin="5,0"/>
+            <TextBlock Text=" (估算)"
+                       Foreground="Orange"
+                       FontSize="12"
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding IsEstimatedVoltage}"
+                       ToolTip.Tip="RTX 50 系列 (Blackwell) 無法讀取 16-pin 實際電壓"/>
+            <TextBlock Text="{Binding GpuCoreVoltage, StringFormat=' | Core: {0:F3} V'}"
+                       Foreground="#88FFFF"
+                       FontSize="12"
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding GpuCoreVoltage, Converter={x:Static ObjectConverters.IsNotNull}}"
+                       ToolTip.Tip="GPU 核心電壓 (NVML Field 169)"/>
           </StackPanel>
           <lvc:CartesianChart Series="{Binding VoltageSeries}" 
                               XAxes="{Binding XAxes}" 
