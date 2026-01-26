@@ -19,8 +19,8 @@
   
   <DockPanel>
     <StackPanel DockPanel.Dock="Top" Height="40" Background="#2b2b2b" Orientation="Horizontal" Spacing="10">
-      <Button Content="設定" Margin="10,0,0,0" />
-      <Button Content="測試 Alert" />
+      <Button Content="設定" Margin="10,0,0,0" Click="OnSettingsClick" />
+      <Button Content="測試 Alert" Click="OnTestAlertClick" />
       <TextBlock Text="{Binding GpuName}" VerticalAlignment="Center" Foreground="White" FontWeight="Bold" Margin="20,0,0,0"/>
     </StackPanel>
 
