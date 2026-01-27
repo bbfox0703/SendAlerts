@@ -43,8 +43,14 @@ public class JsonSettingsService : ISettingsService
         {
             if (!File.Exists(_settingsFilePath))
             {
-                Log.Information("設定檔不存在，使用預設設定: {Path}", _settingsFilePath);
-                return new AppSettings();
+                Log.Information("設定檔不存在，建立預設設定: {Path}", _settingsFilePath);
+                var defaultSettings = new AppSettings();
+
+                // TA4-3: 首次啟動時初始化預設群組
+                SettingsMigrator.InitializeDefaultGroups(defaultSettings);
+                Save(defaultSettings);
+
+                return defaultSettings;
             }
 
             var json = File.ReadAllText(_settingsFilePath);
@@ -65,6 +71,16 @@ public class JsonSettingsService : ISettingsService
                     // 儲存遷移後的設定
                     Save(settings);
                     Log.Information("舊版設定已自動遷移並儲存");
+                }
+            }
+            // TA4-3: 首次啟動時初始化預設群組
+            else if (SettingsMigrator.NeedsDefaultGroups(settings))
+            {
+                var initialized = SettingsMigrator.InitializeDefaultGroups(settings);
+                if (initialized)
+                {
+                    Save(settings);
+                    Log.Information("預設群組已建立並儲存");
                 }
             }
 
