@@ -159,9 +159,9 @@ Phase C/D (收尾) ────────────────────�
 > 優先級: **最高** | 目標: 建立三層式警報中繼站架構
 
 #### A1: Single Instance 與 Named Pipe (基礎通訊)
-- [ ] **TA1-1**: `SingleInstanceManager` - 使用 Mutex 確保單一實例運行
+- [x] **TA1-1**: `SingleInstanceManager` - 使用 Mutex 確保單一實例運行
 - [ ] **TA1-2**: 第二實例啟動時，透過 Named Pipe 傳送參數給主實例後退出
-- [ ] **TA1-3**: `NamedPipeServer` - 持續監聽 `\\.\pipe\16pin-vmon-alert`
+- [x] **TA1-3**: `NamedPipeServer` - 持續監聽 `\\.\pipe\16pin-vmon-alert`
 - [ ] **TA1-4**: `PipeMessage` 資料模型 - JSON Schema: `{ GroupName, CustomMessage }`
 - [ ] **TA1-5**: Pipe 訊息驗證與錯誤處理 (invalid JSON, unknown group)
 
@@ -306,3 +306,5 @@ Phase C/D (收尾) ────────────────────�
 | T4-5 | Debug Mode | 2026-01-26 | AlertActionsDebugMode 設定整合 |
 | T1-3 | NvApiWindowsProvider | 2026-01-26 | NVML fallback, nvapi64.dll P/Invoke |
 | T1-4 | CpuNetworkWindowsProvider | 2026-01-27 | CPU/Network fallback, LibreHardwareMonitor + NetworkInterface |
+| TA1-1 | SingleInstanceManager | 2026-01-27 | Named Mutex 單一實例控制, Program.cs 整合 |
+| TA1-3 | NamedPipeServer | 2026-01-27 | Named Pipe 監聽, 事件驅動訊息處理 |
