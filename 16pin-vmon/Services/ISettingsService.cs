@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using _16pin_vmon.Models;
 
 namespace _16pin_vmon.Services;
 
@@ -131,4 +133,32 @@ public class AppSettings
     /// T4-3: LINE Notify Access Token
     /// </summary>
     public string LineNotifyAccessToken { get; set; } = string.Empty;
+
+    // ==========================================================================
+    // TA4-1: Alert Center 設定 (新架構)
+    // ==========================================================================
+
+    /// <summary>
+    /// 設定檔版本號 (用於 TA4-2 版本遷移)
+    /// </summary>
+    public int SettingsVersion { get; set; } = 1;
+
+    /// <summary>
+    /// TA4-1: 警報動作設定清單 (多實例支援)
+    /// 每個 AlertActionConfig 代表一個獨立的警報動作實例
+    /// </summary>
+    public List<AlertActionConfig> AlertActions { get; set; } = new();
+
+    /// <summary>
+    /// TA4-1: 警報群組設定清單
+    /// 每個 AlertGroup 可包含多個 ActionInstanceId 引用
+    /// </summary>
+    public List<AlertGroup> AlertGroups { get; set; } = new();
+
+    /// <summary>
+    /// TA4-1: 是否使用新版 Alert Center 架構
+    /// false = 使用舊版 T4 設定 (向後相容)
+    /// true = 使用新版 AlertActions + AlertGroups
+    /// </summary>
+    public bool UseAlertCenterMode { get; set; } = false;
 }
