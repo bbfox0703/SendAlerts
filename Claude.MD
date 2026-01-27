@@ -166,15 +166,15 @@ Phase C/D (收尾) ────────────────────�
 - [x] **TA1-5**: Pipe 訊息驗證與錯誤處理 (invalid JSON, unknown group)
 
 #### A2: Action Tier 動作層 (多實例支援)
-- [ ] **TA2-1**: 重構 `IAlertAction` 介面 - 新增 `InstanceId`, `ActionType` 屬性
+- [x] **TA2-1**: 重構 `IAlertAction` 介面 - 新增 `InstanceId`, `ActionType` 屬性
 - [ ] **TA2-2**: `AlertActionConfig` 資料模型 - 儲存單一動作的設定
 - [ ] **TA2-3**: `AlertActionFactory` - 根據 ActionType 建立對應的 IAlertAction 實例
-- [ ] **TA2-4**: 重構 `TelegramAlertAction` - 支援多實例 (不同 Bot/Chat)
-- [ ] **TA2-5**: 重構 `LineNotifyAlertAction` - 支援多實例 (不同 Token)
+- [x] **TA2-4**: 重構 `TelegramAlertAction` - 支援多實例 (不同 Bot/Chat) *(已在 TA2-1 完成)*
+- [x] **TA2-5**: 重構 `LineNotifyAlertAction` - 支援多實例 (不同 Token) *(已在 TA2-1 完成)*
 - [ ] **TA2-6**: 新增 `EmailAlertAction` - MailKit SMTP 整合
 - [ ] **TA2-7**: 新增 `HttpClientAlertAction` - 支援 Webhook/REST API
 - [ ] **TA2-8**: 新增 `SystemShutdownAction` - 安全關機 (需確認對話框)
-- [ ] **TA2-9**: 重構 `CommandLineAlertAction` - 支援多實例
+- [x] **TA2-9**: 重構 `CommandLineAlertAction` - 支援多實例 *(已在 TA2-1 完成)*
 
 #### A3: Group Tier 群組層
 - [ ] **TA3-1**: `AlertGroup` 資料模型 - `{ Name, MessageTemplate, ActionIds[] }`
@@ -310,3 +310,4 @@ Phase C/D (收尾) ────────────────────�
 | TA1-3 | NamedPipeServer | 2026-01-27 | Named Pipe 監聽, 事件驅動訊息處理 |
 | TA1-4 | PipeMessage | 2026-01-27 | JSON Schema, PipeMessageParser, 錯誤類型定義 |
 | TA1-5 | Pipe 訊息驗證 | 2026-01-27 | 整合至 PipeMessageParser, 錯誤處理與日誌 |
+| TA2-1 | IAlertAction 重構 | 2026-01-27 | InstanceId, ActionType, DisplayName, Validate(), 多實例建構子 |

@@ -360,7 +360,7 @@ public partial class MainViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "執行警報動作 {ActionName} 時發生錯誤", action.ActionName);
+                Log.Error(ex, "執行警報動作 {ActionName} 時發生錯誤", action.DisplayName);
             }
         }
     }

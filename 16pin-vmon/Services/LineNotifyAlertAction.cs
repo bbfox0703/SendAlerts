@@ -8,7 +8,7 @@ using Serilog;
 namespace _16pin_vmon.Services;
 
 /// <summary>
-/// T4-3: LINE Notify 警報動作 - 透過 LINE Notify API 發送警報訊息
+/// T4-3/TA2-1: LINE Notify 警報動作 - 透過 LINE Notify API 發送警報訊息
 /// 設定步驟:
 /// 1. 前往 https://notify-bot.line.me/
 /// 2. 登入後點選「發行權杖」
@@ -16,19 +16,26 @@ namespace _16pin_vmon.Services;
 /// </summary>
 public class LineNotifyAlertAction : IAlertAction
 {
-    private readonly ISettingsService _settingsService;
+    private readonly ISettingsService? _settingsService;
     private readonly HttpClient _httpClient;
     private DateTime _lastExecutionTime = DateTime.MinValue;
 
-    private const int CooldownSeconds = 30;
+    private const int DefaultCooldownSeconds = 30;
     private const string LineNotifyApiUrl = "https://notify-api.line.me/api/notify";
 
-    public string ActionName => "LINE Notify";
+    // TA2-1: 新增介面成員
+    public string InstanceId { get; set; } = "LINE_Default";
+    public AlertActionType ActionType => AlertActionType.LineNotify;
+    public string DisplayName => string.IsNullOrWhiteSpace(InstanceId) ? "LINE Notify" : InstanceId;
     public bool IsEnabled { get; set; }
 
     public string AccessToken { get; set; } = string.Empty;
     public bool DebugMode { get; set; } = false;
+    public int CooldownSeconds { get; set; } = DefaultCooldownSeconds;
 
+    /// <summary>
+    /// 建構子 - 從設定服務載入 (舊版相容)
+    /// </summary>
     public LineNotifyAlertAction(ISettingsService settingsService)
     {
         _settingsService = settingsService;
@@ -36,12 +43,37 @@ public class LineNotifyAlertAction : IAlertAction
         LoadSettings();
     }
 
+    /// <summary>
+    /// 建構子 - 直接指定參數 (多實例支援)
+    /// </summary>
+    public LineNotifyAlertAction(string instanceId, string accessToken, int cooldownSeconds = DefaultCooldownSeconds, bool debugMode = false)
+    {
+        InstanceId = instanceId;
+        AccessToken = accessToken;
+        CooldownSeconds = cooldownSeconds;
+        DebugMode = debugMode;
+        IsEnabled = true;
+        _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+    }
+
     private void LoadSettings()
     {
+        if (_settingsService == null) return;
         var settings = _settingsService.Load();
         IsEnabled = settings.LineNotifyAlertEnabled;
         AccessToken = settings.LineNotifyAccessToken;
         DebugMode = settings.AlertActionsDebugMode;
+    }
+
+    /// <summary>
+    /// TA2-1: 驗證設定是否有效
+    /// </summary>
+    public AlertActionValidationResult Validate()
+    {
+        if (string.IsNullOrWhiteSpace(AccessToken))
+            return AlertActionValidationResult.Invalid("Access Token 不可為空");
+
+        return AlertActionValidationResult.Valid();
     }
 
     public async Task ExecuteAsync(string message)
@@ -142,11 +174,5 @@ public class LineNotifyAlertAction : IAlertAction
     {
         var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
         return $"\n[16pin-vmon Alert]\n{message}\n{timestamp}";
-    }
-
-    public void ShowConfigurationUI()
-    {
-        // T4-4: 將在 Alert Action Configuration UI 中實作
-        Log.Debug("[LineNotifyAlertAction] 設定 UI 尚未實作");
     }
 }

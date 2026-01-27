@@ -7,15 +7,18 @@ using Serilog;
 namespace _16pin_vmon.Services;
 
 /// <summary>
-/// T4-1: 命令列警報動作 - 警報觸發時執行本機命令
+/// T4-1/TA2-1: 命令列警報動作 - 警報觸發時執行本機命令
 /// 支援變數替換: {voltage}, {temperature}, {gpu_name}, {alert_type}
 /// </summary>
 public class CommandLineAlertAction : IAlertAction
 {
-    private readonly ISettingsService _settingsService;
+    private readonly ISettingsService? _settingsService;
     private DateTime _lastExecutionTime = DateTime.MinValue;
 
-    public string ActionName => "CommandLine";
+    // TA2-1: 新增介面成員
+    public string InstanceId { get; set; } = "CommandLine_Default";
+    public AlertActionType ActionType => AlertActionType.CommandLine;
+    public string DisplayName => string.IsNullOrWhiteSpace(InstanceId) ? "Command Line" : InstanceId;
     public bool IsEnabled { get; set; }
 
     /// <summary>
@@ -33,19 +36,46 @@ public class CommandLineAlertAction : IAlertAction
     /// </summary>
     public bool DebugMode { get; set; } = false;
 
+    /// <summary>
+    /// 建構子 - 從設定服務載入 (舊版相容)
+    /// </summary>
     public CommandLineAlertAction(ISettingsService settingsService)
     {
         _settingsService = settingsService;
         LoadSettings();
     }
 
+    /// <summary>
+    /// 建構子 - 直接指定參數 (多實例支援)
+    /// </summary>
+    public CommandLineAlertAction(string instanceId, string command, int cooldownSeconds = 30, bool debugMode = false)
+    {
+        InstanceId = instanceId;
+        Command = command;
+        CooldownSeconds = cooldownSeconds;
+        DebugMode = debugMode;
+        IsEnabled = true;
+    }
+
     private void LoadSettings()
     {
+        if (_settingsService == null) return;
         var settings = _settingsService.Load();
         IsEnabled = settings.CommandLineAlertEnabled;
         Command = settings.CommandLineAlertCommand;
         CooldownSeconds = settings.CommandLineAlertCooldownSeconds;
         DebugMode = settings.AlertActionsDebugMode;
+    }
+
+    /// <summary>
+    /// TA2-1: 驗證設定是否有效
+    /// </summary>
+    public AlertActionValidationResult Validate()
+    {
+        if (string.IsNullOrWhiteSpace(Command))
+            return AlertActionValidationResult.Invalid("命令不可為空");
+
+        return AlertActionValidationResult.Valid();
     }
 
     public async Task ExecuteAsync(string message)
@@ -140,12 +170,6 @@ public class CommandLineAlertAction : IAlertAction
             .Replace("{gpu_name}", gpuName)
             .Replace("{alert_type}", alertType)
             .Replace("{timestamp}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-    }
-
-    public void ShowConfigurationUI()
-    {
-        // T4-4: 將在 Alert Action Configuration UI 中實作
-        Log.Debug("[CommandLineAlertAction] 設定 UI 尚未實作");
     }
 
     private static string GetShellExecutable()

@@ -9,27 +9,34 @@ using Serilog;
 namespace _16pin_vmon.Services;
 
 /// <summary>
-/// T4-2: Telegram 警報動作 - 透過 Telegram Bot API 發送警報訊息
+/// T4-2/TA2-1: Telegram 警報動作 - 透過 Telegram Bot API 發送警報訊息
 /// 設定步驟:
 /// 1. 與 @BotFather 對話建立 Bot，取得 Bot Token
 /// 2. 與 Bot 對話後，訪問 https://api.telegram.org/bot{TOKEN}/getUpdates 取得 Chat ID
 /// </summary>
 public class TelegramAlertAction : IAlertAction
 {
-    private readonly ISettingsService _settingsService;
+    private readonly ISettingsService? _settingsService;
     private readonly HttpClient _httpClient;
     private DateTime _lastExecutionTime = DateTime.MinValue;
 
-    private const int CooldownSeconds = 30;
+    private const int DefaultCooldownSeconds = 30;
     private const string TelegramApiBaseUrl = "https://api.telegram.org/bot";
 
-    public string ActionName => "Telegram";
+    // TA2-1: 新增介面成員
+    public string InstanceId { get; set; } = "Telegram_Default";
+    public AlertActionType ActionType => AlertActionType.Telegram;
+    public string DisplayName => string.IsNullOrWhiteSpace(InstanceId) ? "Telegram" : InstanceId;
     public bool IsEnabled { get; set; }
 
     public string BotToken { get; set; } = string.Empty;
     public string ChatId { get; set; } = string.Empty;
     public bool DebugMode { get; set; } = false;
+    public int CooldownSeconds { get; set; } = DefaultCooldownSeconds;
 
+    /// <summary>
+    /// 建構子 - 從設定服務載入 (舊版相容)
+    /// </summary>
     public TelegramAlertAction(ISettingsService settingsService)
     {
         _settingsService = settingsService;
@@ -37,13 +44,42 @@ public class TelegramAlertAction : IAlertAction
         LoadSettings();
     }
 
+    /// <summary>
+    /// 建構子 - 直接指定參數 (多實例支援)
+    /// </summary>
+    public TelegramAlertAction(string instanceId, string botToken, string chatId, int cooldownSeconds = DefaultCooldownSeconds, bool debugMode = false)
+    {
+        InstanceId = instanceId;
+        BotToken = botToken;
+        ChatId = chatId;
+        CooldownSeconds = cooldownSeconds;
+        DebugMode = debugMode;
+        IsEnabled = true;
+        _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+    }
+
     private void LoadSettings()
     {
+        if (_settingsService == null) return;
         var settings = _settingsService.Load();
         IsEnabled = settings.TelegramAlertEnabled;
         BotToken = settings.TelegramBotToken;
         ChatId = settings.TelegramChatId;
         DebugMode = settings.AlertActionsDebugMode;
+    }
+
+    /// <summary>
+    /// TA2-1: 驗證設定是否有效
+    /// </summary>
+    public AlertActionValidationResult Validate()
+    {
+        if (string.IsNullOrWhiteSpace(BotToken))
+            return AlertActionValidationResult.Invalid("Bot Token 不可為空");
+
+        if (string.IsNullOrWhiteSpace(ChatId))
+            return AlertActionValidationResult.Invalid("Chat ID 不可為空");
+
+        return AlertActionValidationResult.Valid();
     }
 
     public async Task ExecuteAsync(string message)
@@ -160,11 +196,5 @@ public class TelegramAlertAction : IAlertAction
             .Replace("&", "&amp;")
             .Replace("<", "&lt;")
             .Replace(">", "&gt;");
-    }
-
-    public void ShowConfigurationUI()
-    {
-        // T4-4: 將在 Alert Action Configuration UI 中實作
-        Log.Debug("[TelegramAlertAction] 設定 UI 尚未實作");
     }
 }
