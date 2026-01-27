@@ -161,9 +161,9 @@ Phase C/D (收尾) ────────────────────�
 #### A1: Single Instance 與 Named Pipe (基礎通訊)
 - [x] **TA1-1**: `SingleInstanceManager` - 使用 Mutex 確保單一實例運行
 - [ ] **TA1-2**: 第二實例啟動時，透過 Named Pipe 傳送參數給主實例後退出
-- [x] **TA1-3**: `NamedPipeServer` - 持續監聽 `\\.\pipe\16pin-vmon-alert`
-- [ ] **TA1-4**: `PipeMessage` 資料模型 - JSON Schema: `{ GroupName, CustomMessage }`
-- [ ] **TA1-5**: Pipe 訊息驗證與錯誤處理 (invalid JSON, unknown group)
+- [x] **TA1-3**: `NamedPipeServer` - 持續監聯 `\\.\pipe\16pin-vmon-alert`
+- [x] **TA1-4**: `PipeMessage` 資料模型 - JSON Schema: `{ GroupName, CustomMessage }`
+- [x] **TA1-5**: Pipe 訊息驗證與錯誤處理 (invalid JSON, unknown group)
 
 #### A2: Action Tier 動作層 (多實例支援)
 - [ ] **TA2-1**: 重構 `IAlertAction` 介面 - 新增 `InstanceId`, `ActionType` 屬性
@@ -308,3 +308,5 @@ Phase C/D (收尾) ────────────────────�
 | T1-4 | CpuNetworkWindowsProvider | 2026-01-27 | CPU/Network fallback, LibreHardwareMonitor + NetworkInterface |
 | TA1-1 | SingleInstanceManager | 2026-01-27 | Named Mutex 單一實例控制, Program.cs 整合 |
 | TA1-3 | NamedPipeServer | 2026-01-27 | Named Pipe 監聽, 事件驅動訊息處理 |
+| TA1-4 | PipeMessage | 2026-01-27 | JSON Schema, PipeMessageParser, 錯誤類型定義 |
+| TA1-5 | Pipe 訊息驗證 | 2026-01-27 | 整合至 PipeMessageParser, 錯誤處理與日誌 |
