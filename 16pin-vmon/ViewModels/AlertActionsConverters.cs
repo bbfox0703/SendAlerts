@@ -7,6 +7,46 @@ using _16pin_vmon.Core.Interfaces;
 namespace _16pin_vmon.ViewModels;
 
 /// <summary>
+/// TB1-2: ActionType 可見性轉換器（用於根據選擇的類型顯示不同的設定面板）
+/// </summary>
+public static class ActionTypeVisibilityConverter
+{
+    public static readonly ActionTypeMatchConverter CommandLine = new(AlertActionType.CommandLine);
+    public static readonly ActionTypeMatchConverter Telegram = new(AlertActionType.Telegram);
+    public static readonly ActionTypeMatchConverter LineNotify = new(AlertActionType.LineNotify);
+    public static readonly ActionTypeMatchConverter Email = new(AlertActionType.Email);
+    public static readonly ActionTypeMatchConverter HttpWebhook = new(AlertActionType.HttpWebhook);
+    public static readonly ActionTypeMatchConverter SystemShutdown = new(AlertActionType.SystemShutdown);
+}
+
+/// <summary>
+/// 檢查 ActionType 是否匹配
+/// </summary>
+public class ActionTypeMatchConverter : IValueConverter
+{
+    private readonly AlertActionType _targetType;
+
+    public ActionTypeMatchConverter(AlertActionType targetType)
+    {
+        _targetType = targetType;
+    }
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is AlertActionType actionType)
+        {
+            return actionType == _targetType;
+        }
+        return false;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotSupportedException();
+    }
+}
+
+/// <summary>
 /// TB1-1: ActionType 轉換為圖示
 /// </summary>
 public class ActionTypeIconConverter : IValueConverter

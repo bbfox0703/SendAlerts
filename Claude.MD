@@ -192,10 +192,10 @@ Phase C/D (收尾) ────────────────────�
 
 #### B1: Action 管理頁面
 - [x] **TB1-1**: `AlertActionsView` - 顯示所有已設定的 Action 清單
-- [ ] **TB1-2**: Action 新增對話框 - 選擇 ActionType 後填入設定
-- [ ] **TB1-3**: Action 編輯功能 - 修改現有 Action 設定
-- [ ] **TB1-4**: Action 刪除功能 - 確認後移除 (檢查是否被 Group 引用)
-- [ ] **TB1-5**: Action 測試按鈕 - 發送測試訊息驗證設定正確
+- [x] **TB1-2**: Action 新增對話框 - 選擇 ActionType 後填入設定
+- [x] **TB1-3**: Action 編輯功能 - 修改現有 Action 設定 *(整合於 TB1-2)*
+- [x] **TB1-4**: Action 刪除功能 - 確認後移除 (檢查是否被 Group 引用) *(已在 TB1-1 完成)*
+- [x] **TB1-5**: Action 測試按鈕 - 發送測試訊息驗證設定正確 *(已在 TB1-1 完成)*
 
 #### B2: Group 編輯器
 - [ ] **TB2-1**: `AlertGroupsView` - 顯示所有 Group 清單
@@ -319,3 +319,4 @@ Phase C/D (收尾) ────────────────────�
 | TA4-2 | SettingsMigrator | 2026-01-27 | T4→Alert Center 自動遷移, 版本檢測, 載入時自動執行 |
 | TA4-3 | 預設群組建立 | 2026-01-27 | 首次啟動自動建立 Default/Critical/Warning/Info 群組 |
 | TB1-1 | AlertActionsWindow | 2026-01-27 | Action 清單視窗, ViewModel, Converters, MainView 整合 |
+| TB1-2/3 | EditActionDialog | 2026-01-27 | 新增/編輯 Action 對話框, 類型切換, 欄位驗證 |

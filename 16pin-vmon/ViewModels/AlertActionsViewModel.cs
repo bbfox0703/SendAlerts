@@ -89,25 +89,76 @@ public partial class AlertActionsViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// 新增動作
+    /// 開啟新增對話框請求事件
+    /// </summary>
+    public event Func<Task<AlertActionConfig?>>? AddActionRequested;
+
+    /// <summary>
+    /// 開啟編輯對話框請求事件
+    /// </summary>
+    public event Func<AlertActionConfig, Task<AlertActionConfig?>>? EditActionRequested;
+
+    /// <summary>
+    /// TB1-2: 新增動作
     /// </summary>
     [RelayCommand]
-    private void AddAction()
+    private async Task AddActionAsync()
     {
-        // TB1-2: 開啟新增對話框 (待實作)
-        StatusMessage = "新增功能待實作 (TB1-2)";
+        if (_settings == null) return;
+
+        var newConfig = AddActionRequested != null ? await AddActionRequested.Invoke() : null;
+
+        if (newConfig != null)
+        {
+            // 檢查 InstanceId 是否重複
+            if (_settings.AlertActions.Any(a => a.InstanceId.Equals(newConfig.InstanceId, StringComparison.OrdinalIgnoreCase)))
+            {
+                StatusMessage = $"Instance ID 已存在: {newConfig.InstanceId}";
+                return;
+            }
+
+            _settings.AlertActions.Add(newConfig);
+            Actions.Add(new AlertActionConfigItem(newConfig));
+            HasChanges = true;
+            StatusMessage = $"已新增動作: {newConfig.InstanceId}";
+            Log.Information("[AlertActionsViewModel] 新增動作: {InstanceId} ({Type})", newConfig.InstanceId, newConfig.ActionType);
+        }
     }
 
     /// <summary>
-    /// 編輯選中的動作
+    /// TB1-3: 編輯選中的動作
     /// </summary>
     [RelayCommand]
-    private void EditAction()
+    private async Task EditActionAsync()
     {
-        if (SelectedAction == null) return;
+        if (SelectedAction == null || _settings == null) return;
 
-        // TB1-3: 開啟編輯對話框 (待實作)
-        StatusMessage = "編輯功能待實作 (TB1-3)";
+        var existingConfig = _settings.AlertActions.FirstOrDefault(a => a.InstanceId == SelectedAction.InstanceId);
+        if (existingConfig == null) return;
+
+        var updatedConfig = EditActionRequested != null ? await EditActionRequested.Invoke(existingConfig) : null;
+
+        if (updatedConfig != null)
+        {
+            // 更新設定
+            var index = _settings.AlertActions.IndexOf(existingConfig);
+            if (index >= 0)
+            {
+                _settings.AlertActions[index] = updatedConfig;
+            }
+
+            // 更新 UI
+            var uiIndex = Actions.IndexOf(SelectedAction);
+            if (uiIndex >= 0)
+            {
+                Actions[uiIndex] = new AlertActionConfigItem(updatedConfig);
+                SelectedAction = Actions[uiIndex];
+            }
+
+            HasChanges = true;
+            StatusMessage = $"已更新動作: {updatedConfig.InstanceId}";
+            Log.Information("[AlertActionsViewModel] 更新動作: {InstanceId}", updatedConfig.InstanceId);
+        }
     }
 
     /// <summary>
