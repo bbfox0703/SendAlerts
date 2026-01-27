@@ -20,6 +20,7 @@
   <DockPanel>
     <StackPanel DockPanel.Dock="Top" Height="40" Background="#2b2b2b" Orientation="Horizontal" Spacing="10">
       <Button Content="Settings" Margin="10,0,0,0" Click="OnSettingsClick" />
+      <Button Content="Alert Actions" Click="OnAlertActionsClick" />
       <Button Content="Test Alert" Click="OnTestAlertClick" />
       <TextBlock Text="{Binding GpuName}" VerticalAlignment="Center" Foreground="White" FontWeight="Bold" Margin="20,0,0,0"/>
       <TextBlock Text="{Binding PowerLimit, StringFormat='(TDP: {0:F0}W)'}" VerticalAlignment="Center" Foreground="#888" Margin="10,0,0,0"/>
