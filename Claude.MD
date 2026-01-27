@@ -168,7 +168,7 @@ Phase C/D (收尾) ────────────────────�
 #### A2: Action Tier 動作層 (多實例支援)
 - [x] **TA2-1**: 重構 `IAlertAction` 介面 - 新增 `InstanceId`, `ActionType` 屬性
 - [x] **TA2-2**: `AlertActionConfig` 資料模型 - 儲存單一動作的設定
-- [ ] **TA2-3**: `AlertActionFactory` - 根據 ActionType 建立對應的 IAlertAction 實例
+- [x] **TA2-3**: `AlertActionFactory` - 根據 ActionType 建立對應的 IAlertAction 實例
 - [x] **TA2-4**: 重構 `TelegramAlertAction` - 支援多實例 (不同 Bot/Chat) *(已在 TA2-1 完成)*
 - [x] **TA2-5**: 重構 `LineNotifyAlertAction` - 支援多實例 (不同 Token) *(已在 TA2-1 完成)*
 - [ ] **TA2-6**: 新增 `EmailAlertAction` - MailKit SMTP 整合
@@ -177,10 +177,10 @@ Phase C/D (收尾) ────────────────────�
 - [x] **TA2-9**: 重構 `CommandLineAlertAction` - 支援多實例 *(已在 TA2-1 完成)*
 
 #### A3: Group Tier 群組層
-- [ ] **TA3-1**: `AlertGroup` 資料模型 - `{ Name, MessageTemplate, ActionIds[] }`
+- [x] **TA3-1**: `AlertGroup` 資料模型 - `{ Name, MessageTemplate, ActionIds[] }`
 - [ ] **TA3-2**: `AlertGroupService` - 管理群組 CRUD 與執行邏輯
-- [ ] **TA3-3**: 訊息範本變數替換: `{message}`, `{timestamp}`, `{group_name}`
-- [ ] **TA3-4**: CustomMessage 覆蓋邏輯 - Pipe 訊息優先於群組範本
+- [x] **TA3-3**: 訊息範本變數替換: `{message}`, `{timestamp}`, `{group_name}` *(已在 TA3-1 完成)*
+- [x] **TA3-4**: CustomMessage 覆蓋邏輯 - Pipe 訊息優先於群組範本 *(已在 TA3-1 完成)*
 
 #### A4: 設定系統重構
 - [ ] **TA4-1**: 擴展 `AppSettings` - 新增 `List<AlertActionConfig>` 和 `List<AlertGroup>`
@@ -312,3 +312,5 @@ Phase C/D (收尾) ────────────────────�
 | TA1-5 | Pipe 訊息驗證 | 2026-01-27 | 整合至 PipeMessageParser, 錯誤處理與日誌 |
 | TA2-1 | IAlertAction 重構 | 2026-01-27 | InstanceId, ActionType, DisplayName, Validate(), 多實例建構子 |
 | TA2-2 | AlertActionConfig | 2026-01-27 | 扁平化資料模型, 工廠方法, 驗證邏輯 |
+| TA2-3 | AlertActionFactory | 2026-01-27 | Config→Action 轉換, 批次建立, 類型檢查輔助方法 |
+| TA3-1 | AlertGroup | 2026-01-27 | 群組模型, 訊息範本變數替換, 驗證方法, 工廠方法 (含 TA3-3/TA3-4) |
