@@ -12,6 +12,12 @@ namespace _16pin_vmon.Desktop;
 
 sealed class Program
 {
+    // TA1-1: Single Instance Manager
+    private static SingleInstanceManager? _singleInstanceManager;
+
+    // TA1-3: Named Pipe Server
+    private static NamedPipeServer? _namedPipeServer;
+
     [STAThread]
     public static void Main(string[] args)
     {
@@ -24,6 +30,19 @@ sealed class Program
             Log.Information("平台: {OS}, 架構: {Arch}",
                 RuntimeInformation.OSDescription,
                 RuntimeInformation.OSArchitecture);
+
+            // TA1-1: 檢查單一實例
+            _singleInstanceManager = new SingleInstanceManager();
+            if (!_singleInstanceManager.TryAcquire())
+            {
+                // 已有實例運行，未來 TA1-2 會透過 Named Pipe 傳送參數
+                Log.Information("偵測到已有實例運行，即將退出");
+                HandleSecondInstance(args);
+                return;
+            }
+
+            // TA1-3: 啟動 Named Pipe Server
+            InitializeNamedPipeServer();
 
             // T1-1: Initialize services based on platform
             InitializeServices();
@@ -38,10 +57,85 @@ sealed class Program
         finally
         {
             // Cleanup
+            ShutdownNamedPipeServer();
             ServiceLocator.GpuProvider?.Dispose();
+            _singleInstanceManager?.Dispose();
             Log.Information("=== 16pin-vmon 應用程式結束 ===");
             Log.CloseAndFlush();
         }
+    }
+
+    /// <summary>
+    /// TA1-2: 處理第二實例啟動 (未來透過 Named Pipe 傳送參數給主實例)
+    /// </summary>
+    private static void HandleSecondInstance(string[] args)
+    {
+        // TODO: TA1-2 實作 - 透過 Named Pipe 傳送參數給主實例
+        // 目前僅顯示訊息並退出
+        Log.Information("第二實例參數: {Args}", string.Join(" ", args));
+        Console.WriteLine("16pin-vmon 已在運行中。請使用 Named Pipe 發送指令。");
+        Console.WriteLine($"Pipe 名稱: \\\\.\\pipe\\{SingleInstanceManager.NamedPipeName}");
+    }
+
+    /// <summary>
+    /// TA1-3: 初始化並啟動 Named Pipe Server
+    /// </summary>
+    private static void InitializeNamedPipeServer()
+    {
+        try
+        {
+            _namedPipeServer = new NamedPipeServer(SingleInstanceManager.NamedPipeName);
+
+            // 註冊訊息接收事件
+            _namedPipeServer.MessageReceived += OnPipeMessageReceived;
+            _namedPipeServer.ErrorOccurred += OnPipeError;
+
+            // 啟動伺服器
+            _namedPipeServer.Start();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "[NamedPipe] 初始化 Named Pipe Server 失敗");
+        }
+    }
+
+    /// <summary>
+    /// TA1-3: 關閉 Named Pipe Server
+    /// </summary>
+    private static void ShutdownNamedPipeServer()
+    {
+        if (_namedPipeServer == null) return;
+
+        try
+        {
+            // 使用同步方式等待停止 (在 finally 區塊中)
+            _namedPipeServer.StopAsync().GetAwaiter().GetResult();
+            _namedPipeServer.Dispose();
+            _namedPipeServer = null;
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "[NamedPipe] 關閉 Named Pipe Server 時發生錯誤");
+        }
+    }
+
+    /// <summary>
+    /// TA1-3: 處理 Named Pipe 收到的訊息
+    /// </summary>
+    private static void OnPipeMessageReceived(object? sender, PipeMessageReceivedEventArgs e)
+    {
+        // TODO: TA1-4/TA1-5 實作 - 解析 JSON 並觸發警報
+        Log.Information("[NamedPipe] 處理訊息: {Message}", e.RawMessage);
+
+        // 暫時只記錄訊息，等 TA1-4 (PipeMessage) 和 TA3 (AlertGroup) 實作後再處理
+    }
+
+    /// <summary>
+    /// TA1-3: 處理 Named Pipe 錯誤
+    /// </summary>
+    private static void OnPipeError(object? sender, PipeErrorEventArgs e)
+    {
+        Log.Warning(e.Exception, "[NamedPipe] Pipe 錯誤");
     }
 
     /// <summary>
