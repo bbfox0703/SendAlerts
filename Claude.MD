@@ -167,7 +167,7 @@ Phase C/D (收尾) ────────────────────�
 
 #### A2: Action Tier 動作層 (多實例支援)
 - [x] **TA2-1**: 重構 `IAlertAction` 介面 - 新增 `InstanceId`, `ActionType` 屬性
-- [ ] **TA2-2**: `AlertActionConfig` 資料模型 - 儲存單一動作的設定
+- [x] **TA2-2**: `AlertActionConfig` 資料模型 - 儲存單一動作的設定
 - [ ] **TA2-3**: `AlertActionFactory` - 根據 ActionType 建立對應的 IAlertAction 實例
 - [x] **TA2-4**: 重構 `TelegramAlertAction` - 支援多實例 (不同 Bot/Chat) *(已在 TA2-1 完成)*
 - [x] **TA2-5**: 重構 `LineNotifyAlertAction` - 支援多實例 (不同 Token) *(已在 TA2-1 完成)*
@@ -311,3 +311,4 @@ Phase C/D (收尾) ────────────────────�
 | TA1-4 | PipeMessage | 2026-01-27 | JSON Schema, PipeMessageParser, 錯誤類型定義 |
 | TA1-5 | Pipe 訊息驗證 | 2026-01-27 | 整合至 PipeMessageParser, 錯誤處理與日誌 |
 | TA2-1 | IAlertAction 重構 | 2026-01-27 | InstanceId, ActionType, DisplayName, Validate(), 多實例建構子 |
+| TA2-2 | AlertActionConfig | 2026-01-27 | 扁平化資料模型, 工廠方法, 驗證邏輯 |
