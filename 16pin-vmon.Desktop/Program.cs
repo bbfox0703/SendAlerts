@@ -139,13 +139,45 @@ sealed class Program
         }
 
         var message = parseResult.Message!;
-        Log.Information("[NamedPipe] 收到有效訊息 | Group: {GroupName} | CustomMessage: {HasCustom} | Message: {Message}",
+        Log.Information("[NamedPipe] 收到有效訊息 | Group: {GroupName} | CustomMessage: {HasCustom}",
             message.GroupName,
-            message.HasCustomMessage,
-            message.GetEffectiveMessage());
+            message.HasCustomMessage);
 
-        // TODO: TA3 實作後，這裡要呼叫 AlertGroupService 執行對應群組的所有動作
-        // await AlertGroupService.ExecuteGroupAsync(message.GroupName, message.GetEffectiveMessage(groupTemplate));
+        // TA3-2: 執行 AlertService
+        ExecuteAlertAsync(message);
+    }
+
+    /// <summary>
+    /// TA3-2: 執行警報 (非同步，不阻塞 Pipe Server)
+    /// </summary>
+    private static async void ExecuteAlertAsync(PipeMessage message)
+    {
+        var alertService = ServiceLocator.AlertService;
+        if (alertService == null)
+        {
+            Log.Warning("[NamedPipe] AlertService 未初始化，無法執行警報");
+            return;
+        }
+
+        try
+        {
+            var result = await alertService.ExecuteAsync(message);
+
+            if (result.Success)
+            {
+                Log.Information("[NamedPipe] 警報執行完成 | Group: {GroupName} | Executed: {Count}",
+                    result.GroupName, result.ExecutedActions.Count);
+            }
+            else
+            {
+                Log.Warning("[NamedPipe] 警報執行失敗 | Group: {GroupName} | Error: {Error}",
+                    result.GroupName, result.ErrorMessage ?? "Unknown");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "[NamedPipe] 執行警報時發生例外 | Group: {GroupName}", message.GroupName);
+        }
     }
 
     /// <summary>
@@ -170,6 +202,29 @@ sealed class Program
         Log.Information("GPU Provider: {ProviderType}, Available: {IsAvailable}",
             ServiceLocator.GpuProvider.GetType().Name,
             ServiceLocator.GpuProvider.IsAvailable);
+
+        // TA3-2: Alert Service (Alert Center 核心)
+        InitializeAlertService();
+    }
+
+    /// <summary>
+    /// TA3-2: 初始化警報服務
+    /// </summary>
+    private static void InitializeAlertService()
+    {
+        var alertService = new AlertService();
+
+        // TODO: TA4 實作後，這裡要從 Settings 載入 Actions 和 Groups
+        // var settings = ServiceLocator.SettingsService?.Load();
+        // alertService.LoadFromSettings(settings.AlertActions, settings.AlertGroups);
+
+        // 目前先初始化預設群組
+        alertService.InitializeDefaults();
+
+        ServiceLocator.AlertService = alertService;
+
+        Log.Information("AlertService 初始化完成 | Actions: {ActionCount}, Groups: {GroupCount}",
+            alertService.ActionCount, alertService.GroupCount);
     }
 
     /// <summary>

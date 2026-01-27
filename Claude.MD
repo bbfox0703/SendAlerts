@@ -178,7 +178,7 @@ Phase C/D (收尾) ────────────────────�
 
 #### A3: Group Tier 群組層
 - [x] **TA3-1**: `AlertGroup` 資料模型 - `{ Name, MessageTemplate, ActionIds[] }`
-- [ ] **TA3-2**: `AlertGroupService` - 管理群組 CRUD 與執行邏輯
+- [x] **TA3-2**: `AlertService` - 管理群組 CRUD 與執行邏輯
 - [x] **TA3-3**: 訊息範本變數替換: `{message}`, `{timestamp}`, `{group_name}` *(已在 TA3-1 完成)*
 - [x] **TA3-4**: CustomMessage 覆蓋邏輯 - Pipe 訊息優先於群組範本 *(已在 TA3-1 完成)*
 
@@ -314,3 +314,4 @@ Phase C/D (收尾) ────────────────────�
 | TA2-2 | AlertActionConfig | 2026-01-27 | 扁平化資料模型, 工廠方法, 驗證邏輯 |
 | TA2-3 | AlertActionFactory | 2026-01-27 | Config→Action 轉換, 批次建立, 類型檢查輔助方法 |
 | TA3-1 | AlertGroup | 2026-01-27 | 群組模型, 訊息範本變數替換, 驗證方法, 工廠方法 (含 TA3-3/TA3-4) |
+| TA3-2 | AlertService | 2026-01-27 | Action/Group CRUD, 並行執行, Named Pipe 整合, ServiceLocator 註冊 |
