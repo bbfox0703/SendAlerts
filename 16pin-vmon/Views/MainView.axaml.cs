@@ -26,6 +26,18 @@ public partial class MainView : UserControl
         }
     }
 
+    private async void OnAlertActionsClick(object? sender, RoutedEventArgs e)
+    {
+        var alertActionsWindow = new AlertActionsWindow();
+
+        // Get the parent window
+        var parentWindow = TopLevel.GetTopLevel(this) as Window;
+        if (parentWindow != null)
+        {
+            await alertActionsWindow.ShowDialog(parentWindow);
+        }
+    }
+
     private void OnTestAlertClick(object? sender, RoutedEventArgs e)
     {
         // For testing: manually trigger alert state
