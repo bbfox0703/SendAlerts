@@ -56,6 +56,18 @@ public class JsonSettingsService : ISettingsService
                 return new AppSettings();
             }
 
+            // TA4-2: 自動遷移舊版設定
+            if (SettingsMigrator.NeedsMigration(settings))
+            {
+                var migrated = SettingsMigrator.Migrate(settings);
+                if (migrated)
+                {
+                    // 儲存遷移後的設定
+                    Save(settings);
+                    Log.Information("舊版設定已自動遷移並儲存");
+                }
+            }
+
             Log.Information("已載入設定檔: {Path}", _settingsFilePath);
             return settings;
         }
