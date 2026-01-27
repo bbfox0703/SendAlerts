@@ -6,6 +6,7 @@ using Serilog;
 using _16pin_vmon.Core.Interfaces;
 using _16pin_vmon.Desktop.Implementations;
 using _16pin_vmon.Implementations;
+using _16pin_vmon.Models;
 using _16pin_vmon.Services;
 
 namespace _16pin_vmon.Desktop;
@@ -120,14 +121,31 @@ sealed class Program
     }
 
     /// <summary>
-    /// TA1-3: 處理 Named Pipe 收到的訊息
+    /// TA1-3/TA1-4: 處理 Named Pipe 收到的訊息
     /// </summary>
     private static void OnPipeMessageReceived(object? sender, PipeMessageReceivedEventArgs e)
     {
-        // TODO: TA1-4/TA1-5 實作 - 解析 JSON 並觸發警報
-        Log.Information("[NamedPipe] 處理訊息: {Message}", e.RawMessage);
+        // TA1-4: 解析 JSON 訊息
+        var parseResult = PipeMessageParser.Parse(e.RawMessage);
 
-        // 暫時只記錄訊息，等 TA1-4 (PipeMessage) 和 TA3 (AlertGroup) 實作後再處理
+        if (!parseResult.Success)
+        {
+            // TA1-5: 錯誤處理
+            Log.Warning("[NamedPipe] 訊息解析失敗: {Error} | ErrorType: {ErrorType} | Raw: {RawMessage}",
+                parseResult.ErrorMessage,
+                parseResult.ErrorType,
+                e.RawMessage);
+            return;
+        }
+
+        var message = parseResult.Message!;
+        Log.Information("[NamedPipe] 收到有效訊息 | Group: {GroupName} | CustomMessage: {HasCustom} | Message: {Message}",
+            message.GroupName,
+            message.HasCustomMessage,
+            message.GetEffectiveMessage());
+
+        // TODO: TA3 實作後，這裡要呼叫 AlertGroupService 執行對應群組的所有動作
+        // await AlertGroupService.ExecuteGroupAsync(message.GroupName, message.GetEffectiveMessage(groupTemplate));
     }
 
     /// <summary>
