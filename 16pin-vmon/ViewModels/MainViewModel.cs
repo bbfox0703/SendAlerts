@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -20,7 +20,6 @@ public partial class MainViewModel : ViewModelBase
 {
     private readonly IGpuProvider _gpuProvider;
     private readonly DispatcherTimer _timer;
-    private readonly AlertEvaluator _voltageEvaluator;
     private readonly AlertEvaluator _tempEvaluator;
     private readonly List<IAlertAction> _alertActions = new();
     private CommandLineAlertAction? _commandLineAction;
@@ -28,33 +27,41 @@ public partial class MainViewModel : ViewModelBase
     private LineNotifyAlertAction? _lineNotifyAction;
 
     // --- 警報門檻常數 (T0-3: 供審計日誌使用) ---
-    private const float VoltageThreshold = 11.8f;
     private const float TemperatureThreshold = 88.0f;
     private const int AlertWindowSeconds = 3;
     private const int AlertTriggerCount = 2;
 
     // --- 警報狀態追蹤 (避免重複記錄) ---
-    private bool _wasVoltageAlertActive;
     private bool _wasTempAlertActive;
 
     // --- 介面綁定屬性 ---
     [ObservableProperty] private string _gpuName = "正在偵測...";
-    [ObservableProperty] private float _currentVoltage;
+    [ObservableProperty] private float _currentUtilization;
     [ObservableProperty] private float _currentTemperature;
-    [ObservableProperty] private bool _isVoltageAlert;
+    [ObservableProperty] private float _currentPower;
     [ObservableProperty] private bool _isTempAlert;
+    [ObservableProperty] private float _powerLimit;
+
+    // --- 動態標籤 (支援 GPU/CPU 模式切換) ---
+    [ObservableProperty] private string _primaryMetricLabel = "GPU Utilization";
+    [ObservableProperty] private string _temperatureLabel = "GPU Temperature";
+    [ObservableProperty] private string _secondaryMetricLabel = "Power Usage";
+    [ObservableProperty] private string _secondaryMetricUnit = "W";
+    [ObservableProperty] private bool _isGpuMode = true;
 
     // --- LiveCharts2 數據結構 ---
-    public ObservableCollection<float> VoltageHistory { get; } = new();
+    public ObservableCollection<float> UtilizationHistory { get; } = new();
     public ObservableCollection<float> TemperatureHistory { get; } = new();
+    public ObservableCollection<float> PowerHistory { get; } = new();
 
-    public ISeries[] VoltageSeries { get; set; }
-    public ISeries[] TempSeries { get; set; }
+    public ISeries[] UtilizationSeries { get; set; } = [];
+    public ISeries[] TempSeries { get; set; } = [];
+    public ISeries[] PowerSeries { get; set; } = [];
 
-    public Axis[] VoltageYAxes { get; set; } = {
+    public Axis[] UtilizationYAxes { get; set; } = {
         new Axis {
-            MinLimit = 11.3, MaxLimit = 12.6,
-            Labeler = v => v.ToString("F2") + " V",
+            MinLimit = 0, MaxLimit = 100,
+            Labeler = v => v.ToString("F0") + " %",
             SeparatorsPaint = new SolidColorPaint(SKColors.Gray.WithAlpha(50))
         }
     };
@@ -63,6 +70,14 @@ public partial class MainViewModel : ViewModelBase
         new Axis {
             MinLimit = 0, MaxLimit = 100,
             Labeler = v => v.ToString("F0") + " °C",
+            SeparatorsPaint = new SolidColorPaint(SKColors.Gray.WithAlpha(50))
+        }
+    };
+
+    public Axis[] PowerYAxes { get; set; } = {
+        new Axis {
+            MinLimit = 0, MaxLimit = 600,
+            Labeler = v => v.ToString("F0") + " W", // 預設為 GPU 模式，InitializeCharts 會根據模式調整
             SeparatorsPaint = new SolidColorPaint(SKColors.Gray.WithAlpha(50))
         }
     };
@@ -78,16 +93,19 @@ public partial class MainViewModel : ViewModelBase
     {
         _gpuProvider = gpuProvider;
         GpuName = _gpuProvider.GetGpuName();
+        PowerLimit = _gpuProvider.PowerLimit;
 
-        // 1. 初始化圖表外觀
+        // 初始化動態標籤 (支援 GPU/CPU 模式)
+        PrimaryMetricLabel = _gpuProvider.PrimaryMetricLabel;
+        TemperatureLabel = _gpuProvider.TemperatureLabel;
+        SecondaryMetricLabel = _gpuProvider.SecondaryMetricLabel;
+        SecondaryMetricUnit = _gpuProvider.SecondaryMetricUnit;
+        IsGpuMode = _gpuProvider.Mode == HardwareMode.Gpu;
+
+        // 1. 初始化圖表外觀 (在設定標籤之後)
         InitializeCharts();
 
-        // 2. 初始化警報判定器 (依規格書：X秒內達到門檻Y次)
-        _voltageEvaluator = new AlertEvaluator(
-            seconds: AlertWindowSeconds,
-            count: AlertTriggerCount,
-            threshold: VoltageThreshold,
-            isLowerBound: true);
+        // 2. 初始化警報判定器 (溫度)
         _tempEvaluator = new AlertEvaluator(
             seconds: AlertWindowSeconds,
             count: AlertTriggerCount,
@@ -102,7 +120,8 @@ public partial class MainViewModel : ViewModelBase
         _timer.Tick += OnTimerTick;
         _timer.Start();
 
-        Log.Information("16pin-vmon 監控啟動: {GpuName}", GpuName);
+        Log.Information("16pin-vmon 監控啟動: {GpuName} | Mode: {Mode} | PowerLimit: {PowerLimit:F1}{Unit}",
+            GpuName, _gpuProvider.Mode, PowerLimit, SecondaryMetricUnit);
     }
 
     /// <summary>
@@ -148,12 +167,12 @@ public partial class MainViewModel : ViewModelBase
 
     private void InitializeCharts()
     {
-        VoltageSeries = new ISeries[] {
+        UtilizationSeries = new ISeries[] {
             new LineSeries<float> {
-                Values = VoltageHistory,
+                Values = UtilizationHistory,
                 Fill = null,
                 GeometrySize = 0,
-                Stroke = new SolidColorPaint(SKColors.Cyan, 2)
+                Stroke = new SolidColorPaint(SKColors.LimeGreen, 2)
             }
         };
 
@@ -165,6 +184,70 @@ public partial class MainViewModel : ViewModelBase
                 Stroke = new SolidColorPaint(SKColors.OrangeRed, 2)
             }
         };
+
+        PowerSeries = new ISeries[] {
+            new LineSeries<float> {
+                Values = PowerHistory,
+                Fill = null,
+                GeometrySize = 0,
+                Stroke = new SolidColorPaint(SKColors.Cyan, 2)
+            }
+        };
+
+        // 根據硬體模式設定 Y 軸
+        ConfigureYAxesForMode();
+    }
+
+    /// <summary>
+    /// 根據硬體模式設定 Y 軸標籤和範圍
+    /// </summary>
+    private void ConfigureYAxesForMode()
+    {
+        if (IsGpuMode)
+        {
+            // GPU 模式: 0-600 W
+            PowerYAxes[0].MinLimit = 0;
+            PowerYAxes[0].MaxLimit = 600;
+            PowerYAxes[0].Labeler = v => v.ToString("F0") + " W";
+        }
+        else
+        {
+            // CPU/Network 模式: 0-125000 KB/s，自動縮放為 MB/s
+            PowerYAxes[0].MinLimit = 0;
+            PowerYAxes[0].MaxLimit = 10000; // 初始 10 MB/s
+            PowerYAxes[0].Labeler = v =>
+            {
+                if (v >= 1000)
+                    return (v / 1000).ToString("F1") + " MB/s";
+                return v.ToString("F0") + " KB/s";
+            };
+        }
+    }
+
+    /// <summary>
+    /// 動態調整 Y 軸範圍
+    /// </summary>
+    private void AdjustYAxisDynamically()
+    {
+        var currentMax = PowerYAxes[0].MaxLimit ?? 600;
+
+        if (IsGpuMode)
+        {
+            // GPU 模式: 功耗超過 600W 時動態擴展
+            if (CurrentPower > currentMax)
+            {
+                PowerYAxes[0].MaxLimit = CurrentPower + 50;
+            }
+        }
+        else
+        {
+            // CPU/Network 模式: 網路流量超過當前上限時動態擴展
+            if (CurrentPower > currentMax)
+            {
+                // 擴展為當前值的 1.5 倍，最少增加 1000 KB/s
+                PowerYAxes[0].MaxLimit = Math.Max(CurrentPower * 1.5, currentMax + 1000);
+            }
+        }
     }
 
     private void OnTimerTick(object? sender, EventArgs e)
@@ -173,22 +256,23 @@ public partial class MainViewModel : ViewModelBase
         {
             // A. 讀取數據
             var reading = _gpuProvider.GetCurrentReading();
-            CurrentVoltage = reading.Voltage16Pin;
+            CurrentUtilization = reading.GpuUtilization;
             CurrentTemperature = reading.Temperature;
+            CurrentPower = reading.PowerUsage;
 
-            // B. 警報邏輯判定 (滑動視窗)
-            IsVoltageAlert = _voltageEvaluator.PushValueAndCheckAlert(CurrentVoltage);
+            // B. 警報邏輯判定 (滑動視窗) - 僅溫度
             IsTempAlert = _tempEvaluator.PushValueAndCheckAlert(CurrentTemperature);
 
             // C. 更新圖表數據 (保留最近 900 秒)
-            UpdateHistory(VoltageHistory, CurrentVoltage);
+            UpdateHistory(UtilizationHistory, CurrentUtilization);
             UpdateHistory(TemperatureHistory, CurrentTemperature);
+            UpdateHistory(PowerHistory, CurrentPower);
 
             // D. 警報執行動作與日誌
             HandleAlertLogs();
 
             // E. 動態 Y 軸調整
-            if (CurrentVoltage > 12.6) VoltageYAxes[0].MaxLimit = CurrentVoltage + 0.1;
+            AdjustYAxisDynamically();
         }
         catch (Exception ex)
         {
@@ -202,38 +286,6 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     private void HandleAlertLogs()
     {
-        // 電壓警報：從無到有觸發時記錄
-        if (IsVoltageAlert && !_wasVoltageAlertActive)
-        {
-            Log.Warning(
-                "[ALERT TRIGGERED] 16-pin 電壓異常 | " +
-                "GPU: {GpuName} | " +
-                "電壓: {Voltage:F3}V | " +
-                "門檻: < {Threshold:F1}V | " +
-                "判定條件: {Window}秒內{Count}次 | " +
-                "溫度: {Temp:F1}°C",
-                GpuName,
-                CurrentVoltage,
-                VoltageThreshold,
-                AlertWindowSeconds,
-                AlertTriggerCount,
-                CurrentTemperature);
-
-            // T4-1: 執行警報動作
-            _ = ExecuteAlertActionsAsync("Voltage", $"16-pin 電壓異常: {CurrentVoltage:F3}V");
-        }
-
-        // 電壓警報解除
-        if (!IsVoltageAlert && _wasVoltageAlertActive)
-        {
-            Log.Information(
-                "[ALERT CLEARED] 16-pin 電壓恢復正常 | " +
-                "GPU: {GpuName} | " +
-                "電壓: {Voltage:F3}V",
-                GpuName,
-                CurrentVoltage);
-        }
-
         // 溫度警報：從無到有觸發時記錄
         if (IsTempAlert && !_wasTempAlertActive)
         {
@@ -243,13 +295,13 @@ public partial class MainViewModel : ViewModelBase
                 "溫度: {Temp:F1}°C | " +
                 "門檻: > {Threshold:F1}°C | " +
                 "判定條件: {Window}秒內{Count}次 | " +
-                "電壓: {Voltage:F3}V",
+                "功耗: {Power:F1}W",
                 GpuName,
                 CurrentTemperature,
                 TemperatureThreshold,
                 AlertWindowSeconds,
                 AlertTriggerCount,
-                CurrentVoltage);
+                CurrentPower);
 
             // T4-1: 執行警報動作
             _ = ExecuteAlertActionsAsync("Temperature", $"GPU 溫度過高: {CurrentTemperature:F1}°C");
@@ -267,7 +319,6 @@ public partial class MainViewModel : ViewModelBase
         }
 
         // 更新狀態追蹤
-        _wasVoltageAlertActive = IsVoltageAlert;
         _wasTempAlertActive = IsTempAlert;
     }
 
@@ -281,7 +332,7 @@ public partial class MainViewModel : ViewModelBase
         {
             var substitutedCommand = _commandLineAction.SubstituteVariables(
                 _commandLineAction.Command,
-                CurrentVoltage,
+                CurrentPower,
                 CurrentTemperature,
                 GpuName,
                 alertType);
@@ -300,7 +351,7 @@ public partial class MainViewModel : ViewModelBase
             }
         }
 
-        // 執行其他警報動作（未來 T4-2, T4-3 實作）
+        // 執行其他警報動作
         foreach (var action in _alertActions.Where(a => a.IsEnabled && a != _commandLineAction))
         {
             try

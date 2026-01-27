@@ -61,13 +61,34 @@ sealed class Program
     }
 
     /// <summary>
-    /// T1-1: 根據平台建立適當的 IGpuProvider
+    /// 根據平台建立適當的 IGpuProvider
+    /// 優先順序: NvAPI -> NVML -> CpuNetwork -> Demo
     /// </summary>
     private static IGpuProvider CreateGpuProvider()
     {
-        // Windows: 嘗試使用 NVML
+        // Windows: 嘗試使用 NvAPI (功耗 + 溫度)
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
+            // 第一優先：嘗試 NvAPI (RTX 50 系列)
+            try
+            {
+                var nvApiProvider = new NvApiWindowsProvider();
+                if (nvApiProvider.IsAvailable)
+                {
+                    Log.Information("使用 NvAPI Windows Provider");
+                    return nvApiProvider;
+                }
+                else
+                {
+                    nvApiProvider.Dispose();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "NvAPI 載入失敗");
+            }
+
+            // 第二優先：嘗試 NVML (舊版 NVIDIA GPU)
             try
             {
                 var nvmlProvider = new NvmlWindowsProvider();
@@ -78,13 +99,31 @@ sealed class Program
                 }
                 else
                 {
-                    Log.Warning("NVML 初始化失敗，切換至 Demo 模式");
                     nvmlProvider.Dispose();
                 }
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "無法載入 NVML，切換至 Demo 模式");
+                Log.Warning(ex, "NVML 載入失敗");
+            }
+
+            // 第三優先：嘗試 CPU/Network (非 NVIDIA 系統 fallback)
+            try
+            {
+                var cpuNetworkProvider = new CpuNetworkWindowsProvider();
+                if (cpuNetworkProvider.IsAvailable)
+                {
+                    Log.Information("使用 CPU/Network Windows Provider (Fallback 模式)");
+                    return cpuNetworkProvider;
+                }
+                else
+                {
+                    cpuNetworkProvider.Dispose();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "CPU/Network 載入失敗");
             }
         }
 
