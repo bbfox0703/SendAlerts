@@ -29,7 +29,9 @@ public class JsonSettingsService : ISettingsService
         {
             WriteIndented = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            // TA4-1: 列舉以字串形式序列化 (更易讀)
+            Converters = { new JsonStringEnumConverter() }
         };
     }
 

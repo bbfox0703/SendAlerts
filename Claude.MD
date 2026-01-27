@@ -183,7 +183,7 @@ Phase C/D (收尾) ────────────────────�
 - [x] **TA3-4**: CustomMessage 覆蓋邏輯 - Pipe 訊息優先於群組範本 *(已在 TA3-1 完成)*
 
 #### A4: 設定系統重構
-- [ ] **TA4-1**: 擴展 `AppSettings` - 新增 `List<AlertActionConfig>` 和 `List<AlertGroup>`
+- [x] **TA4-1**: 擴展 `AppSettings` - 新增 `List<AlertActionConfig>` 和 `List<AlertGroup>`
 - [ ] **TA4-2**: 設定檔版本遷移 - 舊版設定自動轉換為新格式
 - [ ] **TA4-3**: 預設群組建立 - 首次啟動時建立 "Default" 群組
 
@@ -315,3 +315,4 @@ Phase C/D (收尾) ────────────────────�
 | TA2-3 | AlertActionFactory | 2026-01-27 | Config→Action 轉換, 批次建立, 類型檢查輔助方法 |
 | TA3-1 | AlertGroup | 2026-01-27 | 群組模型, 訊息範本變數替換, 驗證方法, 工廠方法 (含 TA3-3/TA3-4) |
 | TA3-2 | AlertService | 2026-01-27 | Action/Group CRUD, 並行執行, Named Pipe 整合, ServiceLocator 註冊 |
+| TA4-1 | AppSettings 擴展 | 2026-01-27 | AlertActions/AlertGroups 清單, SettingsVersion, UseAlertCenterMode, enum 字串序列化 |

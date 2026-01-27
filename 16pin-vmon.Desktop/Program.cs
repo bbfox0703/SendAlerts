@@ -208,23 +208,30 @@ sealed class Program
     }
 
     /// <summary>
-    /// TA3-2: 初始化警報服務
+    /// TA3-2/TA4-1: 初始化警報服務
     /// </summary>
     private static void InitializeAlertService()
     {
         var alertService = new AlertService();
+        var settings = ServiceLocator.SettingsService?.Load();
 
-        // TODO: TA4 實作後，這裡要從 Settings 載入 Actions 和 Groups
-        // var settings = ServiceLocator.SettingsService?.Load();
-        // alertService.LoadFromSettings(settings.AlertActions, settings.AlertGroups);
-
-        // 目前先初始化預設群組
-        alertService.InitializeDefaults();
+        if (settings != null && settings.UseAlertCenterMode &&
+            (settings.AlertActions.Count > 0 || settings.AlertGroups.Count > 0))
+        {
+            // TA4-1: 使用新版 Alert Center 設定
+            alertService.LoadFromSettings(settings.AlertActions, settings.AlertGroups);
+            Log.Information("AlertService 從設定檔載入 | Actions: {ActionCount}, Groups: {GroupCount}",
+                alertService.ActionCount, alertService.GroupCount);
+        }
+        else
+        {
+            // 預設模式或首次啟動: 初始化預設群組
+            alertService.InitializeDefaults();
+            Log.Information("AlertService 使用預設配置 | Actions: {ActionCount}, Groups: {GroupCount}",
+                alertService.ActionCount, alertService.GroupCount);
+        }
 
         ServiceLocator.AlertService = alertService;
-
-        Log.Information("AlertService 初始化完成 | Actions: {ActionCount}, Groups: {GroupCount}",
-            alertService.ActionCount, alertService.GroupCount);
     }
 
     /// <summary>
