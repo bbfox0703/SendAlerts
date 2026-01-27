@@ -185,7 +185,7 @@ Phase C/D (收尾) ────────────────────�
 #### A4: 設定系統重構
 - [x] **TA4-1**: 擴展 `AppSettings` - 新增 `List<AlertActionConfig>` 和 `List<AlertGroup>`
 - [x] **TA4-2**: 設定檔版本遷移 - 舊版設定自動轉換為新格式
-- [ ] **TA4-3**: 預設群組建立 - 首次啟動時建立 "Default" 群組
+- [x] **TA4-3**: 預設群組建立 - 首次啟動時建立 "Default" 群組
 
 ---
 ### 🎨 Phase B: Alert Center UI (警報管理介面)
@@ -317,3 +317,4 @@ Phase C/D (收尾) ────────────────────�
 | TA3-2 | AlertService | 2026-01-27 | Action/Group CRUD, 並行執行, Named Pipe 整合, ServiceLocator 註冊 |
 | TA4-1 | AppSettings 擴展 | 2026-01-27 | AlertActions/AlertGroups 清單, SettingsVersion, UseAlertCenterMode, enum 字串序列化 |
 | TA4-2 | SettingsMigrator | 2026-01-27 | T4→Alert Center 自動遷移, 版本檢測, 載入時自動執行 |
+| TA4-3 | 預設群組建立 | 2026-01-27 | 首次啟動自動建立 Default/Critical/Warning/Info 群組 |

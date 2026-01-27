@@ -203,4 +203,77 @@ public static class SettingsMigrator
     {
         return settings != null && settings.SettingsVersion < CurrentVersion && HasLegacyAlertSettings(settings);
     }
+
+    /// <summary>
+    /// TA4-3: 檢查是否需要初始化預設群組
+    /// </summary>
+    public static bool NeedsDefaultGroups(AppSettings settings)
+    {
+        return settings != null &&
+               settings.AlertGroups.Count == 0 &&
+               !HasLegacyAlertSettings(settings);
+    }
+
+    /// <summary>
+    /// TA4-3: 初始化預設群組（首次啟動時）
+    /// </summary>
+    /// <param name="settings">要初始化的設定</param>
+    /// <returns>是否有進行初始化</returns>
+    public static bool InitializeDefaultGroups(AppSettings settings)
+    {
+        if (settings == null) return false;
+
+        // 如果已有群組或有舊版設定，不初始化
+        if (settings.AlertGroups.Count > 0 || HasLegacyAlertSettings(settings))
+        {
+            return false;
+        }
+
+        Log.Information("[SettingsMigrator] 首次啟動，建立預設群組...");
+
+        // 建立預設群組（不含 Actions，等使用者自行設定）
+        settings.AlertGroups.AddRange(new[]
+        {
+            new AlertGroup
+            {
+                Name = "Default",
+                Description = "預設警報群組",
+                IsEnabled = true,
+                MessageTemplate = "[Alert] {message}\n時間: {timestamp}",
+                ActionInstanceIds = new List<string>()
+            },
+            new AlertGroup
+            {
+                Name = "Critical",
+                Description = "緊急警報 - 高優先級",
+                IsEnabled = true,
+                MessageTemplate = "🚨 [CRITICAL] {message}\n群組: {group_name}\n時間: {timestamp}",
+                ActionInstanceIds = new List<string>()
+            },
+            new AlertGroup
+            {
+                Name = "Warning",
+                Description = "警告通知 - 中優先級",
+                IsEnabled = true,
+                MessageTemplate = "⚠️ [WARNING] {message}\n時間: {timestamp}",
+                ActionInstanceIds = new List<string>()
+            },
+            new AlertGroup
+            {
+                Name = "Info",
+                Description = "一般資訊通知",
+                IsEnabled = true,
+                MessageTemplate = "ℹ️ {message}",
+                ActionInstanceIds = new List<string>()
+            }
+        });
+
+        // 啟用 Alert Center 模式
+        settings.UseAlertCenterMode = true;
+        settings.SettingsVersion = CurrentVersion;
+
+        Log.Information("[SettingsMigrator] 已建立 {Count} 個預設群組", settings.AlertGroups.Count);
+
+        return true;
+    }
 }
