@@ -17,4 +17,9 @@ public static class ServiceLocator
     /// 設定服務
     /// </summary>
     public static ISettingsService? SettingsService { get; set; }
+
+    /// <summary>
+    /// TA3-2: 警報服務 (Alert Center 核心)
+    /// </summary>
+    public static AlertService? AlertService { get; set; }
 }
