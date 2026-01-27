@@ -61,87 +61,69 @@ sealed class Program
     }
 
     /// <summary>
-    /// T1-1: 根據平台建立適當的 IGpuProvider
-    /// 優先順序: NVML (有效電壓) -> NvAPI -> NVML (估算模式) -> Demo
+    /// 根據平台建立適當的 IGpuProvider
+    /// 優先順序: NvAPI -> NVML -> CpuNetwork -> Demo
     /// </summary>
     private static IGpuProvider CreateGpuProvider()
     {
-        // Windows: 嘗試使用 NVML，若無法讀取電壓則 fallback 到 NvAPI
+        // Windows: 嘗試使用 NvAPI (功耗 + 溫度)
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            NvmlWindowsProvider? nvmlProvider = null;
-
-            // 第一優先：嘗試 NVML
+            // 第一優先：嘗試 NvAPI (RTX 50 系列)
             try
             {
-                nvmlProvider = new NvmlWindowsProvider();
-                if (nvmlProvider.IsAvailable && !nvmlProvider.IsEstimatedVoltage)
+                var nvApiProvider = new NvApiWindowsProvider();
+                if (nvApiProvider.IsAvailable)
                 {
-                    // NVML 可用且能讀取真實電壓
-                    Log.Information("使用 NVML Windows Provider (直接電壓讀取)");
+                    Log.Information("使用 NvAPI Windows Provider");
+                    return nvApiProvider;
+                }
+                else
+                {
+                    nvApiProvider.Dispose();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "NvAPI 載入失敗");
+            }
+
+            // 第二優先：嘗試 NVML (舊版 NVIDIA GPU)
+            try
+            {
+                var nvmlProvider = new NvmlWindowsProvider();
+                if (nvmlProvider.IsAvailable)
+                {
+                    Log.Information("使用 NVML Windows Provider");
                     return nvmlProvider;
+                }
+                else
+                {
+                    nvmlProvider.Dispose();
                 }
             }
             catch (Exception ex)
             {
                 Log.Warning(ex, "NVML 載入失敗");
-                nvmlProvider?.Dispose();
-                nvmlProvider = null;
             }
 
-            // 第二優先：NVML 無法讀取電壓，嘗試 NvAPI
-            if (nvmlProvider != null && nvmlProvider.IsEstimatedVoltage)
+            // 第三優先：嘗試 CPU/Network (非 NVIDIA 系統 fallback)
+            try
             {
-                Log.Information("[Fallback] NVML 無法讀取電壓，嘗試 NvAPI...");
-
-                try
+                var cpuNetworkProvider = new CpuNetworkWindowsProvider();
+                if (cpuNetworkProvider.IsAvailable)
                 {
-                    var nvApiProvider = new NvApiWindowsProvider();
-                    if (nvApiProvider.IsAvailable)
-                    {
-                        // NvAPI 可用，釋放 NVML
-                        nvmlProvider.Dispose();
-                        Log.Information("使用 NvAPI Windows Provider");
-                        return nvApiProvider;
-                    }
-                    else
-                    {
-                        Log.Warning("NvAPI 初始化失敗");
-                        nvApiProvider.Dispose();
-                    }
+                    Log.Information("使用 CPU/Network Windows Provider (Fallback 模式)");
+                    return cpuNetworkProvider;
                 }
-                catch (Exception ex)
+                else
                 {
-                    Log.Warning(ex, "NvAPI 載入失敗");
+                    cpuNetworkProvider.Dispose();
                 }
-
-                // NvAPI 也失敗，使用 NVML 估算模式
-                Log.Information("使用 NVML Windows Provider (功耗估算模式)");
-                return nvmlProvider;
             }
-
-            // NVML 完全不可用，直接嘗試 NvAPI
-            if (nvmlProvider == null || !nvmlProvider.IsAvailable)
+            catch (Exception ex)
             {
-                nvmlProvider?.Dispose();
-
-                try
-                {
-                    var nvApiProvider = new NvApiWindowsProvider();
-                    if (nvApiProvider.IsAvailable)
-                    {
-                        Log.Information("使用 NvAPI Windows Provider (NVML 不可用)");
-                        return nvApiProvider;
-                    }
-                    else
-                    {
-                        nvApiProvider.Dispose();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log.Warning(ex, "NvAPI 載入失敗");
-                }
+                Log.Warning(ex, "CPU/Network 載入失敗");
             }
         }
 

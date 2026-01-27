@@ -8,81 +8,237 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Clean**: `dotnet clean`
 
 ## Project Overview
-RTX 50 Series (Blackwell) GPU monitoring tool focused on 16-pin (12VHPWR) voltage rail stability. Built with Avalonia UI for Windows/Linux cross-platform support.
 
-**Spec Reference**: Always consult `docs/Spec.md` for hardware logic, alert algorithms, and feature requirements.
+**專案定位轉型：硬體警報中繼站 (Hardware Alert Relay Station)**
+
+本專案從 GPU 監控工具轉型為「硬體警報中繼站」，利用 HWiNFO64 等專業工具作為資料源：
+- 核心功能：接收外部觸發並執行多管道警報 (Alert Center)
+- UI 顯示：GPU 功耗、核心電壓與溫度僅供參考，不再主動發送警訊
+- 通訊方式：Single Instance 模式，所有外部指令透過 Named Pipe 集中處理
+
+Built with Avalonia UI for Windows/Linux cross-platform support.
 
 ## Architecture
 
-### Solution Structure (avalonia.xplat template)
+### Alert 多層級架構 (Three-Tier Alert System)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Interface Tier (接口層)                       │
+│  Named Pipe Server: \\.\pipe\16pin-vmon-alert                   │
+│  JSON Format: { "GroupName": "...", "CustomMessage": "..." }    │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Group Tier (群組層)                           │
+│  AlertGroup: { Name, MessageTemplate, List<ActionReference> }   │
+│  Example: "Critical" → [LINE_Admin, Telegram_All, Email_IT]     │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Action Tier (動作層)                          │
+│  IAlertAction implementations with unique InstanceId            │
+│  Example: LINE_User1, LINE_Admin1, Telegram_All, Email_IT       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Solution Structure
 ```
 16pin-vmon/           (Core - cross-platform logic, namespace: _16pin_vmon)
-├── Interfaces/       IGpuProvider, IAlertAction definitions
-├── Logic/            AlertEvaluator (sliding window algorithm)
-├── Services/         ServiceLocator, Settings, Alert Actions (Telegram, LINE, CLI)
-├── ViewModels/       MainViewModel (MVVM data binding)
-├── Views/            Avalonia AXAML UI layouts
+├── Interfaces/       IAlertAction, IGpuProvider definitions
+├── Models/           AlertActionConfig, AlertGroup, PipeMessage
+├── Services/         AlertService, NamedPipeServer, ServiceLocator
+├── ViewModels/       MainViewModel, AlertManagementViewModel
+├── Views/            MainView, AlertManagementView
 └── Converters/       UI value converters
 
 16pin-vmon.Desktop/   (Platform head, namespace: _16pin_vmon.Desktop)
-└── Implementations/  NvmlWindowsProvider (NVML P/Invoke), DemoGpuProvider
+├── Implementations/  NvmlWindowsProvider, SingleInstanceManager
+└── Program.cs        Single instance mutex + Named Pipe init
 ```
 
 **Note**: Namespace uses underscores: `_16pin_vmon` (not `16pin-vmon`)
 
-### Dependency Injection
-Uses `ServiceLocator` (static class) for cross-project DI. Platform head (Desktop) registers implementations at startup:
-- `ServiceLocator.GpuProvider` → `NvmlWindowsProvider` or `DemoGpuProvider`
-- `ServiceLocator.SettingsService` → `JsonSettingsService`
-
 ### Key Abstractions
-- **`IGpuProvider`**: Hardware abstraction for GPU data. Returns `GpuReading(Voltage16Pin, Temperature, Timestamp)`.
-- **`IAlertAction`**: Alert notification interface. Implementations: `CommandLineAlertAction`, `TelegramAlertAction`, `LineNotifyAlertAction`.
-- **`AlertEvaluator`**: Sliding window algorithm - triggers when threshold exceeded Y times within X seconds.
-- **`ISettingsService`**: Cross-platform settings persistence (JSON at `%AppData%/16pin-vmon` or `~/.config/16pin-vmon`).
+- **`IAlertAction`**: Alert action interface with `InstanceId` for multi-instance support
+- **`AlertGroup`**: Groups multiple actions with shared message template
+- **`NamedPipeServer`**: Listens for external JSON commands
+- **`AlertService`**: Orchestrates action execution by group
+- **`IGpuProvider`**: Hardware abstraction for GPU data (display only)
 
-### Data Flow
-1. `DispatcherTimer` (1s interval) → `IGpuProvider.GetCurrentReading()`
-2. Values → `AlertEvaluator.PushValueAndCheckAlert()` → Alert state
-3. Values → `ObservableCollection<float>` → LiveCharts2 visualization
-4. Alert triggered → `IAlertAction.ExecuteAsync()` → Telegram/LINE/CLI notification
+### Data Flow (New)
+```
+External Tool (HWiNFO64)
+        │
+        ▼ Named Pipe JSON: {"GroupName":"Critical","CustomMessage":"GPU過熱!"}
+┌───────────────────┐
+│ NamedPipeServer   │
+└───────────────────┘
+        │
+        ▼ Parse & Dispatch
+┌───────────────────┐
+│   AlertService    │ → Find Group by Name
+└───────────────────┘
+        │
+        ▼ Execute All Actions in Group
+┌───────────────────────────────────────────┐
+│ IAlertAction[] (LINE, Telegram, Email...) │
+└───────────────────────────────────────────┘
+```
+
+### HWiNFO64 Integration Example
+```
+; HWiNFO64 Alert Configuration
+; Action: Run Program
+; Program: powershell.exe
+; Arguments: -Command "'{\"GroupName\":\"Critical\",\"CustomMessage\":\"GPU Temp: <#GPU Core Temp#>°C\"}' | Out-File -FilePath \\.\pipe\16pin-vmon-alert -Encoding utf8"
+```
 
 ## Coding Standards
 
 ### Critical Rules
-- **Never access Win32/NVML APIs directly in ViewModels** - always use `IGpuProvider` interface
-- **Wrap all NVML calls in try-catch** with Serilog logging
-- **Implement `IDisposable`** on providers to ensure `nvmlShutdown()` is called
-- **READ-ONLY operations only** - 本工具僅讀取硬體數據，嚴禁任何「寫入」操作（如降壓 Undervolt、超頻 Overclock 等修改硬體暫存器行為）
+- **Single Instance**: Use Mutex to ensure only one instance runs
+- **Named Pipe Security**: Validate JSON schema before processing
+- **Async everywhere**: All I/O, pipe operations, and alert actions must be async
+- **READ-ONLY operations only** - 本工具僅讀取硬體數據，嚴禁任何「寫入」操作
 
 ### Patterns
 - **MVVM**: Use `CommunityToolkit.Mvvm` with `[ObservableProperty]` and `partial` classes
-- **Async**: All I/O, logging, and hardware probing must be async
+- **Async**: All I/O, logging, and alert actions must be async
 - **Naming**: `PascalCase` for classes/methods, `_camelCase` for private fields
-
-## Hardware Probing Strategy (Three-Tier Field ID Detection)
-
-When initializing NVML for RTX 50 series:
-
-1. **First**: Check `gpu_mapping.json` for known `SubsystemID` → `VerifiedVoltageFieldId` mapping
-2. **Second**: Dynamic probe Field IDs 150-165, accept if value in range 11.2V-12.6V
-3. **Fallback**: Use GPU Total Power estimation, display warning in UI
-
-Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5170`)
 
 ## Tech Stack
 - .NET 10 / C#
 - Avalonia UI (MVVM)
-- NVIDIA NVML v2 (P/Invoke)
+- System.IO.Pipes (Named Pipe IPC)
 - LiveCharts2 (SkiaSharp)
 - Serilog (logging)
 - CommunityToolkit.Mvvm
+- MailKit (Email support)
 
 ---
 
 ## Development TODO
 
 > 本專案會在多台 PC 上開發，以下 TODO 用於追蹤進度。完成項目後請更新狀態。
+
+### 📋 實作優先順序 (Recommended Order)
+
+```
+Phase A (核心架構) ─────────────────────────────────────────────────────────
+   │
+   ├─ A1: Single Instance + Named Pipe ← 最優先！建立通訊基礎
+   │      TA1-1 → TA1-3 → TA1-4 → TA1-5 → TA1-2
+   │
+   ├─ A2: Action Tier ← 重構現有 Actions
+   │      TA2-1 → TA2-2 → TA2-3 → TA2-4/5/9 (重構) → TA2-6/7/8 (新增)
+   │
+   ├─ A3: Group Tier ← 建立群組邏輯
+   │      TA3-1 → TA3-2 → TA3-3 → TA3-4
+   │
+   └─ A4: Settings ← 整合設定
+          TA4-1 → TA4-2 → TA4-3
+
+Phase B (UI) ──────────────────────────────────────────────────────────────
+   │
+   ├─ B1: Action 管理 UI
+   ├─ B2: Group 編輯 UI
+   └─ B3: 主介面整合
+
+Phase C/D (收尾) ──────────────────────────────────────────────────────────
+   │
+   ├─ C1: 移除主動警報、UI 簡化
+   ├─ C2: HWiNFO64 整合文件
+   └─ D1/D2: CLI 工具、系統整合
+```
+
+---
+### 🚀 Phase A: Alert Center 核心架構 (專案轉型)
+> 優先級: **最高** | 目標: 建立三層式警報中繼站架構
+
+#### A1: Single Instance 與 Named Pipe (基礎通訊)
+- [ ] **TA1-1**: `SingleInstanceManager` - 使用 Mutex 確保單一實例運行
+- [ ] **TA1-2**: 第二實例啟動時，透過 Named Pipe 傳送參數給主實例後退出
+- [ ] **TA1-3**: `NamedPipeServer` - 持續監聽 `\\.\pipe\16pin-vmon-alert`
+- [ ] **TA1-4**: `PipeMessage` 資料模型 - JSON Schema: `{ GroupName, CustomMessage }`
+- [ ] **TA1-5**: Pipe 訊息驗證與錯誤處理 (invalid JSON, unknown group)
+
+#### A2: Action Tier 動作層 (多實例支援)
+- [ ] **TA2-1**: 重構 `IAlertAction` 介面 - 新增 `InstanceId`, `ActionType` 屬性
+- [ ] **TA2-2**: `AlertActionConfig` 資料模型 - 儲存單一動作的設定
+- [ ] **TA2-3**: `AlertActionFactory` - 根據 ActionType 建立對應的 IAlertAction 實例
+- [ ] **TA2-4**: 重構 `TelegramAlertAction` - 支援多實例 (不同 Bot/Chat)
+- [ ] **TA2-5**: 重構 `LineNotifyAlertAction` - 支援多實例 (不同 Token)
+- [ ] **TA2-6**: 新增 `EmailAlertAction` - MailKit SMTP 整合
+- [ ] **TA2-7**: 新增 `HttpClientAlertAction` - 支援 Webhook/REST API
+- [ ] **TA2-8**: 新增 `SystemShutdownAction` - 安全關機 (需確認對話框)
+- [ ] **TA2-9**: 重構 `CommandLineAlertAction` - 支援多實例
+
+#### A3: Group Tier 群組層
+- [ ] **TA3-1**: `AlertGroup` 資料模型 - `{ Name, MessageTemplate, ActionIds[] }`
+- [ ] **TA3-2**: `AlertGroupService` - 管理群組 CRUD 與執行邏輯
+- [ ] **TA3-3**: 訊息範本變數替換: `{message}`, `{timestamp}`, `{group_name}`
+- [ ] **TA3-4**: CustomMessage 覆蓋邏輯 - Pipe 訊息優先於群組範本
+
+#### A4: 設定系統重構
+- [ ] **TA4-1**: 擴展 `AppSettings` - 新增 `List<AlertActionConfig>` 和 `List<AlertGroup>`
+- [ ] **TA4-2**: 設定檔版本遷移 - 舊版設定自動轉換為新格式
+- [ ] **TA4-3**: 預設群組建立 - 首次啟動時建立 "Default" 群組
+
+---
+### 🎨 Phase B: Alert Center UI (警報管理介面)
+
+#### B1: Action 管理頁面
+- [ ] **TB1-1**: `AlertActionsView` - 顯示所有已設定的 Action 清單
+- [ ] **TB1-2**: Action 新增對話框 - 選擇 ActionType 後填入設定
+- [ ] **TB1-3**: Action 編輯功能 - 修改現有 Action 設定
+- [ ] **TB1-4**: Action 刪除功能 - 確認後移除 (檢查是否被 Group 引用)
+- [ ] **TB1-5**: Action 測試按鈕 - 發送測試訊息驗證設定正確
+
+#### B2: Group 編輯器
+- [ ] **TB2-1**: `AlertGroupsView` - 顯示所有 Group 清單
+- [ ] **TB2-2**: Group 新增/編輯對話框 - 設定名稱與訊息範本
+- [ ] **TB2-3**: Action 勾選清單 - 多選要加入 Group 的 Actions
+- [ ] **TB2-4**: Group 刪除功能 - 確認後移除
+- [ ] **TB2-5**: Group 測試按鈕 - 觸發該 Group 所有 Actions
+
+#### B3: 主介面整合
+- [ ] **TB3-1**: 導航列新增「警報管理」按鈕
+- [ ] **TB3-2**: 狀態列顯示 Named Pipe 連線狀態
+- [ ] **TB3-3**: 最近警報歷史清單 (最近 10 筆觸發紀錄)
+
+---
+### 📊 Phase C: 顯示優化 (Display-Only Mode)
+
+#### C1: UI 簡化
+- [ ] **TC1-1**: 移除主動警報邏輯 - MainViewModel 不再觸發 AlertEvaluator
+- [ ] **TC1-2**: 圖表改為純顯示模式 - 移除警報相關 UI 元素
+- [ ] **TC1-3**: 新增「僅供參考」標籤 - 提示資料來源為本機讀取
+
+#### C2: HWiNFO64 整合文件
+- [ ] **TC2-1**: 撰寫 HWiNFO64 設定教學文件 (docs/HWiNFO-Setup.md)
+- [ ] **TC2-2**: 提供範例 PowerShell 腳本傳送 Pipe 訊息
+- [ ] **TC2-3**: 提供範例 Python 腳本傳送 Pipe 訊息
+
+---
+### 🔧 Phase D: 進階功能
+
+#### D1: CLI 工具
+- [ ] **TD1-1**: 命令列工具發送 Pipe 訊息 (16pin-vmon-cli.exe send -g Critical -m "Test")
+- [ ] **TD1-2**: 命令列查詢 Group 清單
+
+#### D2: 系統整合
+- [ ] **TD2-1**: Windows 開機自動啟動選項
+- [ ] **TD2-2**: 系統匣圖示 (Tray Icon) 最小化
+- [ ] **TD2-3**: 系統匣右鍵選單 (顯示/隱藏/退出)
+
+---
+### 📁 Legacy Phases (已完成 - 保留參考)
+
+<details>
+<summary>點擊展開已完成的舊版 TODO</summary>
 
 ### Phase 0: Legal & Safety Compliance (法律與安全合規)
 - [x] **T0-1**: 啟動警告視窗 - 首次啟動時顯示免責聲明，要求勾選「我已閱讀免責聲明，並了解監控高負載硬體之風險」後才進入主畫面
@@ -98,6 +254,7 @@ Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5
 - [x] **T1-1**: Dependency Injection setup (ServiceLocator + RuntimeInformation platform detection)
 - [x] **T1-2**: Demo/Mock `IGpuProvider` for testing without GPU
 - [x] **T1-3**: NvApiWindowsProvider - NVML fallback for RTX 50 series (Blackwell)
+- [x] **T1-4**: CpuNetworkWindowsProvider - CPU/Network fallback when no NVIDIA GPU
 
 ### Phase 2: Hardware Database (硬體資料庫)
 - [x] **T2-1**: Create `HardwareDbManager` class
@@ -111,26 +268,18 @@ Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5
 - [x] **T3-3**: Cross-platform path management (`%AppData%` / `~/.config`)
 - [x] **T3-4**: Settings UI (threshold values, sampling rate)
 
-### Phase 4: Alert Actions (警報動作)
+### Phase 4: Alert Actions (警報動作) - 部分重構至 Phase A
 - [x] **T4-1**: `CommandLineAlertAction` - execute local commands
 - [x] **T4-2**: `TelegramAlertAction` - bot API integration
 - [x] **T4-3**: `LineNotifyAlertAction` - LINE Notify API
 - [x] **T4-4**: Alert action configuration UI
 - [x] **T4-5**: Debug mode - destructive actions log-only
 
-### Phase 5: Data Export (資料匯出)
-- [ ] **T5-1**: CSV export service with configurable row limit
-- [ ] **T5-2**: CSV export settings UI
+### ~~Phase 5: Data Export (資料匯出)~~ - 暫緩
+### ~~Phase 6: UI/UX Enhancements (介面強化)~~ - 部分整合至 Phase B
+### ~~Phase 7: CLI Tools (命令列工具)~~ - 整合至 Phase D
 
-### Phase 6: UI/UX Enhancements (介面強化)
-- [ ] **T6-1**: `IThemeService` for Windows theme awareness
-- [ ] **T6-2**: Multi-language support (EN/ZH-TW/JA)
-- [ ] **T6-3**: Auto-detect OS language on startup
-- [ ] **T6-4**: Status bar warning for estimated voltage mode
-
-### Phase 7: CLI Tools (命令列工具)
-- [ ] **T7-1**: Standalone CLI for GPU probing and mapping export
-- [ ] **T7-2**: Multi-GPU environment support
+</details>
 
 ---
 
@@ -156,3 +305,4 @@ Device identity format: `VendorID:DeviceID:SubsystemID` (e.g., `10DE:2684:1462:5
 | T4-4 | Alert Action UI | 2026-01-26 | TabControl 分頁設定介面 |
 | T4-5 | Debug Mode | 2026-01-26 | AlertActionsDebugMode 設定整合 |
 | T1-3 | NvApiWindowsProvider | 2026-01-26 | NVML fallback, nvapi64.dll P/Invoke |
+| T1-4 | CpuNetworkWindowsProvider | 2026-01-27 | CPU/Network fallback, LibreHardwareMonitor + NetworkInterface |

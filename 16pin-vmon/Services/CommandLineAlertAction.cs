@@ -132,10 +132,10 @@ public class CommandLineAlertAction : IAlertAction
     /// <summary>
     /// 將命令中的變數替換為實際值
     /// </summary>
-    public string SubstituteVariables(string command, float voltage, float temperature, string gpuName, string alertType)
+    public string SubstituteVariables(string command, float power, float temperature, string gpuName, string alertType)
     {
         return command
-            .Replace("{voltage}", voltage.ToString("F3"))
+            .Replace("{power}", power.ToString("F1"))
             .Replace("{temperature}", temperature.ToString("F1"))
             .Replace("{gpu_name}", gpuName)
             .Replace("{alert_type}", alertType)
