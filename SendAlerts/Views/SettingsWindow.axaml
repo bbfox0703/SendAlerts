@@ -6,7 +6,7 @@
         mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="480"
         x:Class="SendAlerts.Views.SettingsWindow"
         x:DataType="vm:SettingsViewModel"
-        Title="Settings"
+        Title="{Binding Loc_Title}"
         Width="500" Height="480"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
@@ -26,7 +26,7 @@
                     <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
                             CornerRadius="8" Padding="16">
                         <StackPanel Spacing="8">
-                            <TextBlock Text="Sampling Interval" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding Loc_SamplingInterval}" FontWeight="SemiBold"/>
                             <Grid ColumnDefinitions="*,80">
                                 <Slider Grid.Column="0"
                                         Minimum="1" Maximum="10"
@@ -39,7 +39,7 @@
                                            HorizontalAlignment="Right"
                                            FontWeight="Bold"/>
                             </Grid>
-                            <TextBlock Text="How often to read hardware data for display"
+                            <TextBlock Text="{Binding Loc_SamplingIntervalDesc}"
                                        FontSize="11"
                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
                         </StackPanel>
@@ -50,19 +50,19 @@
                             CornerRadius="8" Padding="16">
                         <StackPanel Spacing="8">
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <CheckBox Content="Enable HTTP API"
+                                <CheckBox Content="{Binding Loc_HttpApiEnable}"
                                           IsChecked="{Binding HttpApiEnabled}"
                                           FontWeight="SemiBold"/>
                             </StackPanel>
 
-                            <TextBlock Text="Allow remote machines to send alerts via HTTP"
+                            <TextBlock Text="{Binding Loc_HttpApiDesc}"
                                        FontSize="11"
                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
 
                             <!-- Port -->
                             <Grid ColumnDefinitions="80,*" Margin="0,8,0,0"
                                   IsEnabled="{Binding HttpApiEnabled}">
-                                <TextBlock Text="Port:" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Loc_HttpApiPort}" VerticalAlignment="Center"/>
                                 <NumericUpDown Grid.Column="1"
                                                Value="{Binding HttpApiPort}"
                                                Minimum="1024" Maximum="65535"
@@ -75,30 +75,30 @@
                             <!-- API Key -->
                             <Grid ColumnDefinitions="80,*,Auto,Auto" Margin="0,4,0,0"
                                   IsEnabled="{Binding HttpApiEnabled}">
-                                <TextBlock Text="API Key:" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Loc_HttpApiApiKey}" VerticalAlignment="Center"/>
                                 <TextBox Grid.Column="1"
                                          Text="{Binding HttpApiKey}"
                                          PasswordChar="*"
-                                         Watermark="Click Generate to create a key"
+                                         Watermark="{Binding Loc_HttpApiApiKeyPlaceholder}"
                                          IsReadOnly="True"
                                          Margin="0,0,8,0"/>
                                 <Button Grid.Column="2"
-                                        Content="Generate"
+                                        Content="{Binding Loc_Generate}"
                                         Command="{Binding GenerateApiKeyCommand}"
                                         Width="80"
                                         Margin="0,0,4,0"/>
                                 <Button Grid.Column="3"
-                                        Content="Copy"
+                                        Content="{Binding Loc_Copy}"
                                         Command="{Binding CopyApiKeyCommand}"
                                         IsEnabled="{Binding HasApiKey}"
                                         Width="60"/>
                             </Grid>
 
                             <!-- Example Command -->
-                            <Expander Header="Example Commands" Margin="0,8,0,0"
+                            <Expander Header="{Binding Loc_HttpApiExampleCommands}" Margin="0,8,0,0"
                                       IsEnabled="{Binding HttpApiEnabled}">
                                 <StackPanel Spacing="8" Margin="0,8,0,0">
-                                    <Button Content="Copy PowerShell Example"
+                                    <Button Content="{Binding Loc_HttpApiCopyPowerShell}"
                                             Command="{Binding CopyExampleCommandCommand}"
                                             HorizontalAlignment="Left"/>
                                     <TextBlock Text="POST http://YOUR_IP:58080/api/send"
@@ -119,7 +119,7 @@
                             <!-- Warning -->
                             <Border Background="#FFF3E0" CornerRadius="4" Padding="8" Margin="0,8,0,0"
                                     IsVisible="{Binding HttpApiEnabled}">
-                                <TextBlock Text="Note: Changes to HTTP API settings require restarting the application."
+                                <TextBlock Text="{Binding Loc_HttpApiRestartRequired}"
                                            FontSize="11"
                                            Foreground="#E65100"
                                            TextWrapping="Wrap"/>
@@ -127,21 +127,36 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Language Settings -->
+                    <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                            CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="{Binding Loc_Language}" FontWeight="SemiBold"/>
+                            <ComboBox ItemsSource="{Binding AvailableLanguages}"
+                                      SelectedItem="{Binding SelectedLanguage}"
+                                      Width="200"
+                                      HorizontalAlignment="Left"/>
+                            <TextBlock Text="{Binding Loc_LanguageDesc}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Alert Center Info -->
                     <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
                             CornerRadius="8" Padding="16">
                         <StackPanel Spacing="8">
-                            <TextBlock Text="Alert Center" FontWeight="SemiBold"/>
-                            <TextBlock Text="To configure alert actions and groups, use the buttons on the main screen:"
+                            <TextBlock Text="{Binding Loc_AlertCenter}" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding Loc_AlertCenterDesc}"
                                        FontSize="11"
                                        TextWrapping="Wrap"
                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
                             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
                                 <Border Background="#2E7D32" CornerRadius="4" Padding="8,4">
-                                    <TextBlock Text="Alert Actions" Foreground="White" FontSize="11"/>
+                                    <TextBlock Text="{Binding Loc_AlertActions}" Foreground="White" FontSize="11"/>
                                 </Border>
                                 <Border Background="#1565C0" CornerRadius="4" Padding="8,4">
-                                    <TextBlock Text="Alert Groups" Foreground="White" FontSize="11"/>
+                                    <TextBlock Text="{Binding Loc_AlertGroups}" Foreground="White" FontSize="11"/>
                                 </Border>
                             </StackPanel>
                         </StackPanel>
@@ -161,14 +176,14 @@
             <!-- Buttons -->
             <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" Margin="0,12,0,0">
                 <Button Grid.Column="1"
-                        Content="Cancel"
+                        Content="{Binding Loc_Cancel}"
                         Command="{Binding CancelCommand}"
                         Width="80"
                         HorizontalContentAlignment="Center"
                         Margin="0,0,8,0"/>
 
                 <Button Grid.Column="2"
-                        Content="Save"
+                        Content="{Binding Loc_Save}"
                         Command="{Binding SaveCommand}"
                         Width="80"
                         HorizontalContentAlignment="Center"

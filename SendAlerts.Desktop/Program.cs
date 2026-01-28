@@ -64,6 +64,9 @@ sealed class Program
             // T1-1: Initialize services based on platform
             InitializeServices();
 
+            // 初始化語系服務
+            InitializeLocalization();
+
             // TD2-2: 初始化系統匣圖示管理
             InitializeTrayIcon();
 
@@ -258,6 +261,18 @@ sealed class Program
     private static void OnPipeError(object? sender, PipeErrorEventArgs e)
     {
         Log.Warning(e.Exception, "[NamedPipe] Pipe 錯誤");
+    }
+
+    /// <summary>
+    /// 初始化語系服務
+    /// </summary>
+    private static void InitializeLocalization()
+    {
+        var settings = ServiceLocator.SettingsService?.Load();
+        var languageSetting = settings?.Language;
+
+        LocalizationService.Instance.Initialize(languageSetting);
+        Log.Information("語系初始化: {Culture}", LocalizationService.Instance.CurrentLanguageCode);
     }
 
     /// <summary>

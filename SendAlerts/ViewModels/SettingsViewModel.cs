@@ -3,6 +3,8 @@ using CommunityToolkit.Mvvm.Input;
 using SendAlerts.Services;
 using Serilog;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace SendAlerts.ViewModels;
 
@@ -13,6 +15,31 @@ public partial class SettingsViewModel : ViewModelBase
 {
     private readonly ISettingsService _settingsService;
     private readonly AppSettings _settings;
+    private readonly LocalizationService _loc = LocalizationService.Instance;
+
+    #region Localized Strings
+    public string Loc_Title => _loc["Settings_Title"];
+    public string Loc_SamplingInterval => _loc["Settings_SamplingInterval"];
+    public string Loc_SamplingIntervalDesc => _loc["Settings_SamplingInterval_Desc"];
+    public string Loc_HttpApiEnable => _loc["Settings_HttpApi_Enable"];
+    public string Loc_HttpApiDesc => _loc["Settings_HttpApi_Desc"];
+    public string Loc_HttpApiPort => _loc["Settings_HttpApi_Port"];
+    public string Loc_HttpApiApiKey => _loc["Settings_HttpApi_ApiKey"];
+    public string Loc_HttpApiApiKeyPlaceholder => _loc["Settings_HttpApi_ApiKey_Placeholder"];
+    public string Loc_HttpApiRestartRequired => _loc["Settings_HttpApi_RestartRequired"];
+    public string Loc_HttpApiExampleCommands => _loc["Settings_HttpApi_ExampleCommands"];
+    public string Loc_HttpApiCopyPowerShell => _loc["Settings_HttpApi_CopyPowerShell"];
+    public string Loc_AlertCenter => _loc["Settings_AlertCenter"];
+    public string Loc_AlertCenterDesc => _loc["Settings_AlertCenter_Desc"];
+    public string Loc_Language => _loc["Settings_Language"];
+    public string Loc_LanguageDesc => _loc["Settings_Language_Desc"];
+    public string Loc_Save => _loc["Save"];
+    public string Loc_Cancel => _loc["Cancel"];
+    public string Loc_Generate => _loc["Generate"];
+    public string Loc_Copy => _loc["Copy"];
+    public string Loc_AlertActions => _loc["Main_AlertActions"];
+    public string Loc_AlertGroups => _loc["Main_AlertGroups"];
+    #endregion
 
     // --- Sampling ---
     [ObservableProperty] private int _samplingIntervalSeconds;
@@ -21,6 +48,14 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private bool _httpApiEnabled;
     [ObservableProperty] private int _httpApiPort;
     [ObservableProperty] private string _httpApiKey = string.Empty;
+
+    // --- Language ---
+    [ObservableProperty] private LanguageOption? _selectedLanguage;
+
+    /// <summary>
+    /// 可選的語系清單
+    /// </summary>
+    public IReadOnlyList<LanguageOption> AvailableLanguages => LocalizationService.SupportedLanguages;
 
     // --- State ---
     [ObservableProperty] private bool _hasChanges;
@@ -59,6 +94,12 @@ public partial class SettingsViewModel : ViewModelBase
         HttpApiEnabled = _settings.HttpApiEnabled;
         HttpApiPort = _settings.HttpApiPort;
         HttpApiKey = _settings.HttpApiKey;
+
+        // 載入語系設定
+        var langCode = _settings.Language ?? "auto";
+        SelectedLanguage = AvailableLanguages.FirstOrDefault(l => l.Code == langCode)
+                           ?? AvailableLanguages.First();
+
         HasChanges = false;
     }
 
@@ -70,6 +111,7 @@ public partial class SettingsViewModel : ViewModelBase
         HasChanges = true;
         OnPropertyChanged(nameof(HasApiKey));
     }
+    partial void OnSelectedLanguageChanged(LanguageOption? value) => HasChanges = true;
 
     /// <summary>
     /// 產生新的 API Key
@@ -78,7 +120,7 @@ public partial class SettingsViewModel : ViewModelBase
     private void GenerateApiKey()
     {
         HttpApiKey = GenerateRandomKey();
-        StatusMessage = "New API Key generated";
+        StatusMessage = _loc["Settings_ApiKeyGenerated"];
     }
 
     /// <summary>
@@ -90,7 +132,7 @@ public partial class SettingsViewModel : ViewModelBase
         if (!string.IsNullOrEmpty(HttpApiKey))
         {
             CopyToClipboardRequested?.Invoke(HttpApiKey);
-            StatusMessage = "API Key copied to clipboard";
+            StatusMessage = _loc["Settings_ApiKeyCopied"];
         }
     }
 
@@ -102,7 +144,7 @@ public partial class SettingsViewModel : ViewModelBase
     {
         var example = GetPowerShellExample();
         CopyToClipboardRequested?.Invoke(example);
-        StatusMessage = "Example command copied to clipboard";
+        StatusMessage = _loc["Settings_ExampleCopied"];
     }
 
     /// <summary>
@@ -166,11 +208,16 @@ print(response.json())";
                                   _settings.HttpApiPort != HttpApiPort ||
                                   _settings.HttpApiKey != HttpApiKey;
 
+        // 檢查語系設定是否變更
+        var newLangCode = SelectedLanguage?.Code == "auto" ? null : SelectedLanguage?.Code;
+        var languageChanged = _settings.Language != newLangCode;
+
         // Save to settings
         _settings.SamplingIntervalSeconds = SamplingIntervalSeconds;
         _settings.HttpApiEnabled = HttpApiEnabled;
         _settings.HttpApiPort = HttpApiPort;
         _settings.HttpApiKey = HttpApiKey;
+        _settings.Language = newLangCode;
 
         _settingsService.Save(_settings);
         HasChanges = false;

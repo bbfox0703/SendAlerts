@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter</value>
+  </resheader>
+
+  <!-- Common -->
+  <data name="AppName" xml:space="preserve">
+    <value>SendAlerts</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>キャンセル</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>閉じる</value>
+  </data>
+  <data name="Add" xml:space="preserve">
+    <value>追加</value>
+  </data>
+  <data name="Edit" xml:space="preserve">
+    <value>編集</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>削除</value>
+  </data>
+  <data name="Test" xml:space="preserve">
+    <value>テスト</value>
+  </data>
+  <data name="Enabled" xml:space="preserve">
+    <value>有効</value>
+  </data>
+  <data name="Disabled" xml:space="preserve">
+    <value>無効</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="OK" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="Copy" xml:space="preserve">
+    <value>コピー</value>
+  </data>
+  <data name="Generate" xml:space="preserve">
+    <value>生成</value>
+  </data>
+  <data name="Reload" xml:space="preserve">
+    <value>再読込</value>
+  </data>
+
+  <!-- Settings Window -->
+  <data name="Settings_Title" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="Settings_SamplingInterval" xml:space="preserve">
+    <value>サンプリング間隔</value>
+  </data>
+  <data name="Settings_SamplingInterval_Desc" xml:space="preserve">
+    <value>ハードウェアデータを読み取る頻度（表示用）</value>
+  </data>
+  <data name="Settings_HttpApi" xml:space="preserve">
+    <value>HTTP API</value>
+  </data>
+  <data name="Settings_HttpApi_Enable" xml:space="preserve">
+    <value>HTTP API を有効にする</value>
+  </data>
+  <data name="Settings_HttpApi_Desc" xml:space="preserve">
+    <value>リモートマシンからHTTP経由でアラートを送信できるようにする</value>
+  </data>
+  <data name="Settings_HttpApi_Port" xml:space="preserve">
+    <value>ポート：</value>
+  </data>
+  <data name="Settings_HttpApi_ApiKey" xml:space="preserve">
+    <value>API キー：</value>
+  </data>
+  <data name="Settings_HttpApi_ApiKey_Placeholder" xml:space="preserve">
+    <value>「生成」をクリックしてキーを作成</value>
+  </data>
+  <data name="Settings_HttpApi_RestartRequired" xml:space="preserve">
+    <value>注意：HTTP API 設定の変更にはアプリケーションの再起動が必要です。</value>
+  </data>
+  <data name="Settings_HttpApi_ExampleCommands" xml:space="preserve">
+    <value>コマンド例</value>
+  </data>
+  <data name="Settings_HttpApi_CopyPowerShell" xml:space="preserve">
+    <value>PowerShell 例をコピー</value>
+  </data>
+  <data name="Settings_AlertCenter" xml:space="preserve">
+    <value>アラートセンター</value>
+  </data>
+  <data name="Settings_AlertCenter_Desc" xml:space="preserve">
+    <value>アラートアクションとグループを設定するには、メイン画面のボタンを使用してください：</value>
+  </data>
+  <data name="Settings_Language" xml:space="preserve">
+    <value>言語</value>
+  </data>
+  <data name="Settings_Language_Auto" xml:space="preserve">
+    <value>自動（システムデフォルト）</value>
+  </data>
+  <data name="Settings_Language_Desc" xml:space="preserve">
+    <value>アプリケーションの言語。適用するには再起動が必要です。</value>
+  </data>
+  <data name="Settings_ApiKeyCopied" xml:space="preserve">
+    <value>API キーをクリップボードにコピーしました</value>
+  </data>
+  <data name="Settings_ApiKeyGenerated" xml:space="preserve">
+    <value>新しい API キーを生成しました</value>
+  </data>
+  <data name="Settings_ExampleCopied" xml:space="preserve">
+    <value>コマンド例をクリップボードにコピーしました</value>
+  </data>
+
+  <!-- Main Window -->
+  <data name="Main_Title" xml:space="preserve">
+    <value>SendAlerts - ハードウェアアラート中継ステーション</value>
+  </data>
+  <data name="Main_AlertActions" xml:space="preserve">
+    <value>アラートアクション</value>
+  </data>
+  <data name="Main_AlertGroups" xml:space="preserve">
+    <value>アラートグループ</value>
+  </data>
+  <data name="Main_DisplayOnly" xml:space="preserve">
+    <value>表示のみ - 外部ツール (HWiNFO64) を使用して Named Pipe 経由でアラートをトリガー</value>
+  </data>
+  <data name="Main_PipeConnected" xml:space="preserve">
+    <value>Pipe：接続中</value>
+  </data>
+  <data name="Main_PipeDisconnected" xml:space="preserve">
+    <value>Pipe：未接続</value>
+  </data>
+  <data name="Main_RecentAlerts" xml:space="preserve">
+    <value>最近のアラート</value>
+  </data>
+
+  <!-- Alert Actions Window -->
+  <data name="AlertActions_Title" xml:space="preserve">
+    <value>アラートアクション管理</value>
+  </data>
+  <data name="AlertActions_InstanceId" xml:space="preserve">
+    <value>インスタンス ID</value>
+  </data>
+  <data name="AlertActions_Type" xml:space="preserve">
+    <value>タイプ</value>
+  </data>
+  <data name="AlertActions_Description" xml:space="preserve">
+    <value>説明</value>
+  </data>
+  <data name="AlertActions_Status" xml:space="preserve">
+    <value>ステータス</value>
+  </data>
+
+  <!-- Alert Groups Window -->
+  <data name="AlertGroups_Title" xml:space="preserve">
+    <value>アラートグループ管理</value>
+  </data>
+  <data name="AlertGroups_Name" xml:space="preserve">
+    <value>名前</value>
+  </data>
+  <data name="AlertGroups_Actions" xml:space="preserve">
+    <value>アクション</value>
+  </data>
+  <data name="AlertGroups_MessageTemplate" xml:space="preserve">
+    <value>メッセージテンプレート</value>
+  </data>
+  <data name="AlertGroups_CLI" xml:space="preserve">
+    <value>CLI</value>
+  </data>
+  <data name="AlertGroups_Toggle" xml:space="preserve">
+    <value>切替</value>
+  </data>
+
+  <!-- Edit Action Dialog -->
+  <data name="EditAction_AddTitle" xml:space="preserve">
+    <value>アクションを追加</value>
+  </data>
+  <data name="EditAction_EditTitle" xml:space="preserve">
+    <value>アクションを編集</value>
+  </data>
+  <data name="EditAction_ActionType" xml:space="preserve">
+    <value>アクションタイプ</value>
+  </data>
+  <data name="EditAction_CommonSettings" xml:space="preserve">
+    <value>共通設定</value>
+  </data>
+  <data name="EditAction_InstanceId" xml:space="preserve">
+    <value>インスタンス ID：</value>
+  </data>
+  <data name="EditAction_Cooldown" xml:space="preserve">
+    <value>クールダウン：</value>
+  </data>
+  <data name="EditAction_Seconds" xml:space="preserve">
+    <value>秒</value>
+  </data>
+  <data name="EditAction_DebugMode" xml:space="preserve">
+    <value>デバッグモード（ログのみ）</value>
+  </data>
+
+  <!-- Edit Group Dialog -->
+  <data name="EditGroup_AddTitle" xml:space="preserve">
+    <value>グループを追加</value>
+  </data>
+  <data name="EditGroup_EditTitle" xml:space="preserve">
+    <value>グループを編集</value>
+  </data>
+  <data name="EditGroup_Name" xml:space="preserve">
+    <value>名前：</value>
+  </data>
+  <data name="EditGroup_Description" xml:space="preserve">
+    <value>説明：</value>
+  </data>
+  <data name="EditGroup_MessageTemplate" xml:space="preserve">
+    <value>メッセージテンプレート：</value>
+  </data>
+  <data name="EditGroup_SelectActions" xml:space="preserve">
+    <value>アクションを選択</value>
+  </data>
+  <data name="EditGroup_SelectAll" xml:space="preserve">
+    <value>すべて選択</value>
+  </data>
+  <data name="EditGroup_SelectNone" xml:space="preserve">
+    <value>選択解除</value>
+  </data>
+
+  <!-- CLI Command Dialog -->
+  <data name="CliDialog_Title" xml:space="preserve">
+    <value>CLI コマンド</value>
+  </data>
+  <data name="CliDialog_CopyToClipboard" xml:space="preserve">
+    <value>クリップボードにコピー</value>
+  </data>
+  <data name="CliDialog_Copied" xml:space="preserve">
+    <value>コピーしました！</value>
+  </data>
+
+  <!-- Tray Icon -->
+  <data name="Tray_Show" xml:space="preserve">
+    <value>表示</value>
+  </data>
+  <data name="Tray_Exit" xml:space="preserve">
+    <value>終了</value>
+  </data>
+
+  <!-- Messages -->
+  <data name="Msg_SettingsSaved" xml:space="preserve">
+    <value>設定を保存しました</value>
+  </data>
+  <data name="Msg_TestSuccess" xml:space="preserve">
+    <value>テスト成功</value>
+  </data>
+  <data name="Msg_TestFailed" xml:space="preserve">
+    <value>テスト失敗</value>
+  </data>
+  <data name="Msg_DeleteConfirm" xml:space="preserve">
+    <value>このアイテムを削除してもよろしいですか？</value>
+  </data>
+  <data name="Msg_RestartRequired" xml:space="preserve">
+    <value>変更を適用するにはアプリケーションを再起動してください。</value>
+  </data>
+</root>
