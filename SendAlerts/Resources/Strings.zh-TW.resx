@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter</value>
+  </resheader>
+
+  <!-- Common -->
+  <data name="AppName" xml:space="preserve">
+    <value>SendAlerts</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>儲存</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>關閉</value>
+  </data>
+  <data name="Add" xml:space="preserve">
+    <value>新增</value>
+  </data>
+  <data name="Edit" xml:space="preserve">
+    <value>編輯</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>刪除</value>
+  </data>
+  <data name="Test" xml:space="preserve">
+    <value>測試</value>
+  </data>
+  <data name="Enabled" xml:space="preserve">
+    <value>啟用</value>
+  </data>
+  <data name="Disabled" xml:space="preserve">
+    <value>停用</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="OK" xml:space="preserve">
+    <value>確定</value>
+  </data>
+  <data name="Copy" xml:space="preserve">
+    <value>複製</value>
+  </data>
+  <data name="Generate" xml:space="preserve">
+    <value>產生</value>
+  </data>
+  <data name="Reload" xml:space="preserve">
+    <value>重新載入</value>
+  </data>
+
+  <!-- Settings Window -->
+  <data name="Settings_Title" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="Settings_SamplingInterval" xml:space="preserve">
+    <value>取樣間隔</value>
+  </data>
+  <data name="Settings_SamplingInterval_Desc" xml:space="preserve">
+    <value>讀取硬體資料的頻率（用於顯示）</value>
+  </data>
+  <data name="Settings_HttpApi" xml:space="preserve">
+    <value>HTTP API</value>
+  </data>
+  <data name="Settings_HttpApi_Enable" xml:space="preserve">
+    <value>啟用 HTTP API</value>
+  </data>
+  <data name="Settings_HttpApi_Desc" xml:space="preserve">
+    <value>允許遠端機器透過 HTTP 發送警報</value>
+  </data>
+  <data name="Settings_HttpApi_Port" xml:space="preserve">
+    <value>連接埠：</value>
+  </data>
+  <data name="Settings_HttpApi_ApiKey" xml:space="preserve">
+    <value>API 金鑰：</value>
+  </data>
+  <data name="Settings_HttpApi_ApiKey_Placeholder" xml:space="preserve">
+    <value>點擊「產生」建立金鑰</value>
+  </data>
+  <data name="Settings_HttpApi_RestartRequired" xml:space="preserve">
+    <value>注意：變更 HTTP API 設定需要重新啟動應用程式。</value>
+  </data>
+  <data name="Settings_HttpApi_ExampleCommands" xml:space="preserve">
+    <value>範例指令</value>
+  </data>
+  <data name="Settings_HttpApi_CopyPowerShell" xml:space="preserve">
+    <value>複製 PowerShell 範例</value>
+  </data>
+  <data name="Settings_AlertCenter" xml:space="preserve">
+    <value>警報中心</value>
+  </data>
+  <data name="Settings_AlertCenter_Desc" xml:space="preserve">
+    <value>要設定警報動作和群組，請使用主畫面上的按鈕：</value>
+  </data>
+  <data name="Settings_Language" xml:space="preserve">
+    <value>語言</value>
+  </data>
+  <data name="Settings_Language_Auto" xml:space="preserve">
+    <value>自動（系統預設）</value>
+  </data>
+  <data name="Settings_Language_Desc" xml:space="preserve">
+    <value>應用程式語言。需重新啟動才能套用。</value>
+  </data>
+  <data name="Settings_ApiKeyCopied" xml:space="preserve">
+    <value>API 金鑰已複製到剪貼簿</value>
+  </data>
+  <data name="Settings_ApiKeyGenerated" xml:space="preserve">
+    <value>已產生新的 API 金鑰</value>
+  </data>
+  <data name="Settings_ExampleCopied" xml:space="preserve">
+    <value>範例指令已複製到剪貼簿</value>
+  </data>
+
+  <!-- Main Window -->
+  <data name="Main_Title" xml:space="preserve">
+    <value>SendAlerts - 硬體警報中繼站</value>
+  </data>
+  <data name="Main_AlertActions" xml:space="preserve">
+    <value>警報動作</value>
+  </data>
+  <data name="Main_AlertGroups" xml:space="preserve">
+    <value>警報群組</value>
+  </data>
+  <data name="Main_DisplayOnly" xml:space="preserve">
+    <value>僅供顯示 - 使用外部工具 (HWiNFO64) 透過 Named Pipe 觸發警報</value>
+  </data>
+  <data name="Main_PipeConnected" xml:space="preserve">
+    <value>Pipe：已連線</value>
+  </data>
+  <data name="Main_PipeDisconnected" xml:space="preserve">
+    <value>Pipe：未連線</value>
+  </data>
+  <data name="Main_RecentAlerts" xml:space="preserve">
+    <value>最近警報</value>
+  </data>
+
+  <!-- Alert Actions Window -->
+  <data name="AlertActions_Title" xml:space="preserve">
+    <value>警報動作管理</value>
+  </data>
+  <data name="AlertActions_InstanceId" xml:space="preserve">
+    <value>實例 ID</value>
+  </data>
+  <data name="AlertActions_Type" xml:space="preserve">
+    <value>類型</value>
+  </data>
+  <data name="AlertActions_Description" xml:space="preserve">
+    <value>說明</value>
+  </data>
+  <data name="AlertActions_Status" xml:space="preserve">
+    <value>狀態</value>
+  </data>
+
+  <!-- Alert Groups Window -->
+  <data name="AlertGroups_Title" xml:space="preserve">
+    <value>警報群組管理</value>
+  </data>
+  <data name="AlertGroups_Name" xml:space="preserve">
+    <value>名稱</value>
+  </data>
+  <data name="AlertGroups_Actions" xml:space="preserve">
+    <value>動作</value>
+  </data>
+  <data name="AlertGroups_MessageTemplate" xml:space="preserve">
+    <value>訊息範本</value>
+  </data>
+  <data name="AlertGroups_CLI" xml:space="preserve">
+    <value>CLI</value>
+  </data>
+  <data name="AlertGroups_Toggle" xml:space="preserve">
+    <value>切換</value>
+  </data>
+
+  <!-- Edit Action Dialog -->
+  <data name="EditAction_AddTitle" xml:space="preserve">
+    <value>新增動作</value>
+  </data>
+  <data name="EditAction_EditTitle" xml:space="preserve">
+    <value>編輯動作</value>
+  </data>
+  <data name="EditAction_ActionType" xml:space="preserve">
+    <value>動作類型</value>
+  </data>
+  <data name="EditAction_CommonSettings" xml:space="preserve">
+    <value>共用設定</value>
+  </data>
+  <data name="EditAction_InstanceId" xml:space="preserve">
+    <value>實例 ID：</value>
+  </data>
+  <data name="EditAction_Cooldown" xml:space="preserve">
+    <value>冷卻時間：</value>
+  </data>
+  <data name="EditAction_Seconds" xml:space="preserve">
+    <value>秒</value>
+  </data>
+  <data name="EditAction_DebugMode" xml:space="preserve">
+    <value>偵錯模式（僅記錄）</value>
+  </data>
+
+  <!-- Edit Group Dialog -->
+  <data name="EditGroup_AddTitle" xml:space="preserve">
+    <value>新增群組</value>
+  </data>
+  <data name="EditGroup_EditTitle" xml:space="preserve">
+    <value>編輯群組</value>
+  </data>
+  <data name="EditGroup_Name" xml:space="preserve">
+    <value>名稱：</value>
+  </data>
+  <data name="EditGroup_Description" xml:space="preserve">
+    <value>說明：</value>
+  </data>
+  <data name="EditGroup_MessageTemplate" xml:space="preserve">
+    <value>訊息範本：</value>
+  </data>
+  <data name="EditGroup_SelectActions" xml:space="preserve">
+    <value>選擇動作</value>
+  </data>
+  <data name="EditGroup_SelectAll" xml:space="preserve">
+    <value>全選</value>
+  </data>
+  <data name="EditGroup_SelectNone" xml:space="preserve">
+    <value>取消全選</value>
+  </data>
+
+  <!-- CLI Command Dialog -->
+  <data name="CliDialog_Title" xml:space="preserve">
+    <value>CLI 指令</value>
+  </data>
+  <data name="CliDialog_CopyToClipboard" xml:space="preserve">
+    <value>複製到剪貼簿</value>
+  </data>
+  <data name="CliDialog_Copied" xml:space="preserve">
+    <value>已複製！</value>
+  </data>
+
+  <!-- Tray Icon -->
+  <data name="Tray_Show" xml:space="preserve">
+    <value>顯示</value>
+  </data>
+  <data name="Tray_Exit" xml:space="preserve">
+    <value>結束</value>
+  </data>
+
+  <!-- Messages -->
+  <data name="Msg_SettingsSaved" xml:space="preserve">
+    <value>設定已儲存</value>
+  </data>
+  <data name="Msg_TestSuccess" xml:space="preserve">
+    <value>測試成功</value>
+  </data>
+  <data name="Msg_TestFailed" xml:space="preserve">
+    <value>測試失敗</value>
+  </data>
+  <data name="Msg_DeleteConfirm" xml:space="preserve">
+    <value>確定要刪除此項目嗎？</value>
+  </data>
+  <data name="Msg_RestartRequired" xml:space="preserve">
+    <value>請重新啟動應用程式以套用變更。</value>
+  </data>
+</root>
