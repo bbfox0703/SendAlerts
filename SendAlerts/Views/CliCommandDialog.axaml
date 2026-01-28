@@ -39,7 +39,8 @@
                         x:Name="CopyButton"
                         Click="OnCopyClick"
                         Width="130"/>
-                <Button Content="Close"
+                <Button x:Name="CloseButton"
+                        Content="Close"
                         Click="OnCloseClick"
                         Width="80"/>
             </StackPanel>

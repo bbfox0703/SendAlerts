@@ -326,3 +326,5 @@ Phase C/D (收尾) ────────────────────�
 | TC2-1~3 | HWiNFO64 Integration | 2026-01-28 | docs/HWiNFO-Setup.md, scripts/send-alert.ps1, scripts/send_alert.py |
 | TD1-1~2 | CLI 工具 | 2026-01-28 | SendAlerts.Cli 專案, send/list/test 命令, System.CommandLine |
 | TD2-1~3 | 系統整合 | 2026-01-28 | StartupManager 登錄檔, TrayIconManager 系統匣, 右鍵選單 |
+| - | HTTP API 伺服器 | 2026-01-28 | HttpApiServer, POST /api/send, API Key 認證, Settings UI |
+| - | 多語系 (i18n) | 2026-01-28 | LocalizationService, ResX (en/zh-TW/ja), 全介面本地化 |

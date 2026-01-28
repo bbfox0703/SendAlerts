@@ -15,6 +15,19 @@ namespace SendAlerts.ViewModels;
 public partial class EditActionViewModel : ViewModelBase
 {
     private readonly AlertActionConfig? _existingConfig;
+    private readonly LocalizationService _loc = LocalizationService.Instance;
+
+    #region Localized Strings
+    public string Loc_ActionType => _loc["EditAction_ActionType"];
+    public string Loc_CommonSettings => _loc["EditAction_CommonSettings"];
+    public string Loc_InstanceId => _loc["EditAction_InstanceId"];
+    public string Loc_Cooldown => _loc["EditAction_Cooldown"];
+    public string Loc_Seconds => _loc["EditAction_Seconds"];
+    public string Loc_Enabled => _loc["Enabled"];
+    public string Loc_DebugMode => _loc["EditAction_DebugMode"];
+    public string Loc_Cancel => _loc["Cancel"];
+    public string Loc_OK => _loc["OK"];
+    #endregion
 
     /// <summary>
     /// 是否為編輯模式（false = 新增模式）
@@ -24,7 +37,7 @@ public partial class EditActionViewModel : ViewModelBase
     /// <summary>
     /// 對話框標題
     /// </summary>
-    public string Title => IsEditMode ? "Edit Action" : "Add Action";
+    public string Title => IsEditMode ? _loc["EditAction_EditTitle"] : _loc["EditAction_AddTitle"];
 
     /// <summary>
     /// 可選擇的動作類型

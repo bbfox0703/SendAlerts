@@ -17,6 +17,24 @@ public partial class AlertGroupsViewModel : ViewModelBase
 {
     private readonly ISettingsService? _settingsService;
     private AppSettings? _settings;
+    private readonly LocalizationService _loc = LocalizationService.Instance;
+
+    #region Localized Strings
+    public string Loc_Title => _loc["AlertGroups_Title"];
+    public string Loc_Name => _loc["AlertGroups_Name"];
+    public string Loc_Actions => _loc["AlertGroups_Actions"];
+    public string Loc_MessageTemplate => _loc["AlertGroups_MessageTemplate"];
+    public string Loc_Status => _loc["AlertActions_Status"];
+    public string Loc_Add => _loc["Add"];
+    public string Loc_Edit => _loc["Edit"];
+    public string Loc_Delete => _loc["Delete"];
+    public string Loc_Test => _loc["Test"];
+    public string Loc_Toggle => _loc["AlertGroups_Toggle"];
+    public string Loc_CLI => _loc["AlertGroups_CLI"];
+    public string Loc_Reload => _loc["Reload"];
+    public string Loc_Save => _loc["Save"];
+    public string Loc_Close => _loc["Close"];
+    #endregion
 
     /// <summary>
     /// 所有已設定的警報群組

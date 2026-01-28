@@ -6,7 +6,7 @@
         mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="500"
         x:Class="SendAlerts.Views.AlertActionsWindow"
         x:DataType="vm:AlertActionsViewModel"
-        Title="Alert Actions Management"
+        Title="{Binding Loc_Title}"
         Width="700" Height="500"
         MinWidth="500" MinHeight="400"
         WindowStartupLocation="CenterOwner"
@@ -21,8 +21,8 @@
 
             <!-- Header -->
             <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
-                <TextBlock Text="Alert Actions" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding Actions.Count, StringFormat='({0} items)'}"
+                <TextBlock Text="{Binding Loc_Title}" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Actions.Count, StringFormat='({0})'}"
                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                            VerticalAlignment="Center"/>
             </StackPanel>
@@ -39,10 +39,10 @@
                           ColumnDefinitions="40,150,100,*,60"
                           Margin="8,4,8,8">
                         <TextBlock Grid.Column="0" Text="" FontWeight="SemiBold" FontSize="12"/>
-                        <TextBlock Grid.Column="1" Text="Instance ID" FontWeight="SemiBold" FontSize="12"/>
-                        <TextBlock Grid.Column="2" Text="Type" FontWeight="SemiBold" FontSize="12"/>
-                        <TextBlock Grid.Column="3" Text="Description" FontWeight="SemiBold" FontSize="12"/>
-                        <TextBlock Grid.Column="4" Text="Status" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Loc_InstanceId}" FontWeight="SemiBold" FontSize="12"/>
+                        <TextBlock Grid.Column="2" Text="{Binding Loc_Type}" FontWeight="SemiBold" FontSize="12"/>
+                        <TextBlock Grid.Column="3" Text="{Binding Loc_Description}" FontWeight="SemiBold" FontSize="12"/>
+                        <TextBlock Grid.Column="4" Text="{Binding Loc_Status}" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
                     </Grid>
 
                     <!-- List Content -->
@@ -104,29 +104,28 @@
                         Orientation="Horizontal"
                         Spacing="8"
                         Margin="0,12,0,0">
-                <Button Content="Add"
+                <Button Content="{Binding Loc_Add}"
                         Command="{Binding AddActionCommand}"
                         Width="80"/>
-                <Button Content="Edit"
+                <Button Content="{Binding Loc_Edit}"
                         Command="{Binding EditActionCommand}"
                         IsEnabled="{Binding HasSelection}"
                         Width="80"/>
-                <Button Content="Delete"
+                <Button Content="{Binding Loc_Delete}"
                         Command="{Binding DeleteActionCommand}"
                         IsEnabled="{Binding HasSelection}"
                         Width="80"/>
                 <Rectangle Width="1" Fill="{DynamicResource SystemControlForegroundBaseMediumBrush}" Margin="8,4"/>
-                <Button Content="Test"
+                <Button Content="{Binding Loc_Test}"
                         Command="{Binding TestActionCommand}"
                         IsEnabled="{Binding HasSelection}"
                         Width="80"/>
-                <Button Content="Toggle"
+                <Button Content="{Binding Loc_Toggle}"
                         Command="{Binding ToggleEnabledCommand}"
                         IsEnabled="{Binding HasSelection}"
-                        Width="80"
-                        ToolTip.Tip="Toggle enabled/disabled"/>
+                        Width="80"/>
                 <Rectangle Width="1" Fill="{DynamicResource SystemControlForegroundBaseMediumBrush}" Margin="8,4"/>
-                <Button Content="Reload"
+                <Button Content="{Binding Loc_Reload}"
                         Command="{Binding ReloadCommand}"
                         Width="80"/>
             </StackPanel>
@@ -142,13 +141,13 @@
 
                 <!-- Save/Close Buttons -->
                 <Button Grid.Column="1"
-                        Content="Save"
+                        Content="{Binding Loc_Save}"
                         Command="{Binding SaveCommand}"
                         Width="80"
                         Margin="0,0,8,0"
                         Classes="accent"/>
                 <Button Grid.Column="2"
-                        Content="Close"
+                        Content="{Binding Loc_Close}"
                         Command="{Binding CloseCommand}"
                         Width="80"/>
             </Grid>
