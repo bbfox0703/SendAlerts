@@ -1,6 +1,6 @@
 {
     "profiles": {
-    "_16pin_vmon.Browser": {
+    "SendAlerts.Browser": {
         "commandName": "Project",
         "launchBrowser": true,
         "environmentVariables": {
