@@ -327,7 +327,7 @@ public partial class AlertActionConfigItem : ObservableObject
         {
             AlertActionType.CommandLine => TruncateCommand(_config.Command ?? ""),
             AlertActionType.Telegram => $"Chat: {_config.TelegramChatId}",
-            AlertActionType.LineNotify => "LINE Notify",
+            AlertActionType.Discord => TruncateUrl(_config.DiscordWebhookUrl ?? ""),
             AlertActionType.Email => _config.EmailToAddresses ?? "",
             AlertActionType.HttpWebhook => _config.WebhookUrl ?? "",
             AlertActionType.SystemShutdown => _config.ShutdownType ?? "Shutdown",
@@ -340,5 +340,22 @@ public partial class AlertActionConfigItem : ObservableObject
         const int maxLength = 40;
         if (command.Length <= maxLength) return command;
         return command[..(maxLength - 3)] + "...";
+    }
+
+    private static string TruncateUrl(string url)
+    {
+        if (string.IsNullOrEmpty(url)) return "";
+        // 顯示簡化的 Discord Webhook 資訊
+        if (url.Contains("discord.com/api/webhooks/"))
+        {
+            var parts = url.Split('/');
+            if (parts.Length >= 2)
+            {
+                return $"Webhook: ...{parts[^2][^6..]}";
+            }
+        }
+        const int maxLength = 30;
+        if (url.Length <= maxLength) return url;
+        return url[..(maxLength - 3)] + "...";
     }
 }

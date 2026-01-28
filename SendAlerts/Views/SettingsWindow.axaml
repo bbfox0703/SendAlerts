@@ -199,21 +199,17 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- LINE Notify Alert -->
+                            <!-- LINE Notify has been discontinued - Use Alert Center for Discord -->
                             <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                    CornerRadius="8" Padding="16">
+                                    CornerRadius="8" Padding="16"
+                                    Opacity="0.6">
                                 <StackPanel Spacing="8">
-                                    <CheckBox Content="LINE Notify"
-                                              IsChecked="{Binding LineNotifyAlertEnabled}"
-                                              FontWeight="SemiBold"/>
-                                    <TextBlock Text="Access Token:"
-                                               IsEnabled="{Binding LineNotifyAlertEnabled}"/>
-                                    <TextBox Text="{Binding LineNotifyAccessToken}"
-                                             Watermark="aBcDeFgHiJkLmNoP..."
-                                             PasswordChar="*"
-                                             IsEnabled="{Binding LineNotifyAlertEnabled}"/>
-                                    <TextBlock Text="Get token from notify-bot.line.me"
-                                               FontSize="10"
+                                    <TextBlock Text="LINE Notify (Discontinued)"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                    <TextBlock Text="LINE Notify has been discontinued by LINE. Please use Alert Center with Discord Webhook instead."
+                                               FontSize="11"
+                                               TextWrapping="Wrap"
                                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
                                 </StackPanel>
                             </Border>

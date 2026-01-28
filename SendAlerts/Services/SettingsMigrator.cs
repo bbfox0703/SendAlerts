@@ -102,22 +102,13 @@ public static class SettingsMigrator
             Log.Debug("[SettingsMigrator] 已遷移 Telegram 設定: {InstanceId}", config.InstanceId);
         }
 
-        // 遷移 LINE Notify 設定
+        // LINE Notify 已停用，不再遷移
         if (settings.LineNotifyAlertEnabled &&
             !string.IsNullOrWhiteSpace(settings.LineNotifyAccessToken))
         {
-            var config = new AlertActionConfig
-            {
-                InstanceId = "LineNotify_Legacy",
-                ActionType = AlertActionType.LineNotify,
-                IsEnabled = true,
-                LineNotifyAccessToken = settings.LineNotifyAccessToken,
-                CooldownSeconds = 30,
-                DebugMode = settings.AlertActionsDebugMode
-            };
-            migratedActions.Add(config);
-            defaultGroupActionIds.Add(config.InstanceId);
-            Log.Debug("[SettingsMigrator] 已遷移 LINE Notify 設定: {InstanceId}", config.InstanceId);
+            Log.Warning("[SettingsMigrator] 偵測到舊版 LINE Notify 設定，但 LINE Notify 服務已於 2025 年停止。請改用 Discord Webhook。");
+            // 停用舊設定
+            settings.LineNotifyAlertEnabled = false;
         }
 
         // 如果有遷移的動作，建立預設群組
@@ -190,10 +181,9 @@ public static class SettingsMigrator
     /// </summary>
     private static bool HasLegacyAlertSettings(AppSettings settings)
     {
-        // 檢查是否有任何舊版 T4 警報設定啟用
+        // 檢查是否有任何舊版 T4 警報設定啟用 (LINE Notify 已停用，不納入判斷)
         return (settings.CommandLineAlertEnabled && !string.IsNullOrWhiteSpace(settings.CommandLineAlertCommand)) ||
-               (settings.TelegramAlertEnabled && !string.IsNullOrWhiteSpace(settings.TelegramBotToken)) ||
-               (settings.LineNotifyAlertEnabled && !string.IsNullOrWhiteSpace(settings.LineNotifyAccessToken));
+               (settings.TelegramAlertEnabled && !string.IsNullOrWhiteSpace(settings.TelegramBotToken));
     }
 
     /// <summary>

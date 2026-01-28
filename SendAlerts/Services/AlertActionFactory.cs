@@ -38,7 +38,7 @@ public static class AlertActionFactory
             {
                 AlertActionType.CommandLine => CreateCommandLine(config),
                 AlertActionType.Telegram => CreateTelegram(config),
-                AlertActionType.LineNotify => CreateLineNotify(config),
+                AlertActionType.Discord => CreateDiscord(config),
                 AlertActionType.Email => CreateEmail(config),
                 AlertActionType.HttpWebhook => CreateHttpWebhook(config),
                 AlertActionType.SystemShutdown => CreateSystemShutdown(config),
@@ -109,18 +109,19 @@ public static class AlertActionFactory
         return action;
     }
 
-    private static LineNotifyAlertAction CreateLineNotify(AlertActionConfig config)
+    private static DiscordWebhookAlertAction CreateDiscord(AlertActionConfig config)
     {
-        var action = new LineNotifyAlertAction(
+        var action = new DiscordWebhookAlertAction(
             config.InstanceId,
-            config.LineNotifyAccessToken ?? string.Empty,
+            config.DiscordWebhookUrl ?? string.Empty,
+            config.DiscordUsername,
             config.CooldownSeconds,
             config.DebugMode)
         {
             IsEnabled = config.IsEnabled
         };
 
-        Log.Debug("[AlertActionFactory] 建立 LineNotify 動作: {InstanceId}", config.InstanceId);
+        Log.Debug("[AlertActionFactory] 建立 Discord 動作: {InstanceId}", config.InstanceId);
         return action;
     }
 
@@ -173,7 +174,7 @@ public static class AlertActionFactory
         {
             AlertActionType.CommandLine => true,
             AlertActionType.Telegram => true,
-            AlertActionType.LineNotify => true,
+            AlertActionType.Discord => true,
             AlertActionType.Email => false,      // TA2-6
             AlertActionType.HttpWebhook => false, // TA2-7
             AlertActionType.SystemShutdown => false, // TA2-8
@@ -190,7 +191,7 @@ public static class AlertActionFactory
         {
             AlertActionType.CommandLine,
             AlertActionType.Telegram,
-            AlertActionType.LineNotify
+            AlertActionType.Discord
         };
     }
 
@@ -203,7 +204,7 @@ public static class AlertActionFactory
         {
             AlertActionType.CommandLine => "命令列",
             AlertActionType.Telegram => "Telegram",
-            AlertActionType.LineNotify => "LINE Notify",
+            AlertActionType.Discord => "Discord",
             AlertActionType.Email => "電子郵件",
             AlertActionType.HttpWebhook => "HTTP Webhook",
             AlertActionType.SystemShutdown => "系統關機",

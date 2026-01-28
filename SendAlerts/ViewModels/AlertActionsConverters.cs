@@ -13,7 +13,7 @@ public static class ActionTypeVisibilityConverter
 {
     public static readonly ActionTypeMatchConverter CommandLine = new(AlertActionType.CommandLine);
     public static readonly ActionTypeMatchConverter Telegram = new(AlertActionType.Telegram);
-    public static readonly ActionTypeMatchConverter LineNotify = new(AlertActionType.LineNotify);
+    public static readonly ActionTypeMatchConverter Discord = new(AlertActionType.Discord);
     public static readonly ActionTypeMatchConverter Email = new(AlertActionType.Email);
     public static readonly ActionTypeMatchConverter HttpWebhook = new(AlertActionType.HttpWebhook);
     public static readonly ActionTypeMatchConverter SystemShutdown = new(AlertActionType.SystemShutdown);
@@ -61,7 +61,7 @@ public class ActionTypeIconConverter : IValueConverter
             {
                 AlertActionType.CommandLine => "\u2318",    // ⌘
                 AlertActionType.Telegram => "\u2708",       // ✈
-                AlertActionType.LineNotify => "\u260E",     // ☎
+                AlertActionType.Discord => "\uD83D\uDCAC",  // 💬
                 AlertActionType.Email => "\u2709",          // ✉
                 AlertActionType.HttpWebhook => "\u21C4",    // ⇄
                 AlertActionType.SystemShutdown => "\u23FB", // ⏻
