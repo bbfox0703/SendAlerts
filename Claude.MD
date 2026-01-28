@@ -198,41 +198,41 @@ Phase C/D (收尾) ────────────────────�
 - [x] **TB1-5**: Action 測試按鈕 - 發送測試訊息驗證設定正確 *(已在 TB1-1 完成)*
 
 #### B2: Group 編輯器
-- [ ] **TB2-1**: `AlertGroupsView` - 顯示所有 Group 清單
-- [ ] **TB2-2**: Group 新增/編輯對話框 - 設定名稱與訊息範本
-- [ ] **TB2-3**: Action 勾選清單 - 多選要加入 Group 的 Actions
-- [ ] **TB2-4**: Group 刪除功能 - 確認後移除
-- [ ] **TB2-5**: Group 測試按鈕 - 觸發該 Group 所有 Actions
+- [x] **TB2-1**: `AlertGroupsView` - 顯示所有 Group 清單
+- [x] **TB2-2**: Group 新增/編輯對話框 - 設定名稱與訊息範本
+- [x] **TB2-3**: Action 勾選清單 - 多選要加入 Group 的 Actions
+- [x] **TB2-4**: Group 刪除功能 - 確認後移除
+- [x] **TB2-5**: Group 測試按鈕 - 觸發該 Group 所有 Actions
 
 #### B3: 主介面整合
-- [ ] **TB3-1**: 導航列新增「警報管理」按鈕
-- [ ] **TB3-2**: 狀態列顯示 Named Pipe 連線狀態
-- [ ] **TB3-3**: 最近警報歷史清單 (最近 10 筆觸發紀錄)
+- [x] **TB3-1**: 導航列新增「警報管理」按鈕 *(Alert Actions / Alert Groups 按鈕已存在)*
+- [x] **TB3-2**: 狀態列顯示 Named Pipe 連線狀態
+- [x] **TB3-3**: 最近警報歷史清單 (最近 10 筆觸發紀錄)
 
 ---
 ### 📊 Phase C: 顯示優化 (Display-Only Mode)
 
 #### C1: UI 簡化
-- [ ] **TC1-1**: 移除主動警報邏輯 - MainViewModel 不再觸發 AlertEvaluator
-- [ ] **TC1-2**: 圖表改為純顯示模式 - 移除警報相關 UI 元素
-- [ ] **TC1-3**: 新增「僅供參考」標籤 - 提示資料來源為本機讀取
+- [x] **TC1-1**: 移除主動警報邏輯 - MainViewModel 不再觸發 AlertEvaluator
+- [x] **TC1-2**: 圖表改為純顯示模式 - 移除警報相關 UI 元素
+- [x] **TC1-3**: 新增「僅供參考」標籤 - 提示資料來源為本機讀取
 
 #### C2: HWiNFO64 整合文件
-- [ ] **TC2-1**: 撰寫 HWiNFO64 設定教學文件 (docs/HWiNFO-Setup.md)
-- [ ] **TC2-2**: 提供範例 PowerShell 腳本傳送 Pipe 訊息
-- [ ] **TC2-3**: 提供範例 Python 腳本傳送 Pipe 訊息
+- [x] **TC2-1**: 撰寫 HWiNFO64 設定教學文件 (docs/HWiNFO-Setup.md)
+- [x] **TC2-2**: 提供範例 PowerShell 腳本傳送 Pipe 訊息
+- [x] **TC2-3**: 提供範例 Python 腳本傳送 Pipe 訊息
 
 ---
 ### 🔧 Phase D: 進階功能
 
 #### D1: CLI 工具
-- [ ] **TD1-1**: 命令列工具發送 Pipe 訊息 (16pin-vmon-cli.exe send -g Critical -m "Test")
-- [ ] **TD1-2**: 命令列查詢 Group 清單
+- [x] **TD1-1**: 命令列工具發送 Pipe 訊息 (16pin-vmon-cli.exe send -g Critical -m "Test")
+- [x] **TD1-2**: 命令列查詢 Group 清單
 
 #### D2: 系統整合
-- [ ] **TD2-1**: Windows 開機自動啟動選項
-- [ ] **TD2-2**: 系統匣圖示 (Tray Icon) 最小化
-- [ ] **TD2-3**: 系統匣右鍵選單 (顯示/隱藏/退出)
+- [x] **TD2-1**: Windows 開機自動啟動選項
+- [x] **TD2-2**: 系統匣圖示 (Tray Icon) 最小化
+- [x] **TD2-3**: 系統匣右鍵選單 (顯示/隱藏/退出)
 
 ---
 ### 📁 Legacy Phases (已完成 - 保留參考)
@@ -320,3 +320,9 @@ Phase C/D (收尾) ────────────────────�
 | TA4-3 | 預設群組建立 | 2026-01-27 | 首次啟動自動建立 Default/Critical/Warning/Info 群組 |
 | TB1-1 | AlertActionsWindow | 2026-01-27 | Action 清單視窗, ViewModel, Converters, MainView 整合 |
 | TB1-2/3 | EditActionDialog | 2026-01-27 | 新增/編輯 Action 對話框, 類型切換, 欄位驗證 |
+| TB2-1~5 | AlertGroupsWindow | 2026-01-28 | Group 清單視窗, 新增/編輯對話框, Action 勾選, 測試功能 |
+| TB3-1~3 | 主介面整合 | 2026-01-28 | 狀態列 Pipe 連線指示燈, 警報歷史清單, ServiceLocator 事件 |
+| TC1-1~3 | Display-Only Mode | 2026-01-28 | 移除 AlertEvaluator/T4 警報動作, 純顯示模式提示標籤 |
+| TC2-1~3 | HWiNFO64 Integration | 2026-01-28 | docs/HWiNFO-Setup.md, scripts/send-alert.ps1, scripts/send_alert.py |
+| TD1-1~2 | CLI 工具 | 2026-01-28 | 16pin-vmon.Cli 專案, send/list/test 命令, System.CommandLine |
+| TD2-1~3 | 系統整合 | 2026-01-28 | StartupManager 登錄檔, TrayIconManager 系統匣, 右鍵選單 |

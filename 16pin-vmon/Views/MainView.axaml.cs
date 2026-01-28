@@ -38,13 +38,18 @@ public partial class MainView : UserControl
         }
     }
 
-    private void OnTestAlertClick(object? sender, RoutedEventArgs e)
+    private async void OnAlertGroupsClick(object? sender, RoutedEventArgs e)
     {
-        // For testing: manually trigger alert state
-        if (DataContext is MainViewModel vm)
+        var alertGroupsWindow = new AlertGroupsWindow();
+
+        // Get the parent window
+        var parentWindow = TopLevel.GetTopLevel(this) as Window;
+        if (parentWindow != null)
         {
-            // This is just for visual testing - doesn't affect actual alert logic
-            Serilog.Log.Information("[TEST] 使用者手動觸發測試警報");
+            await alertGroupsWindow.ShowDialog(parentWindow);
         }
     }
+
+    // TC1-1: 移除 OnTestAlertClick - 警報功能已移至 Alert Center
+    // 測試警報請透過 AlertGroupsWindow 的測試按鈕或 Named Pipe 發送
 }

@@ -1,0 +1,155 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:_16pin_vmon.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="500"
+        x:Class="_16pin_vmon.Views.AlertGroupsWindow"
+        x:DataType="vm:AlertGroupsViewModel"
+        Title="Alert Groups Management"
+        Width="700" Height="500"
+        MinWidth="500" MinHeight="400"
+        WindowStartupLocation="CenterOwner"
+        SystemDecorations="Full">
+
+    <Design.DataContext>
+        <vm:AlertGroupsViewModel />
+    </Design.DataContext>
+
+    <Border Padding="16">
+        <Grid RowDefinitions="Auto,*,Auto,Auto">
+
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                <TextBlock Text="Alert Groups" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Groups.Count, StringFormat='({0} items)'}"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Groups List -->
+            <Border Grid.Row="1"
+                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                    CornerRadius="8"
+                    Padding="8">
+                <Grid RowDefinitions="Auto,*">
+
+                    <!-- List Header -->
+                    <Grid Grid.Row="0"
+                          ColumnDefinitions="150,100,*,60"
+                          Margin="8,4,8,8">
+                        <TextBlock Grid.Column="0" Text="Name" FontWeight="SemiBold" FontSize="12"/>
+                        <TextBlock Grid.Column="1" Text="Actions" FontWeight="SemiBold" FontSize="12"/>
+                        <TextBlock Grid.Column="2" Text="Message Template" FontWeight="SemiBold" FontSize="12"/>
+                        <TextBlock Grid.Column="3" Text="Status" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
+                    </Grid>
+
+                    <!-- List Content -->
+                    <ListBox Grid.Row="1"
+                             ItemsSource="{Binding Groups}"
+                             SelectedItem="{Binding SelectedGroup}"
+                             SelectionMode="Single"
+                             Background="Transparent">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="150,100,*,60" Margin="0,4">
+                                    <!-- Name -->
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="{Binding Name}"
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Description}"
+                                                   FontSize="10"
+                                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                    </StackPanel>
+
+                                    <!-- Actions Count -->
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding ActionsSummary}"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+
+                                    <!-- Message Template -->
+                                    <TextBlock Grid.Column="2"
+                                               Text="{Binding MessageTemplate}"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                               TextTrimming="CharacterEllipsis"/>
+
+                                    <!-- Status -->
+                                    <Border Grid.Column="3"
+                                            Background="{Binding IsEnabled, Converter={x:Static vm:EnabledColorConverter.Instance}}"
+                                            CornerRadius="4"
+                                            Padding="6,2"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding IsEnabled, Converter={x:Static vm:EnabledTextConverter.Instance}}"
+                                                   FontSize="11"
+                                                   Foreground="White"/>
+                                    </Border>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <!-- Action Buttons -->
+            <StackPanel Grid.Row="2"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        Margin="0,12,0,0">
+                <Button Content="Add"
+                        Command="{Binding AddGroupCommand}"
+                        Width="80"/>
+                <Button Content="Edit"
+                        Command="{Binding EditGroupCommand}"
+                        IsEnabled="{Binding HasSelection}"
+                        Width="80"/>
+                <Button Content="Delete"
+                        Command="{Binding DeleteGroupCommand}"
+                        IsEnabled="{Binding HasSelection}"
+                        Width="80"/>
+                <Rectangle Width="1" Fill="{DynamicResource SystemControlForegroundBaseMediumBrush}" Margin="8,4"/>
+                <Button Content="Test"
+                        Command="{Binding TestGroupCommand}"
+                        IsEnabled="{Binding HasSelection}"
+                        Width="80"/>
+                <Button Content="Toggle"
+                        Command="{Binding ToggleEnabledCommand}"
+                        IsEnabled="{Binding HasSelection}"
+                        Width="80"
+                        ToolTip.Tip="Toggle enabled/disabled"/>
+                <Rectangle Width="1" Fill="{DynamicResource SystemControlForegroundBaseMediumBrush}" Margin="8,4"/>
+                <Button Content="Reload"
+                        Command="{Binding ReloadCommand}"
+                        Width="80"/>
+            </StackPanel>
+
+            <!-- Footer -->
+            <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" Margin="0,12,0,0">
+                <!-- Status Message -->
+                <TextBlock Grid.Column="0"
+                           Text="{Binding StatusMessage}"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                           FontSize="12"/>
+
+                <!-- Save/Close Buttons -->
+                <Button Grid.Column="1"
+                        Content="Save"
+                        Command="{Binding SaveCommand}"
+                        Width="80"
+                        Margin="0,0,8,0"
+                        Classes="accent"/>
+                <Button Grid.Column="2"
+                        Content="Close"
+                        Command="{Binding CloseCommand}"
+                        Width="80"/>
+            </Grid>
+
+        </Grid>
+    </Border>
+</Window>

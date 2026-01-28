@@ -327,6 +327,9 @@ public class AlertService
         // 7. 觸發事件
         AlertExecuted?.Invoke(this, new AlertExecutedEventArgs(result));
 
+        // TB3-3: 記錄到歷史
+        ServiceLocator.AddAlertHistory(groupName, formattedMessage, result.Success);
+
         return result;
     }
 

@@ -1,12 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using _16pin_vmon.Core.Interfaces;
-using _16pin_vmon.Logic;
 using _16pin_vmon.Services;
 using Serilog;
 using LiveChartsCore;
@@ -16,30 +12,21 @@ using SkiaSharp;
 
 namespace _16pin_vmon.ViewModels;
 
+/// <summary>
+/// TC1-1: MainViewModel - 純顯示模式 (Display-Only)
+/// 專案轉型後，本 ViewModel 僅負責顯示硬體數據，不再主動觸發警報。
+/// 警報功能已移至 Alert Center (透過 Named Pipe 由外部工具觸發)。
+/// </summary>
 public partial class MainViewModel : ViewModelBase
 {
     private readonly IGpuProvider _gpuProvider;
     private readonly DispatcherTimer _timer;
-    private readonly AlertEvaluator _tempEvaluator;
-    private readonly List<IAlertAction> _alertActions = new();
-    private CommandLineAlertAction? _commandLineAction;
-    private TelegramAlertAction? _telegramAction;
-    private LineNotifyAlertAction? _lineNotifyAction;
-
-    // --- 警報門檻常數 (T0-3: 供審計日誌使用) ---
-    private const float TemperatureThreshold = 88.0f;
-    private const int AlertWindowSeconds = 3;
-    private const int AlertTriggerCount = 2;
-
-    // --- 警報狀態追蹤 (避免重複記錄) ---
-    private bool _wasTempAlertActive;
 
     // --- 介面綁定屬性 ---
     [ObservableProperty] private string _gpuName = "正在偵測...";
     [ObservableProperty] private float _currentUtilization;
     [ObservableProperty] private float _currentTemperature;
     [ObservableProperty] private float _currentPower;
-    [ObservableProperty] private bool _isTempAlert;
     [ObservableProperty] private float _powerLimit;
 
     // --- 動態標籤 (支援 GPU/CPU 模式切換) ---
@@ -48,6 +35,16 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private string _secondaryMetricLabel = "Power Usage";
     [ObservableProperty] private string _secondaryMetricUnit = "W";
     [ObservableProperty] private bool _isGpuMode = true;
+
+    // --- TB3-2: 狀態列屬性 ---
+    [ObservableProperty] private string _statusText = "System Ready";
+    [ObservableProperty] private bool _isPipeServerRunning;
+
+    // --- TC1-3: 顯示模式提示 ---
+    [ObservableProperty] private string _displayModeHint = "Display Only - Use HWiNFO64 for alerts";
+
+    // --- TB3-3: 警報歷史 ---
+    public ObservableCollection<AlertHistoryItem> AlertHistoryItems { get; } = new();
 
     // --- LiveCharts2 數據結構 ---
     public ObservableCollection<float> UtilizationHistory { get; } = new();
@@ -77,7 +74,7 @@ public partial class MainViewModel : ViewModelBase
     public Axis[] PowerYAxes { get; set; } = {
         new Axis {
             MinLimit = 0, MaxLimit = 600,
-            Labeler = v => v.ToString("F0") + " W", // 預設為 GPU 模式，InitializeCharts 會根據模式調整
+            Labeler = v => v.ToString("F0") + " W",
             SeparatorsPaint = new SolidColorPaint(SKColors.Gray.WithAlpha(50))
         }
     };
@@ -102,67 +99,75 @@ public partial class MainViewModel : ViewModelBase
         SecondaryMetricUnit = _gpuProvider.SecondaryMetricUnit;
         IsGpuMode = _gpuProvider.Mode == HardwareMode.Gpu;
 
-        // 1. 初始化圖表外觀 (在設定標籤之後)
+        // 1. 初始化圖表外觀
         InitializeCharts();
 
-        // 2. 初始化警報判定器 (溫度)
-        _tempEvaluator = new AlertEvaluator(
-            seconds: AlertWindowSeconds,
-            count: AlertTriggerCount,
-            threshold: TemperatureThreshold,
-            isLowerBound: false);
-
-        // 3. 初始化警報動作 (T4-1)
-        InitializeAlertActions();
-
-        // 4. 設定定時器
+        // 2. 設定定時器 (純讀取顯示，不觸發警報)
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _timer.Tick += OnTimerTick;
         _timer.Start();
 
-        Log.Information("16pin-vmon 監控啟動: {GpuName} | Mode: {Mode} | PowerLimit: {PowerLimit:F1}{Unit}",
+        // 3. TB3-2/TB3-3: 訂閱狀態更新事件
+        InitializeStatusSubscriptions();
+
+        Log.Information("16pin-vmon 監控啟動 (Display-Only Mode): {GpuName} | Mode: {Mode} | PowerLimit: {PowerLimit:F1}{Unit}",
             GpuName, _gpuProvider.Mode, PowerLimit, SecondaryMetricUnit);
     }
 
     /// <summary>
-    /// T4-1: 初始化警報動作
+    /// TB3-2/TB3-3: 初始化狀態訂閱
     /// </summary>
-    private void InitializeAlertActions()
+    private void InitializeStatusSubscriptions()
     {
-        var settingsService = ServiceLocator.SettingsService;
-        if (settingsService == null)
+        // TB3-2: 訂閱 Pipe 狀態變更
+        ServiceLocator.PipeStatusChanged += (_, _) =>
         {
-            Log.Warning("SettingsService 未初始化，警報動作將無法使用");
-            return;
-        }
+            Dispatcher.UIThread.Post(() =>
+            {
+                IsPipeServerRunning = ServiceLocator.IsPipeServerRunning;
+                UpdateStatusText();
+            });
+        };
 
-        // T4-1: CommandLine Alert Action
-        _commandLineAction = new CommandLineAlertAction(settingsService);
-        if (_commandLineAction != null)
+        // 初始化 Pipe 狀態
+        IsPipeServerRunning = ServiceLocator.IsPipeServerRunning;
+        UpdateStatusText();
+
+        // TB3-3: 訂閱警報歷史變更
+        ServiceLocator.AlertHistoryChanged += (_, _) =>
         {
-            _alertActions.Add(_commandLineAction);
-        }
+            Dispatcher.UIThread.Post(RefreshAlertHistory);
+        };
 
-        // T4-2: Telegram Alert Action
-        _telegramAction = new TelegramAlertAction(settingsService);
-        if (_telegramAction != null)
+        // 載入現有歷史
+        RefreshAlertHistory();
+    }
+
+    /// <summary>
+    /// TB3-2: 更新狀態列文字
+    /// </summary>
+    private void UpdateStatusText()
+    {
+        if (IsPipeServerRunning)
         {
-            _alertActions.Add(_telegramAction);
+            StatusText = "Alert Center Ready - Listening for alerts";
         }
-
-        // T4-3: LINE Notify Alert Action
-        _lineNotifyAction = new LineNotifyAlertAction(settingsService);
-        if (_lineNotifyAction != null)
+        else
         {
-            _alertActions.Add(_lineNotifyAction);
+            StatusText = "Display Only Mode";
         }
+    }
 
-        var settings = settingsService.Load();
-        Log.Information("警報動作已初始化: CommandLine={CmdEnabled}, Telegram={TgEnabled}, LINE={LineEnabled}, DebugMode={Debug}",
-            settings.CommandLineAlertEnabled,
-            settings.TelegramAlertEnabled,
-            settings.LineNotifyAlertEnabled,
-            settings.AlertActionsDebugMode);
+    /// <summary>
+    /// TB3-3: 刷新警報歷史清單
+    /// </summary>
+    private void RefreshAlertHistory()
+    {
+        AlertHistoryItems.Clear();
+        foreach (var item in ServiceLocator.AlertHistory)
+        {
+            AlertHistoryItems.Add(item);
+        }
     }
 
     private void InitializeCharts()
@@ -212,7 +217,7 @@ public partial class MainViewModel : ViewModelBase
         }
         else
         {
-            // CPU/Network 模式: 0-125000 KB/s，自動縮放為 MB/s
+            // CPU/Network 模式: 自動縮放
             PowerYAxes[0].MinLimit = 0;
             PowerYAxes[0].MaxLimit = 10000; // 初始 10 MB/s
             PowerYAxes[0].Labeler = v =>
@@ -233,7 +238,6 @@ public partial class MainViewModel : ViewModelBase
 
         if (IsGpuMode)
         {
-            // GPU 模式: 功耗超過 600W 時動態擴展
             if (CurrentPower > currentMax)
             {
                 PowerYAxes[0].MaxLimit = CurrentPower + 50;
@@ -241,15 +245,16 @@ public partial class MainViewModel : ViewModelBase
         }
         else
         {
-            // CPU/Network 模式: 網路流量超過當前上限時動態擴展
             if (CurrentPower > currentMax)
             {
-                // 擴展為當前值的 1.5 倍，最少增加 1000 KB/s
                 PowerYAxes[0].MaxLimit = Math.Max(CurrentPower * 1.5, currentMax + 1000);
             }
         }
     }
 
+    /// <summary>
+    /// TC1-1: 定時器回呼 - 純讀取顯示，不觸發警報
+    /// </summary>
     private void OnTimerTick(object? sender, EventArgs e)
     {
         try
@@ -260,108 +265,20 @@ public partial class MainViewModel : ViewModelBase
             CurrentTemperature = reading.Temperature;
             CurrentPower = reading.PowerUsage;
 
-            // B. 警報邏輯判定 (滑動視窗) - 僅溫度
-            IsTempAlert = _tempEvaluator.PushValueAndCheckAlert(CurrentTemperature);
-
-            // C. 更新圖表數據 (保留最近 900 秒)
+            // B. 更新圖表數據 (保留最近 900 秒)
             UpdateHistory(UtilizationHistory, CurrentUtilization);
             UpdateHistory(TemperatureHistory, CurrentTemperature);
             UpdateHistory(PowerHistory, CurrentPower);
 
-            // D. 警報執行動作與日誌
-            HandleAlertLogs();
-
-            // E. 動態 Y 軸調整
+            // C. 動態 Y 軸調整
             AdjustYAxisDynamically();
+
+            // TC1-1: 不再執行警報判定與觸發
+            // 警報功能已移至 Alert Center (透過 Named Pipe 由外部工具觸發)
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "數據讀取或判定過程中發生錯誤");
-        }
-    }
-
-    /// <summary>
-    /// T0-3: 審計日誌 - 完整記錄警報觸發瞬間，作為「程式已盡提醒義務」之證明
-    /// T4-1: 觸發警報動作
-    /// </summary>
-    private void HandleAlertLogs()
-    {
-        // 溫度警報：從無到有觸發時記錄
-        if (IsTempAlert && !_wasTempAlertActive)
-        {
-            Log.Warning(
-                "[ALERT TRIGGERED] GPU 溫度過高 | " +
-                "GPU: {GpuName} | " +
-                "溫度: {Temp:F1}°C | " +
-                "門檻: > {Threshold:F1}°C | " +
-                "判定條件: {Window}秒內{Count}次 | " +
-                "功耗: {Power:F1}W",
-                GpuName,
-                CurrentTemperature,
-                TemperatureThreshold,
-                AlertWindowSeconds,
-                AlertTriggerCount,
-                CurrentPower);
-
-            // T4-1: 執行警報動作
-            _ = ExecuteAlertActionsAsync("Temperature", $"GPU 溫度過高: {CurrentTemperature:F1}°C");
-        }
-
-        // 溫度警報解除
-        if (!IsTempAlert && _wasTempAlertActive)
-        {
-            Log.Information(
-                "[ALERT CLEARED] GPU 溫度恢復正常 | " +
-                "GPU: {GpuName} | " +
-                "溫度: {Temp:F1}°C",
-                GpuName,
-                CurrentTemperature);
-        }
-
-        // 更新狀態追蹤
-        _wasTempAlertActive = IsTempAlert;
-    }
-
-    /// <summary>
-    /// T4-1: 非同步執行所有啟用的警報動作
-    /// </summary>
-    private async Task ExecuteAlertActionsAsync(string alertType, string message)
-    {
-        // 處理 CommandLine 動作的變數替換
-        if (_commandLineAction != null && _commandLineAction.IsEnabled)
-        {
-            var substitutedCommand = _commandLineAction.SubstituteVariables(
-                _commandLineAction.Command,
-                CurrentPower,
-                CurrentTemperature,
-                GpuName,
-                alertType);
-
-            // 暫時替換命令
-            var originalCommand = _commandLineAction.Command;
-            _commandLineAction.Command = substitutedCommand;
-
-            try
-            {
-                await _commandLineAction.ExecuteAsync(message);
-            }
-            finally
-            {
-                _commandLineAction.Command = originalCommand;
-            }
-        }
-
-        // 執行其他警報動作
-        foreach (var action in _alertActions.Where(a => a.IsEnabled && a != _commandLineAction))
-        {
-            try
-            {
-                await action.ExecuteAsync(message);
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "執行警報動作 {ActionName} 時發生錯誤", action.DisplayName);
-            }
+            Log.Error(ex, "數據讀取過程中發生錯誤");
         }
     }
 

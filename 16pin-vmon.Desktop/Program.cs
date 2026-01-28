@@ -1,7 +1,10 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Serilog;
 using _16pin_vmon.Core.Interfaces;
 using _16pin_vmon.Desktop.Implementations;
@@ -19,6 +22,9 @@ sealed class Program
     // TA1-3: Named Pipe Server
     private static NamedPipeServer? _namedPipeServer;
 
+    // TD2-2: Tray Icon Manager
+    private static TrayIconManager? _trayIconManager;
+
     [STAThread]
     public static void Main(string[] args)
     {
@@ -31,6 +37,13 @@ sealed class Program
             Log.Information("平台: {OS}, 架構: {Arch}",
                 RuntimeInformation.OSDescription,
                 RuntimeInformation.OSArchitecture);
+
+            // TD2-1: 檢查是否以最小化模式啟動
+            ServiceLocator.StartMinimized = args.Contains("--minimized") || args.Contains("-m");
+            if (ServiceLocator.StartMinimized)
+            {
+                Log.Information("以最小化模式啟動");
+            }
 
             // TA1-1: 檢查單一實例
             _singleInstanceManager = new SingleInstanceManager();
@@ -48,6 +61,9 @@ sealed class Program
             // T1-1: Initialize services based on platform
             InitializeServices();
 
+            // TD2-2: 初始化系統匣圖示管理
+            InitializeTrayIcon();
+
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
         catch (Exception ex)
@@ -58,12 +74,54 @@ sealed class Program
         finally
         {
             // Cleanup
+            ShutdownTrayIcon();
             ShutdownNamedPipeServer();
             ServiceLocator.GpuProvider?.Dispose();
             _singleInstanceManager?.Dispose();
             Log.Information("=== 16pin-vmon 應用程式結束 ===");
             Log.CloseAndFlush();
         }
+    }
+
+    /// <summary>
+    /// TD2-2: 初始化系統匣圖示
+    /// </summary>
+    private static void InitializeTrayIcon()
+    {
+        if (!TrayIconManager.IsSupported)
+        {
+            Log.Debug("[TrayIcon] 系統匣功能不支援此平台");
+            return;
+        }
+
+        _trayIconManager = new TrayIconManager();
+
+        // 註冊 ServiceLocator 委派
+        ServiceLocator.MinimizeToTray = () => _trayIconManager?.MinimizeToTray();
+        ServiceLocator.RestoreFromTray = () => _trayIconManager?.ShowMainWindow();
+    }
+
+    /// <summary>
+    /// TD2-2: 在主視窗載入後完成系統匣初始化
+    /// </summary>
+    public static void InitializeTrayIconWithWindow(Window mainWindow)
+    {
+        _trayIconManager?.Initialize(mainWindow);
+
+        // TD2-1: 如果以最小化模式啟動，則最小化到系統匣
+        if (ServiceLocator.StartMinimized)
+        {
+            _trayIconManager?.MinimizeToTray();
+        }
+    }
+
+    /// <summary>
+    /// TD2-2: 關閉系統匣圖示
+    /// </summary>
+    private static void ShutdownTrayIcon()
+    {
+        _trayIconManager?.Dispose();
+        _trayIconManager = null;
     }
 
     /// <summary>
@@ -93,10 +151,14 @@ sealed class Program
 
             // 啟動伺服器
             _namedPipeServer.Start();
+
+            // TB3-2: 更新 Pipe 伺服器狀態
+            ServiceLocator.IsPipeServerRunning = _namedPipeServer.IsRunning;
         }
         catch (Exception ex)
         {
             Log.Error(ex, "[NamedPipe] 初始化 Named Pipe Server 失敗");
+            ServiceLocator.IsPipeServerRunning = false;
         }
     }
 
@@ -105,6 +167,9 @@ sealed class Program
     /// </summary>
     private static void ShutdownNamedPipeServer()
     {
+        // TB3-2: 更新狀態
+        ServiceLocator.IsPipeServerRunning = false;
+
         if (_namedPipeServer == null) return;
 
         try
