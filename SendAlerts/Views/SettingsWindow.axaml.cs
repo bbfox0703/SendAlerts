@@ -16,5 +16,15 @@ public partial class SettingsWindow : Window
 
         viewModel.OnSaved += () => Close(true);
         viewModel.OnCancelled += () => Close(false);
+
+        // 處理複製到剪貼簿的請求
+        viewModel.CopyToClipboardRequested += async (text) =>
+        {
+            var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+            if (clipboard != null)
+            {
+                await clipboard.SetTextAsync(text);
+            }
+        };
     }
 }

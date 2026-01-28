@@ -25,6 +25,9 @@ public partial class AlertGroupsWindow : Window
 
         // TB2-2: 訂閱編輯對話框請求
         viewModel.EditGroupRequested += OnEditGroupRequested;
+
+        // 訂閱顯示 CLI 指令請求
+        viewModel.ShowCliCommandRequested += OnShowCliCommandRequested;
     }
 
     /// <summary>
@@ -55,5 +58,14 @@ public partial class AlertGroupsWindow : Window
             return dialog.GetResult();
         }
         return null;
+    }
+
+    /// <summary>
+    /// 顯示 CLI 指令對話框
+    /// </summary>
+    private async void OnShowCliCommandRequested(string title, string content)
+    {
+        var dialog = new CliCommandDialog(title, content);
+        await dialog.ShowDialog(this);
     }
 }

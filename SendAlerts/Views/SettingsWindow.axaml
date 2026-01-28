@@ -3,11 +3,11 @@
         xmlns:vm="using:SendAlerts.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="550" d:DesignHeight="600"
+        mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="480"
         x:Class="SendAlerts.Views.SettingsWindow"
         x:DataType="vm:SettingsViewModel"
         Title="Settings"
-        Width="550" Height="600"
+        Width="500" Height="480"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
         SystemDecorations="Full">
@@ -17,224 +17,157 @@
     </Design.DataContext>
 
     <Border Padding="16">
-        <Grid RowDefinitions="*,Auto">
+        <Grid RowDefinitions="*,Auto,Auto">
 
-            <!-- TabControl for Settings Categories -->
-            <TabControl Grid.Row="0">
+            <ScrollViewer Grid.Row="0">
+                <StackPanel Spacing="12">
 
-                <!-- Tab 1: Monitoring Settings -->
-                <TabItem Header="Monitoring">
-                    <ScrollViewer Margin="0,8,0,0">
-                        <StackPanel Spacing="12">
-
-                            <!-- Voltage Threshold -->
-                            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                    CornerRadius="8" Padding="16">
-                                <StackPanel Spacing="8">
-                                    <TextBlock Text="Voltage Threshold" FontWeight="SemiBold"/>
-                                    <Grid ColumnDefinitions="*,80">
-                                        <Slider Grid.Column="0"
-                                                Minimum="10" Maximum="13"
-                                                Value="{Binding VoltageThreshold}"
-                                                TickFrequency="0.1"
-                                                IsSnapToTickEnabled="True"/>
-                                        <TextBlock Grid.Column="1"
-                                                   Text="{Binding VoltageThreshold, StringFormat={}{0:F1} V}"
-                                                   VerticalAlignment="Center"
-                                                   HorizontalAlignment="Right"
-                                                   FontWeight="Bold"/>
-                                    </Grid>
-                                    <TextBlock Text="Alert when voltage drops below this value"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Temperature Threshold -->
-                            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                    CornerRadius="8" Padding="16">
-                                <StackPanel Spacing="8">
-                                    <TextBlock Text="Temperature Threshold" FontWeight="SemiBold"/>
-                                    <Grid ColumnDefinitions="*,80">
-                                        <Slider Grid.Column="0"
-                                                Minimum="50" Maximum="100"
-                                                Value="{Binding TemperatureThreshold}"
-                                                TickFrequency="1"
-                                                IsSnapToTickEnabled="True"/>
-                                        <TextBlock Grid.Column="1"
-                                                   Text="{Binding TemperatureThreshold, StringFormat={}{0:F0} C}"
-                                                   VerticalAlignment="Center"
-                                                   HorizontalAlignment="Right"
-                                                   FontWeight="Bold"/>
-                                    </Grid>
-                                    <TextBlock Text="Alert when temperature exceeds this value"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Alert Window -->
-                            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                    CornerRadius="8" Padding="16">
-                                <StackPanel Spacing="8">
-                                    <TextBlock Text="Alert Trigger Condition" FontWeight="SemiBold"/>
-                                    <Grid ColumnDefinitions="*,*">
-                                        <StackPanel Grid.Column="0" Spacing="4">
-                                            <TextBlock Text="Window (sec)"/>
-                                            <NumericUpDown Value="{Binding AlertWindowSeconds}"
-                                                           Minimum="1" Maximum="30"
-                                                           Increment="1"
-                                                           FormatString="0"/>
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="1" Spacing="4" Margin="8,0,0,0">
-                                            <TextBlock Text="Trigger Count"/>
-                                            <NumericUpDown Value="{Binding AlertTriggerCount}"
-                                                           Minimum="1" Maximum="30"
-                                                           Increment="1"
-                                                           FormatString="0"/>
-                                        </StackPanel>
-                                    </Grid>
-                                    <TextBlock Text="{Binding AlertWindowSeconds, StringFormat=Trigger when threshold exceeded within {0} seconds}"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Sampling Interval -->
-                            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                    CornerRadius="8" Padding="16">
-                                <StackPanel Spacing="8">
-                                    <TextBlock Text="Sampling Interval" FontWeight="SemiBold"/>
-                                    <Grid ColumnDefinitions="*,80">
-                                        <Slider Grid.Column="0"
-                                                Minimum="1" Maximum="10"
-                                                Value="{Binding SamplingIntervalSeconds}"
-                                                TickFrequency="1"
-                                                IsSnapToTickEnabled="True"/>
-                                        <TextBlock Grid.Column="1"
-                                                   Text="{Binding SamplingIntervalSeconds, StringFormat={}{0} sec}"
-                                                   VerticalAlignment="Center"
-                                                   HorizontalAlignment="Right"
-                                                   FontWeight="Bold"/>
-                                    </Grid>
-                                </StackPanel>
-                            </Border>
-
+                    <!-- Sampling Interval -->
+                    <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                            CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Sampling Interval" FontWeight="SemiBold"/>
+                            <Grid ColumnDefinitions="*,80">
+                                <Slider Grid.Column="0"
+                                        Minimum="1" Maximum="10"
+                                        Value="{Binding SamplingIntervalSeconds}"
+                                        TickFrequency="1"
+                                        IsSnapToTickEnabled="True"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding SamplingIntervalSeconds, StringFormat={}{0} sec}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontWeight="Bold"/>
+                            </Grid>
+                            <TextBlock Text="How often to read hardware data for display"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
                         </StackPanel>
-                    </ScrollViewer>
-                </TabItem>
+                    </Border>
 
-                <!-- Tab 2: Alert Actions -->
-                <TabItem Header="Alert Actions">
-                    <ScrollViewer Margin="0,8,0,0">
-                        <StackPanel Spacing="12">
+                    <!-- HTTP API Settings -->
+                    <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                            CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="8">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <CheckBox Content="Enable HTTP API"
+                                          IsChecked="{Binding HttpApiEnabled}"
+                                          FontWeight="SemiBold"/>
+                            </StackPanel>
 
-                            <!-- Debug Mode -->
-                            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                    CornerRadius="8" Padding="16">
-                                <StackPanel Spacing="8">
-                                    <CheckBox Content="Debug Mode (log only, don't execute)"
-                                              IsChecked="{Binding AlertActionsDebugMode}"/>
-                                    <TextBlock Text="When enabled, alert actions are logged but not executed"
+                            <TextBlock Text="Allow remote machines to send alerts via HTTP"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+
+                            <!-- Port -->
+                            <Grid ColumnDefinitions="80,*" Margin="0,8,0,0"
+                                  IsEnabled="{Binding HttpApiEnabled}">
+                                <TextBlock Text="Port:" VerticalAlignment="Center"/>
+                                <NumericUpDown Grid.Column="1"
+                                               Value="{Binding HttpApiPort}"
+                                               Minimum="1024" Maximum="65535"
+                                               Increment="1"
+                                               FormatString="0"
+                                               Width="150"
+                                               HorizontalAlignment="Left"/>
+                            </Grid>
+
+                            <!-- API Key -->
+                            <Grid ColumnDefinitions="80,*,Auto,Auto" Margin="0,4,0,0"
+                                  IsEnabled="{Binding HttpApiEnabled}">
+                                <TextBlock Text="API Key:" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding HttpApiKey}"
+                                         PasswordChar="*"
+                                         Watermark="Click Generate to create a key"
+                                         IsReadOnly="True"
+                                         Margin="0,0,8,0"/>
+                                <Button Grid.Column="2"
+                                        Content="Generate"
+                                        Command="{Binding GenerateApiKeyCommand}"
+                                        Width="80"
+                                        Margin="0,0,4,0"/>
+                                <Button Grid.Column="3"
+                                        Content="Copy"
+                                        Command="{Binding CopyApiKeyCommand}"
+                                        IsEnabled="{Binding HasApiKey}"
+                                        Width="60"/>
+                            </Grid>
+
+                            <!-- Example Command -->
+                            <Expander Header="Example Commands" Margin="0,8,0,0"
+                                      IsEnabled="{Binding HttpApiEnabled}">
+                                <StackPanel Spacing="8" Margin="0,8,0,0">
+                                    <Button Content="Copy PowerShell Example"
+                                            Command="{Binding CopyExampleCommandCommand}"
+                                            HorizontalAlignment="Left"/>
+                                    <TextBlock Text="POST http://YOUR_IP:58080/api/send"
+                                               FontFamily="Consolas"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                    <TextBlock Text="Header: X-API-Key: &lt;your-api-key&gt;"
+                                               FontFamily="Consolas"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                    <TextBlock Text="Body: { &quot;groupName&quot;: &quot;Critical&quot;, &quot;message&quot;: &quot;...&quot; }"
+                                               FontFamily="Consolas"
                                                FontSize="11"
                                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
                                 </StackPanel>
-                            </Border>
+                            </Expander>
 
-                            <!-- CommandLine Alert -->
-                            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                    CornerRadius="8" Padding="16">
-                                <StackPanel Spacing="8">
-                                    <CheckBox Content="Command Line"
-                                              IsChecked="{Binding CommandLineAlertEnabled}"
-                                              FontWeight="SemiBold"/>
-                                    <TextBlock Text="Command to execute:"
-                                               IsEnabled="{Binding CommandLineAlertEnabled}"/>
-                                    <TextBox Text="{Binding CommandLineAlertCommand}"
-                                             Watermark="e.g., powershell -c &quot;...&quot;"
-                                             IsEnabled="{Binding CommandLineAlertEnabled}"/>
-                                    <Grid ColumnDefinitions="Auto,*">
-                                        <TextBlock Text="Cooldown:"
-                                                   VerticalAlignment="Center"
-                                                   IsEnabled="{Binding CommandLineAlertEnabled}"/>
-                                        <NumericUpDown Grid.Column="1"
-                                                       Value="{Binding CommandLineAlertCooldownSeconds}"
-                                                       Minimum="5" Maximum="300"
-                                                       Increment="5"
-                                                       FormatString="0"
-                                                       Width="100"
-                                                       Margin="8,0,0,0"
-                                                       HorizontalAlignment="Left"
-                                                       IsEnabled="{Binding CommandLineAlertEnabled}"/>
-                                    </Grid>
-                                    <TextBlock Text="Variables: {voltage}, {temperature}, {gpu_name}, {alert_type}, {timestamp}"
-                                               FontSize="10"
-                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                               TextWrapping="Wrap"/>
-                                </StackPanel>
+                            <!-- Warning -->
+                            <Border Background="#FFF3E0" CornerRadius="4" Padding="8" Margin="0,8,0,0"
+                                    IsVisible="{Binding HttpApiEnabled}">
+                                <TextBlock Text="Note: Changes to HTTP API settings require restarting the application."
+                                           FontSize="11"
+                                           Foreground="#E65100"
+                                           TextWrapping="Wrap"/>
                             </Border>
-
-                            <!-- Telegram Alert -->
-                            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                    CornerRadius="8" Padding="16">
-                                <StackPanel Spacing="8">
-                                    <CheckBox Content="Telegram"
-                                              IsChecked="{Binding TelegramAlertEnabled}"
-                                              FontWeight="SemiBold"/>
-                                    <TextBlock Text="Bot Token:"
-                                               IsEnabled="{Binding TelegramAlertEnabled}"/>
-                                    <TextBox Text="{Binding TelegramBotToken}"
-                                             Watermark="123456789:ABC..."
-                                             PasswordChar="*"
-                                             IsEnabled="{Binding TelegramAlertEnabled}"/>
-                                    <TextBlock Text="Chat ID:"
-                                               IsEnabled="{Binding TelegramAlertEnabled}"/>
-                                    <TextBox Text="{Binding TelegramChatId}"
-                                             Watermark="-123456789"
-                                             IsEnabled="{Binding TelegramAlertEnabled}"/>
-                                    <TextBlock Text="Get token from @BotFather, Chat ID from /getUpdates API"
-                                               FontSize="10"
-                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                               TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- LINE Notify has been discontinued - Use Alert Center for Discord -->
-                            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                                    CornerRadius="8" Padding="16"
-                                    Opacity="0.6">
-                                <StackPanel Spacing="8">
-                                    <TextBlock Text="LINE Notify (Discontinued)"
-                                               FontWeight="SemiBold"
-                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-                                    <TextBlock Text="LINE Notify has been discontinued by LINE. Please use Alert Center with Discord Webhook instead."
-                                               FontSize="11"
-                                               TextWrapping="Wrap"
-                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-                                </StackPanel>
-                            </Border>
-
                         </StackPanel>
-                    </ScrollViewer>
-                </TabItem>
+                    </Border>
 
-            </TabControl>
+                    <!-- Alert Center Info -->
+                    <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                            CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Alert Center" FontWeight="SemiBold"/>
+                            <TextBlock Text="To configure alert actions and groups, use the buttons on the main screen:"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                                <Border Background="#2E7D32" CornerRadius="4" Padding="8,4">
+                                    <TextBlock Text="Alert Actions" Foreground="White" FontSize="11"/>
+                                </Border>
+                                <Border Background="#1565C0" CornerRadius="4" Padding="8,4">
+                                    <TextBlock Text="Alert Groups" Foreground="White" FontSize="11"/>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Status Message -->
+            <TextBlock Grid.Row="1"
+                       Text="{Binding StatusMessage}"
+                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                       FontSize="11"
+                       Margin="0,8,0,0"
+                       IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
             <!-- Buttons -->
-            <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,12,0,0">
-                <Button Grid.Column="0"
-                        Content="Reset Defaults"
-                        Command="{Binding ResetToDefaultsCommand}"
-                        HorizontalContentAlignment="Center"/>
-
-                <Button Grid.Column="2"
+            <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" Margin="0,12,0,0">
+                <Button Grid.Column="1"
                         Content="Cancel"
                         Command="{Binding CancelCommand}"
                         Width="80"
                         HorizontalContentAlignment="Center"
                         Margin="0,0,8,0"/>
 
-                <Button Grid.Column="3"
+                <Button Grid.Column="2"
                         Content="Save"
                         Command="{Binding SaveCommand}"
                         Width="80"

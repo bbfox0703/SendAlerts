@@ -201,12 +201,13 @@ public partial class AlertActionsViewModel : ViewModelBase
     [RelayCommand]
     private async Task TestActionAsync()
     {
-        if (SelectedAction == null) return;
+        if (SelectedAction == null || _settings == null) return;
 
-        var alertService = ServiceLocator.AlertService;
-        if (alertService == null)
+        // 從設定中找到對應的 config
+        var config = _settings.AlertActions.FirstOrDefault(a => a.InstanceId == SelectedAction.InstanceId);
+        if (config == null)
         {
-            StatusMessage = "AlertService 未初始化";
+            StatusMessage = $"找不到設定: {SelectedAction.InstanceId}";
             return;
         }
 
@@ -215,10 +216,17 @@ public partial class AlertActionsViewModel : ViewModelBase
 
         try
         {
-            var success = await alertService.TestActionAsync(SelectedAction.InstanceId, "這是測試訊息");
-            StatusMessage = success
-                ? $"測試成功: {SelectedAction.InstanceId}"
-                : $"測試失敗: {SelectedAction.InstanceId}";
+            // 直接從 config 建立 action 來測試（不需要先儲存）
+            var action = AlertActionFactory.Create(config);
+            if (action == null)
+            {
+                StatusMessage = $"無法建立動作: {SelectedAction.InstanceId}";
+                return;
+            }
+
+            Log.Information("[AlertActionsViewModel] 測試 Action: {InstanceId}", SelectedAction.InstanceId);
+            await action.ExecuteAsync($"[TEST] 這是測試訊息 - {DateTime.Now:HH:mm:ss}");
+            StatusMessage = $"測試成功: {SelectedAction.InstanceId}";
         }
         catch (Exception ex)
         {

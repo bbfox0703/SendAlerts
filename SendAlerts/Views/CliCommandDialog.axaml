@@ -1,0 +1,49 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="550" d:DesignHeight="380"
+        x:Class="SendAlerts.Views.CliCommandDialog"
+        Title="CLI Commands"
+        Width="550" Height="380"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        SystemDecorations="Full">
+
+    <Border Padding="16">
+        <Grid RowDefinitions="Auto,*,Auto">
+
+            <!-- Header -->
+            <TextBlock Grid.Row="0"
+                       x:Name="HeaderText"
+                       FontSize="16"
+                       FontWeight="Bold"
+                       Margin="0,0,0,12"/>
+
+            <!-- Content -->
+            <TextBox Grid.Row="1"
+                     x:Name="ContentTextBox"
+                     IsReadOnly="True"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     FontFamily="Consolas, Courier New, monospace"
+                     FontSize="12"/>
+
+            <!-- Buttons -->
+            <StackPanel Grid.Row="2"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="8"
+                        Margin="0,12,0,0">
+                <Button Content="Copy to Clipboard"
+                        x:Name="CopyButton"
+                        Click="OnCopyClick"
+                        Width="130"/>
+                <Button Content="Close"
+                        Click="OnCloseClick"
+                        Width="80"/>
+            </StackPanel>
+
+        </Grid>
+    </Border>
+</Window>

@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.Diagnostics;
 using System.IO.Pipes;
 using System.Text;
 using System.Text.Json;
@@ -128,6 +129,46 @@ class Program
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
 
+        // 嘗試連接，失敗時自動啟動 Desktop
+        var connected = await TryConnectAndSendAsync(jsonMessage, timeout);
+
+        if (!connected)
+        {
+            // 嘗試啟動 Desktop
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("[SendAlerts-cli] SendAlerts not running, attempting to start...");
+            Console.ResetColor();
+
+            if (TryStartDesktop())
+            {
+                // 等待 Desktop 啟動並重試連接
+                Console.WriteLine("[SendAlerts-cli] Waiting for SendAlerts to start...");
+                await Task.Delay(3000); // 等待 3 秒讓 Desktop 啟動
+
+                connected = await TryConnectAndSendAsync(jsonMessage, timeout);
+            }
+        }
+
+        if (connected)
+        {
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("[SendAlerts-cli] Alert sent successfully!");
+            Console.ResetColor();
+        }
+        else
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("[SendAlerts-cli] ERROR: Failed to send alert. Could not connect to SendAlerts.");
+            Console.ResetColor();
+            Environment.Exit(1);
+        }
+    }
+
+    /// <summary>
+    /// 嘗試連接到 Named Pipe 並發送訊息
+    /// </summary>
+    private static async Task<bool> TryConnectAndSendAsync(string jsonMessage, int timeout)
+    {
         try
         {
             using var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.Out);
@@ -143,23 +184,75 @@ class Program
             await pipe.WriteAsync(bytes);
             await pipe.FlushAsync();
 
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("[SendAlerts-cli] Alert sent successfully!");
-            Console.ResetColor();
+            return true;
         }
         catch (OperationCanceledException)
         {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("[SendAlerts-cli] ERROR: Connection timeout. Is SendAlerts running?");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine($"[SendAlerts-cli] Connection failed: {ex.Message}");
             Console.ResetColor();
-            Environment.Exit(1);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 嘗試啟動 Desktop 應用程式
+    /// </summary>
+    private static bool TryStartDesktop()
+    {
+        // 尋找同目錄下的 SendAlerts.Desktop.exe
+        var cliPath = Environment.ProcessPath;
+        if (string.IsNullOrEmpty(cliPath))
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("[SendAlerts-cli] ERROR: Cannot determine CLI path.");
+            Console.ResetColor();
+            return false;
+        }
+
+        var cliDir = Path.GetDirectoryName(cliPath);
+        if (string.IsNullOrEmpty(cliDir))
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("[SendAlerts-cli] ERROR: Cannot determine CLI directory.");
+            Console.ResetColor();
+            return false;
+        }
+
+        var desktopPath = Path.Combine(cliDir, "SendAlerts.Desktop.exe");
+
+        if (!File.Exists(desktopPath))
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"[SendAlerts-cli] ERROR: SendAlerts.Desktop.exe not found at: {desktopPath}");
+            Console.ResetColor();
+            return false;
+        }
+
+        try
+        {
+            Console.WriteLine($"[SendAlerts-cli] Starting: {desktopPath}");
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = desktopPath,
+                UseShellExecute = true,
+                WindowStyle = ProcessWindowStyle.Minimized // 最小化啟動
+            };
+
+            Process.Start(startInfo);
+            return true;
         }
         catch (Exception ex)
         {
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"[SendAlerts-cli] ERROR: {ex.Message}");
+            Console.WriteLine($"[SendAlerts-cli] ERROR: Failed to start SendAlerts: {ex.Message}");
             Console.ResetColor();
-            Environment.Exit(1);
+            return false;
         }
     }
 
