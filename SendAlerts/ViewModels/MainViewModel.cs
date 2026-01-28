@@ -21,6 +21,15 @@ public partial class MainViewModel : ViewModelBase
 {
     private readonly IGpuProvider _gpuProvider;
     private readonly DispatcherTimer _timer;
+    private readonly LocalizationService _loc = LocalizationService.Instance;
+
+    #region Localized Strings
+    public string Loc_Settings => _loc["Settings"];
+    public string Loc_AlertActions => _loc["Main_AlertActions"];
+    public string Loc_AlertGroups => _loc["Main_AlertGroups"];
+    public string Loc_DisplayModeHint => _loc["Main_DisplayOnly"];
+    public string Loc_RecentAlerts => _loc["Main_RecentAlerts"];
+    #endregion
 
     // --- 介面綁定屬性 ---
     [ObservableProperty] private string _gpuName = "正在偵測...";
@@ -40,8 +49,7 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private string _statusText = "System Ready";
     [ObservableProperty] private bool _isPipeServerRunning;
 
-    // --- TC1-3: 顯示模式提示 ---
-    [ObservableProperty] private string _displayModeHint = "Display Only - Use HWiNFO64 for alerts";
+    // --- TC1-3: 顯示模式提示 (use Loc_DisplayModeHint) ---
 
     // --- TB3-3: 警報歷史 ---
     public ObservableCollection<AlertHistoryItem> AlertHistoryItems { get; } = new();

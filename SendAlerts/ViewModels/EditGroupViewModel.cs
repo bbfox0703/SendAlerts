@@ -16,6 +16,20 @@ public partial class EditGroupViewModel : ViewModelBase
 {
     private readonly AlertGroup? _existingGroup;
     private readonly AppSettings? _settings;
+    private readonly LocalizationService _loc = LocalizationService.Instance;
+
+    #region Localized Strings
+    public string Loc_GroupSettings => _loc["Settings"];
+    public string Loc_Name => _loc["EditGroup_Name"];
+    public string Loc_Description => _loc["EditGroup_Description"];
+    public string Loc_Enabled => _loc["Enabled"];
+    public string Loc_MessageTemplate => _loc["EditGroup_MessageTemplate"];
+    public string Loc_SelectActions => _loc["EditGroup_SelectActions"];
+    public string Loc_SelectAll => _loc["EditGroup_SelectAll"];
+    public string Loc_SelectNone => _loc["EditGroup_SelectNone"];
+    public string Loc_Cancel => _loc["Cancel"];
+    public string Loc_OK => _loc["OK"];
+    #endregion
 
     /// <summary>
     /// 是否為編輯模式
@@ -25,7 +39,7 @@ public partial class EditGroupViewModel : ViewModelBase
     /// <summary>
     /// 對話框標題
     /// </summary>
-    public string Title => IsEditMode ? "Edit Group" : "Add Group";
+    public string Title => IsEditMode ? _loc["EditGroup_EditTitle"] : _loc["EditGroup_AddTitle"];
 
     /// <summary>
     /// 是否可以變更名稱（編輯預設群組時不可變更）

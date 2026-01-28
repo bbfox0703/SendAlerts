@@ -21,14 +21,14 @@
   <DockPanel>
     <!-- TC1-3: 導航列 + 顯示模式提示 -->
     <StackPanel DockPanel.Dock="Top" Height="40" Background="#2b2b2b" Orientation="Horizontal" Spacing="10">
-      <Button Content="Settings" Margin="10,0,0,0" Click="OnSettingsClick" />
-      <Button Content="Alert Actions" Click="OnAlertActionsClick" />
-      <Button Content="Alert Groups" Click="OnAlertGroupsClick" />
+      <Button Content="{Binding Loc_Settings}" Margin="10,0,0,0" Click="OnSettingsClick" />
+      <Button Content="{Binding Loc_AlertActions}" Click="OnAlertActionsClick" />
+      <Button Content="{Binding Loc_AlertGroups}" Click="OnAlertGroupsClick" />
       <TextBlock Text="{Binding GpuName}" VerticalAlignment="Center" Foreground="White" FontWeight="Bold" Margin="20,0,0,0"/>
       <TextBlock Text="{Binding PowerLimit, StringFormat='(TDP: {0:F0}W)'}" VerticalAlignment="Center" Foreground="#888" Margin="10,0,0,0"/>
       <!-- TC1-3: 顯示模式提示 -->
       <Border Background="#3a3a00" CornerRadius="3" Padding="8,2" Margin="20,0,0,0" VerticalAlignment="Center">
-        <TextBlock Text="{Binding DisplayModeHint}" Foreground="#ffcc00" FontSize="11"/>
+        <TextBlock Text="{Binding Loc_DisplayModeHint}" Foreground="#ffcc00" FontSize="11"/>
       </Border>
     </StackPanel>
 
@@ -109,7 +109,7 @@
       <!-- TB3-3: Alert History Panel -->
       <Border Grid.Row="3" Margin="5,0,5,5" Background="#1a1a1a" CornerRadius="5"
               IsVisible="{Binding AlertHistoryItems.Count, Converter={x:Static conv:GreaterThanZeroConverter.Instance}}">
-        <Expander Header="Recent Alerts" IsExpanded="False" Padding="5">
+        <Expander Header="{Binding Loc_RecentAlerts}" IsExpanded="False" Padding="5">
           <ItemsControl ItemsSource="{Binding AlertHistoryItems}" MaxHeight="120">
             <ItemsControl.ItemTemplate>
               <DataTemplate>

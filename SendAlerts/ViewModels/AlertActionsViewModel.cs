@@ -18,6 +18,25 @@ public partial class AlertActionsViewModel : ViewModelBase
 {
     private readonly ISettingsService? _settingsService;
     private AppSettings? _settings;
+    private readonly LocalizationService _loc = LocalizationService.Instance;
+
+    #region Localized Strings
+    public string Loc_Title => _loc["AlertActions_Title"];
+    public string Loc_InstanceId => _loc["AlertActions_InstanceId"];
+    public string Loc_Type => _loc["AlertActions_Type"];
+    public string Loc_Description => _loc["AlertActions_Description"];
+    public string Loc_Status => _loc["AlertActions_Status"];
+    public string Loc_Add => _loc["Add"];
+    public string Loc_Edit => _loc["Edit"];
+    public string Loc_Delete => _loc["Delete"];
+    public string Loc_Test => _loc["Test"];
+    public string Loc_Toggle => _loc["AlertGroups_Toggle"];
+    public string Loc_Reload => _loc["Reload"];
+    public string Loc_Save => _loc["Save"];
+    public string Loc_Close => _loc["Close"];
+    public string Loc_Enabled => _loc["Enabled"];
+    public string Loc_Disabled => _loc["Disabled"];
+    #endregion
 
     /// <summary>
     /// 所有已設定的警報動作

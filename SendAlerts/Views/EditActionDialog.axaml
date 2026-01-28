@@ -27,7 +27,7 @@
                     Padding="16"
                     Margin="0,0,0,12">
                 <StackPanel Spacing="8">
-                    <TextBlock Text="Action Type" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding Loc_ActionType}" FontWeight="SemiBold"/>
                     <ComboBox ItemsSource="{Binding ActionTypes}"
                               SelectedItem="{Binding SelectedActionType}"
                               IsEnabled="{Binding CanChangeType}"
@@ -52,25 +52,25 @@
                     <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
                             CornerRadius="8" Padding="16">
                         <StackPanel Spacing="8">
-                            <TextBlock Text="Common Settings" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding Loc_CommonSettings}" FontWeight="SemiBold"/>
 
                             <Grid ColumnDefinitions="100,*" RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,8,0,0">
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Instance ID:" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Loc_InstanceId}" VerticalAlignment="Center"/>
                                 <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding InstanceId}" Watermark="Unique identifier"/>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Cooldown:" VerticalAlignment="Center" Margin="0,8,0,0"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Loc_Cooldown}" VerticalAlignment="Center" Margin="0,8,0,0"/>
                                 <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
                                     <NumericUpDown Value="{Binding CooldownSeconds}"
                                                    Minimum="5" Maximum="300"
                                                    Increment="5"
                                                    FormatString="0"
                                                    Width="130"/>
-                                    <TextBlock Text="seconds" VerticalAlignment="Center"
+                                    <TextBlock Text="{Binding Loc_Seconds}" VerticalAlignment="Center"
                                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
                                 </StackPanel>
 
-                                <CheckBox Grid.Row="2" Grid.Column="1" Content="Enabled" IsChecked="{Binding IsEnabled}" Margin="0,8,0,0"/>
-                                <CheckBox Grid.Row="3" Grid.Column="1" Content="Debug Mode (log only)" IsChecked="{Binding DebugMode}" Margin="0,4,0,0"/>
+                                <CheckBox Grid.Row="2" Grid.Column="1" Content="{Binding Loc_Enabled}" IsChecked="{Binding IsEnabled}" Margin="0,8,0,0"/>
+                                <CheckBox Grid.Row="3" Grid.Column="1" Content="{Binding Loc_DebugMode}" IsChecked="{Binding DebugMode}" Margin="0,4,0,0"/>
                             </Grid>
                         </StackPanel>
                     </Border>
@@ -176,12 +176,12 @@
             <!-- Buttons -->
             <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" Margin="0,12,0,0">
                 <Button Grid.Column="1"
-                        Content="Cancel"
+                        Content="{Binding Loc_Cancel}"
                         Command="{Binding CancelCommand}"
                         Width="80"
                         Margin="0,0,8,0"/>
                 <Button Grid.Column="2"
-                        Content="OK"
+                        Content="{Binding Loc_OK}"
                         Command="{Binding ConfirmCommand}"
                         Width="80"
                         Classes="accent"/>

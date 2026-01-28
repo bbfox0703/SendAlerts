@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using SendAlerts.Services;
 
 namespace SendAlerts.Views;
 
@@ -8,9 +9,12 @@ namespace SendAlerts.Views;
 /// </summary>
 public partial class CliCommandDialog : Window
 {
+    private readonly LocalizationService _loc = LocalizationService.Instance;
+
     public CliCommandDialog()
     {
         InitializeComponent();
+        InitializeLocalization();
     }
 
     public CliCommandDialog(string title, string content) : this()
@@ -19,17 +23,24 @@ public partial class CliCommandDialog : Window
         ContentTextBox.Text = content;
     }
 
+    private void InitializeLocalization()
+    {
+        Title = _loc["CliDialog_Title"];
+        CopyButton.Content = _loc["CliDialog_CopyToClipboard"];
+        CloseButton.Content = _loc["Close"];
+    }
+
     private async void OnCopyClick(object sender, RoutedEventArgs e)
     {
         var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
         if (clipboard != null && ContentTextBox.Text != null)
         {
             await clipboard.SetTextAsync(ContentTextBox.Text);
-            CopyButton.Content = "Copied!";
+            CopyButton.Content = _loc["CliDialog_Copied"];
 
             // 2 秒後恢復按鈕文字
             await System.Threading.Tasks.Task.Delay(2000);
-            CopyButton.Content = "Copy to Clipboard";
+            CopyButton.Content = _loc["CliDialog_CopyToClipboard"];
         }
     }
 
