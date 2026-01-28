@@ -64,7 +64,7 @@
                                                    Minimum="5" Maximum="300"
                                                    Increment="5"
                                                    FormatString="0"
-                                                   Width="100"/>
+                                                   Width="130"/>
                                     <TextBlock Text="seconds" VerticalAlignment="Center"
                                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
                                 </StackPanel>
