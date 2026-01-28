@@ -133,6 +133,14 @@ public partial class EditGroupViewModel : ViewModelBase
             return false;
         }
 
+        // 嚴格的命名規則驗證
+        if (!AlertGroup.IsValidName(Name))
+        {
+            ErrorMessage = "群組名稱只能包含英文字母、數字、底線(_)、連字號(-)，且必須以英文字母開頭";
+            HasError = true;
+            return false;
+        }
+
         if (string.IsNullOrWhiteSpace(MessageTemplate))
         {
             ErrorMessage = "訊息範本不可為空";

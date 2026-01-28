@@ -25,6 +25,9 @@ sealed class Program
     // TD2-2: Tray Icon Manager
     private static TrayIconManager? _trayIconManager;
 
+    // HTTP API Server
+    private static HttpApiServer? _httpApiServer;
+
     [STAThread]
     public static void Main(string[] args)
     {
@@ -64,6 +67,9 @@ sealed class Program
             // TD2-2: 初始化系統匣圖示管理
             InitializeTrayIcon();
 
+            // 初始化 HTTP API 伺服器
+            InitializeHttpApiServer();
+
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
         catch (Exception ex)
@@ -74,6 +80,7 @@ sealed class Program
         finally
         {
             // Cleanup
+            ShutdownHttpApiServer();
             ShutdownTrayIcon();
             ShutdownNamedPipeServer();
             ServiceLocator.GpuProvider?.Dispose();
@@ -270,6 +277,83 @@ sealed class Program
 
         // TA3-2: Alert Service (Alert Center 核心)
         InitializeAlertService();
+    }
+
+    /// <summary>
+    /// 初始化 HTTP API 伺服器
+    /// </summary>
+    private static void InitializeHttpApiServer()
+    {
+        var settings = ServiceLocator.SettingsService?.Load();
+        if (settings == null || !settings.HttpApiEnabled)
+        {
+            Log.Debug("[HttpApiServer] HTTP API 未啟用");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(settings.HttpApiKey))
+        {
+            Log.Warning("[HttpApiServer] HTTP API 已啟用但未設定 API Key，跳過初始化");
+            return;
+        }
+
+        var alertService = ServiceLocator.AlertService;
+        if (alertService == null)
+        {
+            Log.Warning("[HttpApiServer] AlertService 未初始化，無法啟動 HTTP API");
+            return;
+        }
+
+        try
+        {
+            _httpApiServer = new HttpApiServer(alertService, settings.HttpApiPort, settings.HttpApiKey);
+            _httpApiServer.RequestProcessed += OnHttpApiRequestProcessed;
+            _httpApiServer.Start();
+            ServiceLocator.HttpApiServer = _httpApiServer;
+
+            Log.Information("[HttpApiServer] HTTP API 已啟動，監聽 Port: {Port}", settings.HttpApiPort);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "[HttpApiServer] 啟動 HTTP API 失敗");
+        }
+    }
+
+    /// <summary>
+    /// 關閉 HTTP API 伺服器
+    /// </summary>
+    private static void ShutdownHttpApiServer()
+    {
+        if (_httpApiServer == null) return;
+
+        try
+        {
+            _httpApiServer.Dispose();
+            _httpApiServer = null;
+            ServiceLocator.HttpApiServer = null;
+            Log.Information("[HttpApiServer] HTTP API 已關閉");
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "[HttpApiServer] 關閉時發生錯誤");
+        }
+    }
+
+    /// <summary>
+    /// 處理 HTTP API 請求事件
+    /// </summary>
+    private static void OnHttpApiRequestProcessed(object? sender, HttpApiRequestEventArgs e)
+    {
+        if (e.Success)
+        {
+            Log.Debug("[HttpApiServer] 請求成功 | IP: {IP} | Endpoint: {Endpoint} | Details: {Details}",
+                e.RemoteIp, e.Endpoint, e.Details);
+        }
+        else
+        {
+            Log.Warning("[HttpApiServer] 請求失敗 | IP: {IP} | Endpoint: {Endpoint} | Details: {Details}",
+                e.RemoteIp, e.Endpoint, e.Details);
+        }
     }
 
     /// <summary>

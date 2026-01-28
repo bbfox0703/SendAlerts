@@ -3,11 +3,11 @@
         xmlns:vm="using:SendAlerts.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="280"
+        mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="480"
         x:Class="SendAlerts.Views.SettingsWindow"
         x:DataType="vm:SettingsViewModel"
         Title="Settings"
-        Width="400" Height="280"
+        Width="500" Height="480"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
         SystemDecorations="Full">
@@ -17,57 +17,149 @@
     </Design.DataContext>
 
     <Border Padding="16">
-        <Grid RowDefinitions="*,Auto">
+        <Grid RowDefinitions="*,Auto,Auto">
 
-            <StackPanel Grid.Row="0" Spacing="12">
+            <ScrollViewer Grid.Row="0">
+                <StackPanel Spacing="12">
 
-                <!-- Sampling Interval -->
-                <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                        CornerRadius="8" Padding="16">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Sampling Interval" FontWeight="SemiBold"/>
-                        <Grid ColumnDefinitions="*,80">
-                            <Slider Grid.Column="0"
-                                    Minimum="1" Maximum="10"
-                                    Value="{Binding SamplingIntervalSeconds}"
-                                    TickFrequency="1"
-                                    IsSnapToTickEnabled="True"/>
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding SamplingIntervalSeconds, StringFormat={}{0} sec}"
-                                       VerticalAlignment="Center"
-                                       HorizontalAlignment="Right"
-                                       FontWeight="Bold"/>
-                        </Grid>
-                        <TextBlock Text="How often to read hardware data for display"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-                    </StackPanel>
-                </Border>
+                    <!-- Sampling Interval -->
+                    <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                            CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Sampling Interval" FontWeight="SemiBold"/>
+                            <Grid ColumnDefinitions="*,80">
+                                <Slider Grid.Column="0"
+                                        Minimum="1" Maximum="10"
+                                        Value="{Binding SamplingIntervalSeconds}"
+                                        TickFrequency="1"
+                                        IsSnapToTickEnabled="True"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding SamplingIntervalSeconds, StringFormat={}{0} sec}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontWeight="Bold"/>
+                            </Grid>
+                            <TextBlock Text="How often to read hardware data for display"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                        </StackPanel>
+                    </Border>
 
-                <!-- Alert Center Info -->
-                <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                        CornerRadius="8" Padding="16">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Alert Center" FontWeight="SemiBold"/>
-                        <TextBlock Text="To configure alert actions and groups, use the buttons on the main screen:"
-                                   FontSize="11"
-                                   TextWrapping="Wrap"
-                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
-                            <Border Background="#2E7D32" CornerRadius="4" Padding="8,4">
-                                <TextBlock Text="Alert Actions" Foreground="White" FontSize="11"/>
-                            </Border>
-                            <Border Background="#1565C0" CornerRadius="4" Padding="8,4">
-                                <TextBlock Text="Alert Groups" Foreground="White" FontSize="11"/>
+                    <!-- HTTP API Settings -->
+                    <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                            CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="8">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <CheckBox Content="Enable HTTP API"
+                                          IsChecked="{Binding HttpApiEnabled}"
+                                          FontWeight="SemiBold"/>
+                            </StackPanel>
+
+                            <TextBlock Text="Allow remote machines to send alerts via HTTP"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+
+                            <!-- Port -->
+                            <Grid ColumnDefinitions="80,*" Margin="0,8,0,0"
+                                  IsEnabled="{Binding HttpApiEnabled}">
+                                <TextBlock Text="Port:" VerticalAlignment="Center"/>
+                                <NumericUpDown Grid.Column="1"
+                                               Value="{Binding HttpApiPort}"
+                                               Minimum="1024" Maximum="65535"
+                                               Increment="1"
+                                               FormatString="0"
+                                               Width="150"
+                                               HorizontalAlignment="Left"/>
+                            </Grid>
+
+                            <!-- API Key -->
+                            <Grid ColumnDefinitions="80,*,Auto,Auto" Margin="0,4,0,0"
+                                  IsEnabled="{Binding HttpApiEnabled}">
+                                <TextBlock Text="API Key:" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding HttpApiKey}"
+                                         PasswordChar="*"
+                                         Watermark="Click Generate to create a key"
+                                         IsReadOnly="True"
+                                         Margin="0,0,8,0"/>
+                                <Button Grid.Column="2"
+                                        Content="Generate"
+                                        Command="{Binding GenerateApiKeyCommand}"
+                                        Width="80"
+                                        Margin="0,0,4,0"/>
+                                <Button Grid.Column="3"
+                                        Content="Copy"
+                                        Command="{Binding CopyApiKeyCommand}"
+                                        IsEnabled="{Binding HasApiKey}"
+                                        Width="60"/>
+                            </Grid>
+
+                            <!-- Example Command -->
+                            <Expander Header="Example Commands" Margin="0,8,0,0"
+                                      IsEnabled="{Binding HttpApiEnabled}">
+                                <StackPanel Spacing="8" Margin="0,8,0,0">
+                                    <Button Content="Copy PowerShell Example"
+                                            Command="{Binding CopyExampleCommandCommand}"
+                                            HorizontalAlignment="Left"/>
+                                    <TextBlock Text="POST http://YOUR_IP:58080/api/send"
+                                               FontFamily="Consolas"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                    <TextBlock Text="Header: X-API-Key: &lt;your-api-key&gt;"
+                                               FontFamily="Consolas"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                    <TextBlock Text="Body: { &quot;groupName&quot;: &quot;Critical&quot;, &quot;message&quot;: &quot;...&quot; }"
+                                               FontFamily="Consolas"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                </StackPanel>
+                            </Expander>
+
+                            <!-- Warning -->
+                            <Border Background="#FFF3E0" CornerRadius="4" Padding="8" Margin="0,8,0,0"
+                                    IsVisible="{Binding HttpApiEnabled}">
+                                <TextBlock Text="Note: Changes to HTTP API settings require restarting the application."
+                                           FontSize="11"
+                                           Foreground="#E65100"
+                                           TextWrapping="Wrap"/>
                             </Border>
                         </StackPanel>
-                    </StackPanel>
-                </Border>
+                    </Border>
 
-            </StackPanel>
+                    <!-- Alert Center Info -->
+                    <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                            CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Alert Center" FontWeight="SemiBold"/>
+                            <TextBlock Text="To configure alert actions and groups, use the buttons on the main screen:"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                                <Border Background="#2E7D32" CornerRadius="4" Padding="8,4">
+                                    <TextBlock Text="Alert Actions" Foreground="White" FontSize="11"/>
+                                </Border>
+                                <Border Background="#1565C0" CornerRadius="4" Padding="8,4">
+                                    <TextBlock Text="Alert Groups" Foreground="White" FontSize="11"/>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Status Message -->
+            <TextBlock Grid.Row="1"
+                       Text="{Binding StatusMessage}"
+                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                       FontSize="11"
+                       Margin="0,8,0,0"
+                       IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
             <!-- Buttons -->
-            <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" Margin="0,12,0,0">
+            <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" Margin="0,12,0,0">
                 <Button Grid.Column="1"
                         Content="Cancel"
                         Command="{Binding CancelCommand}"

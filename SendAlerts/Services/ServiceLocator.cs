@@ -26,6 +26,11 @@ public static class ServiceLocator
     /// </summary>
     public static AlertService? AlertService { get; set; }
 
+    /// <summary>
+    /// HTTP API 伺服器
+    /// </summary>
+    public static HttpApiServer? HttpApiServer { get; set; }
+
     #region TD2: 系統整合
 
     /// <summary>

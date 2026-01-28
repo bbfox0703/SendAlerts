@@ -122,6 +122,11 @@
                         IsEnabled="{Binding HasSelection}"
                         Width="80"
                         ToolTip.Tip="Toggle enabled/disabled"/>
+                <Button Content="CLI"
+                        Command="{Binding ShowCliCommandCommand}"
+                        IsEnabled="{Binding HasSelection}"
+                        Width="80"
+                        ToolTip.Tip="Show CLI command to trigger this group"/>
                 <Rectangle Width="1" Fill="{DynamicResource SystemControlForegroundBaseMediumBrush}" Margin="8,4"/>
                 <Button Content="Reload"
                         Command="{Binding ReloadCommand}"

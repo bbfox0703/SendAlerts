@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using SendAlerts.Core.Interfaces;
 
 namespace SendAlerts.Models;
@@ -94,12 +95,35 @@ public class AlertGroup
     #region 驗證
 
     /// <summary>
+    /// 群組名稱的驗證正規表達式
+    /// 只允許: 英文字母(a-z, A-Z)、數字(0-9)、底線(_)、連字號(-)
+    /// 必須以英文字母開頭
+    /// </summary>
+    private static readonly Regex ValidNamePattern = new(@"^[a-zA-Z][a-zA-Z0-9_-]*$", RegexOptions.Compiled);
+
+    /// <summary>
+    /// 驗證群組名稱格式是否有效
+    /// </summary>
+    /// <param name="name">群組名稱</param>
+    /// <returns>是否有效</returns>
+    public static bool IsValidName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return false;
+        return ValidNamePattern.IsMatch(name);
+    }
+
+    /// <summary>
     /// 驗證群組設定是否有效
     /// </summary>
     public AlertGroupValidationResult Validate()
     {
         if (string.IsNullOrWhiteSpace(Name))
             return AlertGroupValidationResult.Invalid("群組名稱不可為空");
+
+        if (!IsValidName(Name))
+            return AlertGroupValidationResult.Invalid(
+                "群組名稱只能包含英文字母、數字、底線(_)、連字號(-)，且必須以英文字母開頭");
 
         if (string.IsNullOrWhiteSpace(MessageTemplate))
             return AlertGroupValidationResult.Invalid("訊息範本不可為空");

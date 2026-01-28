@@ -63,6 +63,11 @@ public partial class AlertGroupsViewModel : ViewModelBase
     public event Func<AlertGroup, Task<AlertGroup?>>? EditGroupRequested;
 
     /// <summary>
+    /// 顯示 CLI 指令對話框請求事件
+    /// </summary>
+    public event Action<string, string>? ShowCliCommandRequested;
+
+    /// <summary>
     /// 設定已變更
     /// </summary>
     public bool HasChanges { get; private set; }
@@ -290,6 +295,29 @@ public partial class AlertGroupsViewModel : ViewModelBase
         LoadGroups();
         HasChanges = false;
     }
+
+    /// <summary>
+    /// 顯示 CLI 指令
+    /// </summary>
+    [RelayCommand]
+    private void ShowCliCommand()
+    {
+        if (SelectedGroup == null) return;
+
+        var title = $"CLI Commands for \"{SelectedGroup.Name}\"";
+        var content = $"""
+            === SendAlerts CLI ===
+            {SelectedGroup.GetCliCommand()}
+
+            === PowerShell (Named Pipe) ===
+            {SelectedGroup.GetPowerShellCommand()}
+
+            === Python (Named Pipe) ===
+            {SelectedGroup.GetPythonCommand()}
+            """;
+
+        ShowCliCommandRequested?.Invoke(title, content);
+    }
 }
 
 /// <summary>
@@ -315,5 +343,32 @@ public partial class AlertGroupItem : ObservableObject
     {
         _group = group;
         _isEnabled = group.IsEnabled;
+    }
+
+    /// <summary>
+    /// 取得呼叫此 Group 的 CLI 指令
+    /// </summary>
+    public string GetCliCommand()
+    {
+        return $"SendAlerts-cli send -g {Name} -m \"Your message here\"";
+    }
+
+    /// <summary>
+    /// 取得呼叫此 Group 的 PowerShell Named Pipe 指令
+    /// </summary>
+    public string GetPowerShellCommand()
+    {
+        return $"'{{\"GroupName\":\"{Name}\",\"CustomMessage\":\"Your message here\"}}' | " +
+               @"Out-File -FilePath \\.\pipe\sendalerts-pipe -Encoding utf8";
+    }
+
+    /// <summary>
+    /// 取得呼叫此 Group 的 Python Named Pipe 指令
+    /// </summary>
+    public string GetPythonCommand()
+    {
+        return $"import json\n" +
+               $"with open(r'\\\\.\\pipe\\sendalerts-pipe', 'w') as f:\n" +
+               $"    json.dump({{\"GroupName\": \"{Name}\", \"CustomMessage\": \"Your message\"}}, f)";
     }
 }

@@ -161,4 +161,23 @@ public class AppSettings
     /// true = 使用新版 AlertActions + AlertGroups
     /// </summary>
     public bool UseAlertCenterMode { get; set; } = false;
+
+    // ==========================================================================
+    // HTTP API 設定 (遠端呼叫)
+    // ==========================================================================
+
+    /// <summary>
+    /// 是否啟用 HTTP API
+    /// </summary>
+    public bool HttpApiEnabled { get; set; } = false;
+
+    /// <summary>
+    /// HTTP API 監聽 Port
+    /// </summary>
+    public int HttpApiPort { get; set; } = 58080;
+
+    /// <summary>
+    /// HTTP API Key (用於驗證請求)
+    /// </summary>
+    public string HttpApiKey { get; set; } = string.Empty;
 }
