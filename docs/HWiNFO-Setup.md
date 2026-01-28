@@ -1,17 +1,17 @@
 # HWiNFO64 Integration Guide
 
-本文件說明如何將 HWiNFO64 與 16pin-vmon Alert Center 整合，實現硬體警報自動觸發。
+本文件說明如何將 HWiNFO64 與 SendAlerts Alert Center 整合，實現硬體警報自動觸發。
 
 ## 概述
 
-16pin-vmon 作為「硬體警報中繼站」，透過 Named Pipe 接收外部工具（如 HWiNFO64）的警報觸發訊息，並執行預設的警報動作（Telegram、LINE Notify、Email 等）。
+SendAlerts 作為「硬體警報中繼站」，透過 Named Pipe 接收外部工具（如 HWiNFO64）的警報觸發訊息，並執行預設的警報動作（Telegram、LINE Notify、Email 等）。
 
 ```
 HWiNFO64 (監控硬體)
     │
-    ▼ Named Pipe: \\.\pipe\16pin-vmon-alert
+    ▼ Named Pipe: \\.\pipe\sendalerts-pipe
     │
-16pin-vmon Alert Center
+SendAlerts Alert Center
     │
     ▼ 執行警報動作
 [Telegram] [LINE] [Email] [Webhook] ...
@@ -19,9 +19,9 @@ HWiNFO64 (監控硬體)
 
 ## 前置需求
 
-1. **16pin-vmon** 已安裝並運行
+1. **SendAlerts** 已安裝並運行
 2. **HWiNFO64** v7.0 或更高版本（支援 Actions 功能）
-3. 已在 16pin-vmon 中設定至少一個 Alert Group
+3. 已在 SendAlerts 中設定至少一個 Alert Group
 
 ## HWiNFO64 設定步驟
 
@@ -49,22 +49,22 @@ HWiNFO64 (監控硬體)
 3. **Arguments** (複製以下內容):
 
 ```powershell
--NoProfile -Command "$msg = '{\"GroupName\":\"Critical\",\"CustomMessage\":\"GPU Temperature: <#GPU Core Temp#>°C\"}'; $pipe = New-Object System.IO.Pipes.NamedPipeClientStream('.', '16pin-vmon-alert', 'Out'); $pipe.Connect(1000); $writer = New-Object System.IO.StreamWriter($pipe); $writer.Write($msg); $writer.Flush(); $pipe.Close()"
+-NoProfile -Command "$msg = '{\"GroupName\":\"Critical\",\"CustomMessage\":\"GPU Temperature: <#GPU Core Temp#>°C\"}'; $pipe = New-Object System.IO.Pipes.NamedPipeClientStream('.', 'sendalerts-pipe', 'Out'); $pipe.Connect(1000); $writer = New-Object System.IO.StreamWriter($pipe); $writer.Write($msg); $writer.Flush(); $pipe.Close()"
 ```
 
 #### 參數說明
 
 | 變數 | 說明 |
 |------|------|
-| `GroupName` | 16pin-vmon 中的 Alert Group 名稱 |
+| `GroupName` | SendAlerts 中的 Alert Group 名稱 |
 | `CustomMessage` | 自訂訊息，可包含 HWiNFO64 變數 |
 | `<#GPU Core Temp#>` | HWiNFO64 感測器值變數 |
 
 ### 步驟 4：測試警報
 
-1. 確認 16pin-vmon 已啟動（狀態列顯示綠燈）
+1. 確認 SendAlerts 已啟動（狀態列顯示綠燈）
 2. 在 HWiNFO64 中手動觸發警報（調整門檻值測試）
-3. 檢查 16pin-vmon 是否收到警報並執行動作
+3. 檢查 SendAlerts 是否收到警報並執行動作
 
 ## 常用 Alert Group 範例
 
@@ -114,13 +114,13 @@ HWiNFO64 (監控硬體)
 
 ### 問題：警報未觸發
 
-1. 確認 16pin-vmon 狀態列顯示綠燈
+1. 確認 SendAlerts 狀態列顯示綠燈
 2. 檢查 HWiNFO64 Alert 設定是否正確
-3. 查看 16pin-vmon 日誌檔 (`%AppData%\16pin-vmon\logs\`)
+3. 查看 SendAlerts 日誌檔 (`%AppData%\SendAlerts\logs\`)
 
 ### 問題：收到 "找不到群組" 錯誤
 
-確認 `GroupName` 與 16pin-vmon 中設定的群組名稱完全一致（區分大小寫）。
+確認 `GroupName` 與 SendAlerts 中設定的群組名稱完全一致（區分大小寫）。
 
 ### 問題：PowerShell 執行錯誤
 
@@ -139,6 +139,6 @@ HWiNFO64 (監控硬體)
 
 ## 相關資源
 
-- [16pin-vmon GitHub](https://github.com/your-repo/16pin-vmon)
+- [SendAlerts GitHub](https://github.com/your-repo/SendAlerts)
 - [HWiNFO64 官網](https://www.hwinfo.com/)
 - [範例腳本](../scripts/)

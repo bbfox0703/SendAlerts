@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-TC2-3: Python script to send alert messages to 16pin-vmon Alert Center via Named Pipe.
+TC2-3: Python script to send alert messages to SendAlerts Alert Center via Named Pipe.
 
 Usage:
     python send_alert.py --group Critical --message "GPU Temperature: 95°C"
@@ -31,7 +31,7 @@ import sys
 import time
 
 # Constants
-PIPE_NAME = r"\\.\pipe\16pin-vmon-alert"
+PIPE_NAME = r"\\.\pipe\sendalerts-pipe"
 DEFAULT_TIMEOUT = 3000  # milliseconds
 
 
@@ -76,7 +76,7 @@ def send_alert_windows(group_name: str, message: str = None, timeout_ms: int = D
             except pywintypes.error as e:
                 if e.winerror == 2:  # ERROR_FILE_NOT_FOUND - pipe doesn't exist
                     if time.time() - start_time > timeout_sec:
-                        print("[send_alert] ERROR: Connection timeout. Is 16pin-vmon running?")
+                        print("[send_alert] ERROR: Connection timeout. Is SendAlerts running?")
                         return False
                     time.sleep(0.1)
                     continue
@@ -103,7 +103,7 @@ def send_alert_posix(group_name: str, message: str = None, timeout_ms: int = DEF
 
     # On POSIX, Named Pipes are FIFO files
     # Note: This requires the pipe to be created as a FIFO
-    pipe_path = "/tmp/16pin-vmon-alert"
+    pipe_path = "/tmp/sendalerts-pipe"
 
     if not os.path.exists(pipe_path):
         print(f"[send_alert] ERROR: Pipe not found at {pipe_path}")
@@ -133,7 +133,7 @@ def send_alert_posix(group_name: str, message: str = None, timeout_ms: int = DEF
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Send alert to 16pin-vmon Alert Center",
+        description="Send alert to SendAlerts Alert Center",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build Commands
 - **Build**: `dotnet build`
-- **Run**: `dotnet run --project 16pin-vmon.Desktop`
+- **Run**: `dotnet run --project SendAlerts.Desktop`
 - **Clean**: `dotnet clean`
 
 ## Project Overview
@@ -25,7 +25,7 @@ Built with Avalonia UI for Windows/Linux cross-platform support.
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Interface Tier (接口層)                       │
-│  Named Pipe Server: \\.\pipe\16pin-vmon-alert                   │
+│  Named Pipe Server: \\.\pipe\sendalerts-pipe                   │
 │  JSON Format: { "GroupName": "...", "CustomMessage": "..." }    │
 └─────────────────────────────────────────────────────────────────┘
                               │
@@ -46,7 +46,7 @@ Built with Avalonia UI for Windows/Linux cross-platform support.
 
 ### Solution Structure
 ```
-16pin-vmon/           (Core - cross-platform logic, namespace: _16pin_vmon)
+SendAlerts/           (Core - cross-platform logic, namespace: SendAlerts)
 ├── Interfaces/       IAlertAction, IGpuProvider definitions
 ├── Models/           AlertActionConfig, AlertGroup, PipeMessage
 ├── Services/         AlertService, NamedPipeServer, ServiceLocator
@@ -54,12 +54,12 @@ Built with Avalonia UI for Windows/Linux cross-platform support.
 ├── Views/            MainView, AlertManagementView
 └── Converters/       UI value converters
 
-16pin-vmon.Desktop/   (Platform head, namespace: _16pin_vmon.Desktop)
+SendAlerts.Desktop/   (Platform head, namespace: SendAlerts.Desktop)
 ├── Implementations/  NvmlWindowsProvider, SingleInstanceManager
 └── Program.cs        Single instance mutex + Named Pipe init
 ```
 
-**Note**: Namespace uses underscores: `_16pin_vmon` (not `16pin-vmon`)
+**Note**: Namespace is `SendAlerts` (previously was `_16pin_vmon` with underscores)
 
 ### Key Abstractions
 - **`IAlertAction`**: Alert action interface with `InstanceId` for multi-instance support
@@ -93,7 +93,7 @@ External Tool (HWiNFO64)
 ; HWiNFO64 Alert Configuration
 ; Action: Run Program
 ; Program: powershell.exe
-; Arguments: -Command "'{\"GroupName\":\"Critical\",\"CustomMessage\":\"GPU Temp: <#GPU Core Temp#>°C\"}' | Out-File -FilePath \\.\pipe\16pin-vmon-alert -Encoding utf8"
+; Arguments: -Command "'{\"GroupName\":\"Critical\",\"CustomMessage\":\"GPU Temp: <#GPU Core Temp#>°C\"}' | Out-File -FilePath \\.\pipe\sendalerts-pipe -Encoding utf8"
 ```
 
 ## Coding Standards
@@ -161,7 +161,7 @@ Phase C/D (收尾) ────────────────────�
 #### A1: Single Instance 與 Named Pipe (基礎通訊)
 - [x] **TA1-1**: `SingleInstanceManager` - 使用 Mutex 確保單一實例運行
 - [ ] **TA1-2**: 第二實例啟動時，透過 Named Pipe 傳送參數給主實例後退出
-- [x] **TA1-3**: `NamedPipeServer` - 持續監聯 `\\.\pipe\16pin-vmon-alert`
+- [x] **TA1-3**: `NamedPipeServer` - 持續監聯 `\\.\pipe\sendalerts-pipe`
 - [x] **TA1-4**: `PipeMessage` 資料模型 - JSON Schema: `{ GroupName, CustomMessage }`
 - [x] **TA1-5**: Pipe 訊息驗證與錯誤處理 (invalid JSON, unknown group)
 
@@ -226,7 +226,7 @@ Phase C/D (收尾) ────────────────────�
 ### 🔧 Phase D: 進階功能
 
 #### D1: CLI 工具
-- [x] **TD1-1**: 命令列工具發送 Pipe 訊息 (16pin-vmon-cli.exe send -g Critical -m "Test")
+- [x] **TD1-1**: 命令列工具發送 Pipe 訊息 (SendAlerts-cli.exe send -g Critical -m "Test")
 - [x] **TD1-2**: 命令列查詢 Group 清單
 
 #### D2: 系統整合
@@ -324,5 +324,5 @@ Phase C/D (收尾) ────────────────────�
 | TB3-1~3 | 主介面整合 | 2026-01-28 | 狀態列 Pipe 連線指示燈, 警報歷史清單, ServiceLocator 事件 |
 | TC1-1~3 | Display-Only Mode | 2026-01-28 | 移除 AlertEvaluator/T4 警報動作, 純顯示模式提示標籤 |
 | TC2-1~3 | HWiNFO64 Integration | 2026-01-28 | docs/HWiNFO-Setup.md, scripts/send-alert.ps1, scripts/send_alert.py |
-| TD1-1~2 | CLI 工具 | 2026-01-28 | 16pin-vmon.Cli 專案, send/list/test 命令, System.CommandLine |
+| TD1-1~2 | CLI 工具 | 2026-01-28 | SendAlerts.Cli 專案, send/list/test 命令, System.CommandLine |
 | TD2-1~3 | 系統整合 | 2026-01-28 | StartupManager 登錄檔, TrayIconManager 系統匣, 右鍵選單 |

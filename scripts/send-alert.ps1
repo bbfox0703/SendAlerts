@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-    Send alert message to 16pin-vmon Alert Center via Named Pipe.
+    Send alert message to SendAlerts Alert Center via Named Pipe.
 
 .DESCRIPTION
-    TC2-2: PowerShell script to send alert messages to 16pin-vmon.
+    TC2-2: PowerShell script to send alert messages to SendAlerts.
     Can be used with HWiNFO64 or other monitoring tools.
 
 .PARAMETER GroupName
@@ -13,7 +13,7 @@
     Optional custom message. Supports HWiNFO64 variables when called from HWiNFO64.
 
 .PARAMETER PipeName
-    Named Pipe name (default: 16pin-vmon-alert).
+    Named Pipe name (default: sendalerts-pipe).
 
 .PARAMETER Timeout
     Connection timeout in milliseconds (default: 3000).
@@ -29,7 +29,7 @@
     powershell.exe -ExecutionPolicy Bypass -File "C:\scripts\send-alert.ps1" -GroupName "Critical" -Message "GPU: <#GPU Core Temp#>°C"
 
 .NOTES
-    Author: 16pin-vmon
+    Author: SendAlerts
     Version: 1.0.0
 #>
 
@@ -41,7 +41,7 @@ param(
     [string]$Message = "",
 
     [Parameter(Mandatory=$false)]
-    [string]$PipeName = "16pin-vmon-alert",
+    [string]$PipeName = "sendalerts-pipe",
 
     [Parameter(Mandatory=$false)]
     [int]$Timeout = 3000
@@ -81,7 +81,7 @@ try {
     exit 0
 }
 catch [System.TimeoutException] {
-    Write-Host "[send-alert] ERROR: Connection timeout. Is 16pin-vmon running?" -ForegroundColor Red
+    Write-Host "[send-alert] ERROR: Connection timeout. Is SendAlerts running?" -ForegroundColor Red
     exit 1
 }
 catch {

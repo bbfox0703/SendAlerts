@@ -1,0 +1,133 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:SendAlerts.ViewModels"
+             xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
+             xmlns:conv="clr-namespace:SendAlerts.Converters"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="700"
+             x:Class="SendAlerts.Views.MainView"
+             x:DataType="vm:MainViewModel">
+
+  <Design.DataContext>
+    <vm:MainViewModel />
+  </Design.DataContext>
+
+  <UserControl.Resources>
+	  <conv:AlertColorConverter x:Key="AlertColorConverter" />
+	  <conv:StatusColorConverter x:Key="StatusColorConverter" />
+  </UserControl.Resources>
+
+  <DockPanel>
+    <!-- TC1-3: 導航列 + 顯示模式提示 -->
+    <StackPanel DockPanel.Dock="Top" Height="40" Background="#2b2b2b" Orientation="Horizontal" Spacing="10">
+      <Button Content="Settings" Margin="10,0,0,0" Click="OnSettingsClick" />
+      <Button Content="Alert Actions" Click="OnAlertActionsClick" />
+      <Button Content="Alert Groups" Click="OnAlertGroupsClick" />
+      <TextBlock Text="{Binding GpuName}" VerticalAlignment="Center" Foreground="White" FontWeight="Bold" Margin="20,0,0,0"/>
+      <TextBlock Text="{Binding PowerLimit, StringFormat='(TDP: {0:F0}W)'}" VerticalAlignment="Center" Foreground="#888" Margin="10,0,0,0"/>
+      <!-- TC1-3: 顯示模式提示 -->
+      <Border Background="#3a3a00" CornerRadius="3" Padding="8,2" Margin="20,0,0,0" VerticalAlignment="Center">
+        <TextBlock Text="{Binding DisplayModeHint}" Foreground="#ffcc00" FontSize="11"/>
+      </Border>
+    </StackPanel>
+
+    <!-- TB3-2: 狀態列 -->
+    <Border DockPanel.Dock="Bottom" Height="30" Background="#1e1e1e" BorderBrush="#333" BorderThickness="0,1,0,0">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+        <!-- Pipe 狀態指示燈 -->
+        <Ellipse Grid.Column="0" Width="8" Height="8" Margin="10,0,5,0"
+                 Fill="{Binding IsPipeServerRunning, Converter={StaticResource StatusColorConverter}}"/>
+        <!-- 狀態文字 -->
+        <TextBlock Grid.Column="1" Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="#aaa" FontSize="12"/>
+        <!-- 警報計數 -->
+        <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="#666" FontSize="12" Margin="10,0">
+          <TextBlock.Text>
+            <MultiBinding StringFormat="Alerts: {0}">
+              <Binding Path="AlertHistoryItems.Count"/>
+            </MultiBinding>
+          </TextBlock.Text>
+        </TextBlock>
+        <!-- 版本 -->
+        <TextBlock Grid.Column="3" Text="v1.1.0" Margin="10,0" VerticalAlignment="Center" Foreground="#555" FontSize="12"/>
+      </Grid>
+    </Border>
+
+    <Grid RowDefinitions="*, *, *, Auto">
+
+      <!-- Primary Metric Chart (GPU/CPU Utilization) -->
+      <Border Grid.Row="0" Margin="5" Background="#1a1a1a" CornerRadius="5">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,5">
+            <TextBlock Text="{Binding PrimaryMetricLabel}" Foreground="LimeGreen" FontSize="14" FontWeight="Bold"/>
+            <TextBlock Text="{Binding CurrentUtilization, StringFormat=': {0:F0} %'}"
+                       Foreground="LimeGreen"
+                       FontSize="14"
+                       Margin="5,0"/>
+          </StackPanel>
+          <lvc:CartesianChart Series="{Binding UtilizationSeries}"
+                              XAxes="{Binding XAxes}"
+                              YAxes="{Binding UtilizationYAxes}" />
+        </DockPanel>
+      </Border>
+
+      <!-- TC1-2: Temperature Chart (純顯示模式，不再有警報顏色變化) -->
+      <Border Grid.Row="1" Margin="5" Background="#1a1a1a" CornerRadius="5">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,5">
+            <TextBlock Text="{Binding TemperatureLabel}" Foreground="OrangeRed" FontSize="14" FontWeight="Bold"/>
+            <TextBlock Text="{Binding CurrentTemperature, StringFormat=': {0:F1} °C'}"
+                       Foreground="OrangeRed"
+                       FontSize="14" Margin="5,0"/>
+          </StackPanel>
+          <lvc:CartesianChart Series="{Binding TempSeries}"
+                              XAxes="{Binding XAxes}"
+                              YAxes="{Binding TempYAxes}" />
+        </DockPanel>
+      </Border>
+
+      <!-- Secondary Metric Chart (Power Usage / Network I/O) -->
+      <Border Grid.Row="2" Margin="5" Background="#1a1a1a" CornerRadius="5">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,5">
+            <TextBlock Text="{Binding SecondaryMetricLabel}" Foreground="Cyan" FontSize="14" FontWeight="Bold"/>
+            <TextBlock Foreground="Cyan" FontSize="14" Margin="5,0">
+              <TextBlock.Text>
+                <MultiBinding StringFormat=": {0:F1} {1}">
+                  <Binding Path="CurrentPower"/>
+                  <Binding Path="SecondaryMetricUnit"/>
+                </MultiBinding>
+              </TextBlock.Text>
+            </TextBlock>
+          </StackPanel>
+          <lvc:CartesianChart Series="{Binding PowerSeries}"
+                              XAxes="{Binding XAxes}"
+                              YAxes="{Binding PowerYAxes}" />
+        </DockPanel>
+      </Border>
+
+      <!-- TB3-3: Alert History Panel -->
+      <Border Grid.Row="3" Margin="5,0,5,5" Background="#1a1a1a" CornerRadius="5"
+              IsVisible="{Binding AlertHistoryItems.Count, Converter={x:Static conv:GreaterThanZeroConverter.Instance}}">
+        <Expander Header="Recent Alerts" IsExpanded="False" Padding="5">
+          <ItemsControl ItemsSource="{Binding AlertHistoryItems}" MaxHeight="120">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,2">
+                  <!-- 成功/失敗指示 -->
+                  <Ellipse Grid.Column="0" Width="6" Height="6" Margin="0,0,8,0"
+                           Fill="{Binding Success, Converter={StaticResource StatusColorConverter}}"/>
+                  <!-- 時間 -->
+                  <TextBlock Grid.Column="1" Text="{Binding TimeString}" Foreground="#888" FontSize="11" Margin="0,0,10,0"/>
+                  <!-- 內容 -->
+                  <TextBlock Grid.Column="2" Text="{Binding DisplayText}" Foreground="#ccc" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Expander>
+      </Border>
+
+    </Grid>
+  </DockPanel>
+</UserControl>
