@@ -1,24 +1,23 @@
-# 專案規格書：RTX 16-pin GPU 監控與警報系統 (16pin-vmon)
+# 專案規格書：警報發送系統
 
 # 功能簡述
 
-監測RTX GPU顯示卡的 16 pin voltage數值、以及GPU溫度，在voltage低於設定的警示值、或是GPU溫度高於設定的榅度警示值時，執行發送alert的動作。
+主畫面監測RTX GPU顯示卡的相關數值、例如GPU溫度。接收外部程式觸發送 alert 的動作。如果沒 RTX GPU，則顯示一般 CPU 等使用量。
 
 ## 核心功能構思
-1. **數據採集**：經由 NVIDIA NVML 每秒讀取一次 16-pin voltage 和 GPU temperature。
+1. **數據採集**：經由 NVIDIA NVML 每秒讀取一次 GPU temperature、GPU utilization 等。
 2. **視覺化**：數據即時更新於 GUI 折線圖，電壓與溫度分為獨立圖表。
 3. **定時器**：預設 1 秒取樣一次，使用者可自定義取樣頻率。
 4. **抽象層設計 (Abstraction Layer)**：確保 OS 與硬體 API 呼叫跨平台（Windows/Linux）相容。
 5. **警報系統**：
-* 支援電壓、溫度獨立門檻設定。
-* **判定機制**：滑動視窗（X 秒內達到門檻 Y 次）。
+* 接收 name pipe 進來的參數，執行發送警示。
 * **多樣化 Action**：本地指令、LINE、Telegram、WhatsApp、Email (MAPI/GMail)。
 6. 強制斷電功能：Alert觸發後，可設定是否要經由抽象層 (Abstraction Layer Interface) 觸發斷電程序的 interface，預設是呼叫OS強制關機
 7. 需要經SeriLog來寫入log，管理log rotate
 8. 多語系支援，預設英文界面，但是可自動偵測OS語系而切換成繁體中文或是日文。支援手動設定語系功能。
 9. 相關設定 (alert threshold, alert actions, UI language、save to csv、幾秒讀一次數值) 要能儲存下來，下次執行時自動套用。設定管理一樣要跨平台能使用
 10. 支援 Windows theme aware。Theme aware 一樣要經抽象層來完成。
-11. 使用者可設定 16 pin volatage 以及 GPU temperature、或是以後新增的監控項目，能存到 .csv 中，使用者可設定 csv 保留筆數。要有UI可設定
+11. 使用者可設定圖表資料能存到 .csv 中，使用者可設定 csv 保留筆數。要有UI可設定
 12. 硬體相容性與識別策略 (Hardware Compatibility)
 為了應對 RTX 50 系列（及後續型號）不同 AIB 廠商（如 MSI, ASUS）可能採用不同 Field ID 的問題，採用以下策略：
 12.1 硬體身分識別 (Device Identity)
@@ -31,8 +30,6 @@ a. **第一優先：JSON 資料庫 (Hardware DB)**
 b. **第二優先：動態掃描 (Dynamic Probing)**
 * 若資料庫無紀錄，啟動 Probe-First 模式，掃描 NVML Field ID (範圍 150-165)。
 * 若偵測到數值符合 ，則自動鎖定該 ID 為監控對象。
-c. **第三優先：Fallback 機制**
-* 若上述皆失敗，則讀取 GPU Total Power 並於 UI 提示「目前為估算數值」。
 12.3 獨立 Mapping 工具
 * **CLI 工具功能**：支援以獨立 Command Line 模式執行，輸出目前顯卡的 PCI 資訊與偵測到的 Field ID 至 JSON 格式。要考量多顯示卡的環境中，能抓取到 nVidia GPU
 * **用途**：便於使用者回報資料，擴充 `gpu_mapping.json`。
@@ -49,25 +46,16 @@ c. **第三優先：Fallback 機制**
   - `NvAPI_Initialize` / `NvAPI_Unload`：初始化與釋放。
   - `NvAPI_EnumPhysicalGPUs`：列舉實體 GPU。
   - `NvAPI_GPU_GetThermalSettings`：讀取溫度。
-  - `NvAPI_GPU_GetVoltageDomainsStatus`：讀取電壓域狀態（優先）。
-  - `NvAPI_GPU_GetPstates20`：讀取 P-State 電壓資訊（備用）。
+  - `NvAPI_GPU_GetPstates20`：讀取 P-State 資訊（備用）。
 * **參考文件**：[NVIDIA NvAPI GPU Performance State Interface](https://docs.nvidia.com/gameworks/content/gameworkslibrary/coresdk/nvapi/group__gpupstate.html)
-13.3 Provider 選擇邏輯
-優先順序：`NVML (直接電壓)` → `NvAPI` → `NVML (估算模式)` → `Demo`
-```
-if (NVML 可用 && 有效電壓 Field ID) → 使用 NvmlWindowsProvider
-else if (NvAPI 可用) → 使用 NvApiWindowsProvider
-else if (NVML 可用) → 使用 NvmlWindowsProvider (估算模式)
-else → 使用 DemoGpuProvider
-```
-13.4 優點
-* 可精確讀取 GPU Core 電壓（微伏精度）。
+13.3 優點
+* 可精確讀取 GPU 資料。
 * 支援 RTX 50 系列所有 AIB 廠商私板。
 * 不依賴 NVML Field ID 的硬體映射。
  
 ## 0. 專案願景
 
-開發一個輕量化、跨平台（Windows/Linux）的 GPU 監控工具，專注於 **12VHPWR (16-pin) 電壓穩定性** 與 **核心溫度**。透過高度抽象化的設計，確保在硬體層與作業系統層具備極佳的擴充性，並提供自動化警報反應機制。
+開發一個輕量化、跨平台（Windows/Linux）的 GPU 監控工具，主要用於單一警示外掛平台，確保在硬體層與作業系統層具備極佳的擴充性。
 
 ---
 
@@ -111,17 +99,13 @@ else → 使用 DemoGpuProvider
 
 ### 3.2 警報引擎 (Alert Logic)
 
-* **滑動視窗判定 (Sliding Window):** 警報觸發條件為「$X$ 秒內數值超過門檻 $Y$ 次」。
-* **門檻設定:**
-* 電壓低於設定值 (預設 11.8V)。
-* 溫度高於設定值 (預設 88°C)。
-
+* **訊息傳送設定** 可定義多個訊息傳送通道標籤，例如 LINE_1、lINE_ALL、Telegram_1。
+* **網路推送** (LINE Notify, Telegram, WhatsApp)，需具備 Token 設定 UI。
+* **email推送** 支援一般 MAPI 或是 GMail。
+* **本地命令列** 可執行本地命令列指令。
+* **群組設定** 可定義多個群組，每個群組可包含一到多個訊息傳送通道、email推送、或是本地命令列標籤。
 * **警報動作 (Alert Actions):** 需實作 `IAlertAction` 介面。
-* **Action 1:** 執行本地命令列指令。
-* **Action 2-4:** 網路推送 (LINE Notify, Telegram, WhatsApp)，需具備 Token 設定 UI。
-* **Action 5:** email推送，支援一般 MAPI 或是 GMail
-
-* **強制斷電:** 觸發後呼叫 `IPlatformService.ShutdownOS()`，預設關閉。
+* **強制斷電:** 觸發後可設定是否呼叫 `IPlatformService.ShutdownOS()`，預設關閉。
 
 ### 3.3 GUI 介面設計
 
@@ -130,12 +114,10 @@ else → 使用 DemoGpuProvider
 * **Center Area:** 即時折線圖 (Dynamic Height & Width)。
 * **Status Bar:** 系統訊息、目前狀態。
 
-
 * **圖表細節:**
 * 支援最近 15 分鐘數據回溯。
 * Y 軸自動縮放：電壓區間  (遇 Peak 值自動上調)。
 * 具備文字區塊顯示當前最後數值。
-
 
 * **Theme Aware:** 自動跟隨 Windows/Linux 系統主題，透過 `IThemeService` 抽象化處理。
 
@@ -162,7 +144,3 @@ else → 使用 DemoGpuProvider
 { "GpuMappings": [ { "SubsystemId": "1462:5170", "FieldId": 156, "Model": "MSI 5090 Suprim X" } ] }
 
 ```
-
-
-> **給 CLI 的說明**：
-> 本專案已具備 `avalonia.xplat` 結構。目前 `NvmlWindowsProvider.cs` 需根據此規格書的「三段式判定邏輯」進行重構。請確保 `HardwareDbManager` 的實作能正確處理 JSON 不存在時的自動回退。 .SLN / .csproj 未 compile 過

@@ -1,0 +1,158 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:SendAlerts.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="500"
+        x:Class="SendAlerts.Views.AlertActionsWindow"
+        x:DataType="vm:AlertActionsViewModel"
+        Title="Alert Actions Management"
+        Width="700" Height="500"
+        MinWidth="500" MinHeight="400"
+        WindowStartupLocation="CenterOwner"
+        SystemDecorations="Full">
+
+    <Design.DataContext>
+        <vm:AlertActionsViewModel />
+    </Design.DataContext>
+
+    <Border Padding="16">
+        <Grid RowDefinitions="Auto,*,Auto,Auto">
+
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                <TextBlock Text="Alert Actions" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Actions.Count, StringFormat='({0} items)'}"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Actions List -->
+            <Border Grid.Row="1"
+                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                    CornerRadius="8"
+                    Padding="8">
+                <Grid RowDefinitions="Auto,*">
+
+                    <!-- List Header -->
+                    <Grid Grid.Row="0"
+                          ColumnDefinitions="40,150,100,*,60"
+                          Margin="8,4,8,8">
+                        <TextBlock Grid.Column="0" Text="" FontWeight="SemiBold" FontSize="12"/>
+                        <TextBlock Grid.Column="1" Text="Instance ID" FontWeight="SemiBold" FontSize="12"/>
+                        <TextBlock Grid.Column="2" Text="Type" FontWeight="SemiBold" FontSize="12"/>
+                        <TextBlock Grid.Column="3" Text="Description" FontWeight="SemiBold" FontSize="12"/>
+                        <TextBlock Grid.Column="4" Text="Status" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
+                    </Grid>
+
+                    <!-- List Content -->
+                    <ListBox Grid.Row="1"
+                             ItemsSource="{Binding Actions}"
+                             SelectedItem="{Binding SelectedAction}"
+                             SelectionMode="Single"
+                             Background="Transparent">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="40,150,100,*,60"
+                                      Margin="0,4">
+                                    <!-- Icon based on Type -->
+                                    <TextBlock Grid.Column="0"
+                                               Text="{Binding ActionType, Converter={x:Static vm:ActionTypeIconConverter.Instance}}"
+                                               FontSize="16"
+                                               VerticalAlignment="Center"
+                                               HorizontalAlignment="Center"/>
+
+                                    <!-- Instance ID -->
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding InstanceId}"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"/>
+
+                                    <!-- Type Name -->
+                                    <TextBlock Grid.Column="2"
+                                               Text="{Binding ActionTypeName}"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+
+                                    <!-- Description -->
+                                    <TextBlock Grid.Column="3"
+                                               Text="{Binding Description}"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                               TextTrimming="CharacterEllipsis"/>
+
+                                    <!-- Status -->
+                                    <Border Grid.Column="4"
+                                            Background="{Binding IsEnabled, Converter={x:Static vm:EnabledColorConverter.Instance}}"
+                                            CornerRadius="4"
+                                            Padding="6,2"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding IsEnabled, Converter={x:Static vm:EnabledTextConverter.Instance}}"
+                                                   FontSize="11"
+                                                   Foreground="White"/>
+                                    </Border>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <!-- Action Buttons -->
+            <StackPanel Grid.Row="2"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        Margin="0,12,0,0">
+                <Button Content="Add"
+                        Command="{Binding AddActionCommand}"
+                        Width="80"/>
+                <Button Content="Edit"
+                        Command="{Binding EditActionCommand}"
+                        IsEnabled="{Binding HasSelection}"
+                        Width="80"/>
+                <Button Content="Delete"
+                        Command="{Binding DeleteActionCommand}"
+                        IsEnabled="{Binding HasSelection}"
+                        Width="80"/>
+                <Rectangle Width="1" Fill="{DynamicResource SystemControlForegroundBaseMediumBrush}" Margin="8,4"/>
+                <Button Content="Test"
+                        Command="{Binding TestActionCommand}"
+                        IsEnabled="{Binding HasSelection}"
+                        Width="80"/>
+                <Button Content="Toggle"
+                        Command="{Binding ToggleEnabledCommand}"
+                        IsEnabled="{Binding HasSelection}"
+                        Width="80"
+                        ToolTip.Tip="Toggle enabled/disabled"/>
+                <Rectangle Width="1" Fill="{DynamicResource SystemControlForegroundBaseMediumBrush}" Margin="8,4"/>
+                <Button Content="Reload"
+                        Command="{Binding ReloadCommand}"
+                        Width="80"/>
+            </StackPanel>
+
+            <!-- Footer -->
+            <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" Margin="0,12,0,0">
+                <!-- Status Message -->
+                <TextBlock Grid.Column="0"
+                           Text="{Binding StatusMessage}"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                           FontSize="12"/>
+
+                <!-- Save/Close Buttons -->
+                <Button Grid.Column="1"
+                        Content="Save"
+                        Command="{Binding SaveCommand}"
+                        Width="80"
+                        Margin="0,0,8,0"
+                        Classes="accent"/>
+                <Button Grid.Column="2"
+                        Content="Close"
+                        Command="{Binding CloseCommand}"
+                        Width="80"/>
+            </Grid>
+
+        </Grid>
+    </Border>
+</Window>
