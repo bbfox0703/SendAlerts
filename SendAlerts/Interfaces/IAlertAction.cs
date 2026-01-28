@@ -13,8 +13,8 @@ public enum AlertActionType
     /// <summary>Telegram Bot</summary>
     Telegram,
 
-    /// <summary>LINE Notify</summary>
-    LineNotify,
+    /// <summary>Discord Webhook</summary>
+    Discord,
 
     /// <summary>電子郵件 (SMTP)</summary>
     Email,

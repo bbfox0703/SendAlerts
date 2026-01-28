@@ -63,12 +63,17 @@ public class AlertActionConfig
 
     #endregion
 
-    #region LineNotify 專用屬性
+    #region Discord 專用屬性
 
     /// <summary>
-    /// LINE Notify Access Token (從 notify-bot.line.me 取得)
+    /// Discord Webhook URL (從 Discord 頻道設定 → 整合 → Webhook 取得)
     /// </summary>
-    public string? LineNotifyAccessToken { get; set; }
+    public string? DiscordWebhookUrl { get; set; }
+
+    /// <summary>
+    /// Discord Webhook 顯示的使用者名稱 (可選)
+    /// </summary>
+    public string? DiscordUsername { get; set; }
 
     #endregion
 
@@ -183,7 +188,7 @@ public class AlertActionConfig
         {
             AlertActionType.CommandLine => ValidateCommandLine(),
             AlertActionType.Telegram => ValidateTelegram(),
-            AlertActionType.LineNotify => ValidateLineNotify(),
+            AlertActionType.Discord => ValidateDiscord(),
             AlertActionType.Email => ValidateEmail(),
             AlertActionType.HttpWebhook => ValidateHttpWebhook(),
             AlertActionType.SystemShutdown => ValidateSystemShutdown(),
@@ -207,10 +212,13 @@ public class AlertActionConfig
         return AlertActionValidationResult.Valid();
     }
 
-    private AlertActionValidationResult ValidateLineNotify()
+    private AlertActionValidationResult ValidateDiscord()
     {
-        if (string.IsNullOrWhiteSpace(LineNotifyAccessToken))
-            return AlertActionValidationResult.Invalid("LINE Notify Access Token 不可為空");
+        if (string.IsNullOrWhiteSpace(DiscordWebhookUrl))
+            return AlertActionValidationResult.Invalid("Discord Webhook URL 不可為空");
+        if (!Uri.TryCreate(DiscordWebhookUrl, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != "http" && uri.Scheme != "https"))
+            return AlertActionValidationResult.Invalid("Discord Webhook URL 格式無效");
         return AlertActionValidationResult.Valid();
     }
 
@@ -277,15 +285,16 @@ public class AlertActionConfig
     }
 
     /// <summary>
-    /// 建立 LineNotify 類型的設定
+    /// 建立 Discord 類型的設定
     /// </summary>
-    public static AlertActionConfig CreateLineNotify(string instanceId, string accessToken, int cooldownSeconds = 30)
+    public static AlertActionConfig CreateDiscord(string instanceId, string webhookUrl, string? username = null, int cooldownSeconds = 30)
     {
         return new AlertActionConfig
         {
             InstanceId = instanceId,
-            ActionType = AlertActionType.LineNotify,
-            LineNotifyAccessToken = accessToken,
+            ActionType = AlertActionType.Discord,
+            DiscordWebhookUrl = webhookUrl,
+            DiscordUsername = username,
             CooldownSeconds = cooldownSeconds
         };
     }

@@ -55,8 +55,9 @@ public partial class EditActionViewModel : ViewModelBase
     [ObservableProperty] private string _telegramBotToken = string.Empty;
     [ObservableProperty] private string _telegramChatId = string.Empty;
 
-    // === LineNotify 專用 ===
-    [ObservableProperty] private string _lineNotifyAccessToken = string.Empty;
+    // === Discord 專用 ===
+    [ObservableProperty] private string _discordWebhookUrl = string.Empty;
+    [ObservableProperty] private string _discordUsername = string.Empty;
 
     // === Email 專用 ===
     [ObservableProperty] private string _smtpHost = string.Empty;
@@ -137,8 +138,9 @@ public partial class EditActionViewModel : ViewModelBase
                 TelegramBotToken = config.TelegramBotToken ?? string.Empty;
                 TelegramChatId = config.TelegramChatId ?? string.Empty;
                 break;
-            case AlertActionType.LineNotify:
-                LineNotifyAccessToken = config.LineNotifyAccessToken ?? string.Empty;
+            case AlertActionType.Discord:
+                DiscordWebhookUrl = config.DiscordWebhookUrl ?? string.Empty;
+                DiscordUsername = config.DiscordUsername ?? string.Empty;
                 break;
             case AlertActionType.Email:
                 SmtpHost = config.SmtpHost ?? string.Empty;
@@ -226,10 +228,16 @@ public partial class EditActionViewModel : ViewModelBase
                 }
                 break;
 
-            case AlertActionType.LineNotify:
-                if (string.IsNullOrWhiteSpace(LineNotifyAccessToken))
+            case AlertActionType.Discord:
+                if (string.IsNullOrWhiteSpace(DiscordWebhookUrl))
                 {
-                    ErrorMessage = "Access Token 不可為空";
+                    ErrorMessage = "Webhook URL 不可為空";
+                    HasError = true;
+                    return false;
+                }
+                if (!Uri.TryCreate(DiscordWebhookUrl, UriKind.Absolute, out _))
+                {
+                    ErrorMessage = "Webhook URL 格式無效";
                     HasError = true;
                     return false;
                 }
@@ -279,8 +287,9 @@ public partial class EditActionViewModel : ViewModelBase
                 config.TelegramBotToken = TelegramBotToken;
                 config.TelegramChatId = TelegramChatId;
                 break;
-            case AlertActionType.LineNotify:
-                config.LineNotifyAccessToken = LineNotifyAccessToken;
+            case AlertActionType.Discord:
+                config.DiscordWebhookUrl = DiscordWebhookUrl;
+                config.DiscordUsername = string.IsNullOrWhiteSpace(DiscordUsername) ? null : DiscordUsername;
                 break;
             case AlertActionType.Email:
                 config.SmtpHost = SmtpHost;
@@ -335,7 +344,7 @@ public class ActionTypeItem
         {
             AlertActionType.CommandLine => "\u2318",
             AlertActionType.Telegram => "\u2708",
-            AlertActionType.LineNotify => "\u260E",
+            AlertActionType.Discord => "\uD83D\uDCAC",
             AlertActionType.Email => "\u2709",
             AlertActionType.HttpWebhook => "\u21C4",
             AlertActionType.SystemShutdown => "\u23FB",

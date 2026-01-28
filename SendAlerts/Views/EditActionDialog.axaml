@@ -114,19 +114,23 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- LINE Notify Settings -->
+                    <!-- Discord Settings -->
                     <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
                             CornerRadius="8" Padding="16"
-                            IsVisible="{Binding SelectedActionType.Type, Converter={x:Static vm:ActionTypeVisibilityConverter.LineNotify}}">
+                            IsVisible="{Binding SelectedActionType.Type, Converter={x:Static vm:ActionTypeVisibilityConverter.Discord}}">
                         <StackPanel Spacing="8">
-                            <TextBlock Text="LINE Notify Settings" FontWeight="SemiBold"/>
-                            <TextBlock Text="Access Token:"/>
-                            <TextBox Text="{Binding LineNotifyAccessToken}"
-                                     Watermark="aBcDeFgHiJkLmNoP..."
+                            <TextBlock Text="Discord Webhook Settings" FontWeight="SemiBold"/>
+                            <TextBlock Text="Webhook URL:"/>
+                            <TextBox Text="{Binding DiscordWebhookUrl}"
+                                     Watermark="https://discord.com/api/webhooks/..."
                                      PasswordChar="*"/>
-                            <TextBlock Text="Get token from notify-bot.line.me"
+                            <TextBlock Text="Username (optional):"/>
+                            <TextBox Text="{Binding DiscordUsername}"
+                                     Watermark="SendAlerts"/>
+                            <TextBlock Text="Get webhook URL from Server Settings → Integrations → Webhooks"
                                        FontSize="10"
-                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                       TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
 

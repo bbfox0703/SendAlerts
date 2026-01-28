@@ -33,14 +33,14 @@ Built with Avalonia UI for Windows/Linux cross-platform support.
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Group Tier (群組層)                           │
 │  AlertGroup: { Name, MessageTemplate, List<ActionReference> }   │
-│  Example: "Critical" → [LINE_Admin, Telegram_All, Email_IT]     │
+│  Example: "Critical" → [Discord_Admin, Telegram_All, Email_IT]   │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Action Tier (動作層)                          │
 │  IAlertAction implementations with unique InstanceId            │
-│  Example: LINE_User1, LINE_Admin1, Telegram_All, Email_IT       │
+│  Example: Discord_User1, Discord_Admin1, Telegram_All, Email_IT │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -84,7 +84,7 @@ External Tool (HWiNFO64)
         │
         ▼ Execute All Actions in Group
 ┌───────────────────────────────────────────┐
-│ IAlertAction[] (LINE, Telegram, Email...) │
+│ IAlertAction[] (Discord, Telegram, Email...) │
 └───────────────────────────────────────────┘
 ```
 
@@ -170,7 +170,7 @@ Phase C/D (收尾) ────────────────────�
 - [x] **TA2-2**: `AlertActionConfig` 資料模型 - 儲存單一動作的設定
 - [x] **TA2-3**: `AlertActionFactory` - 根據 ActionType 建立對應的 IAlertAction 實例
 - [x] **TA2-4**: 重構 `TelegramAlertAction` - 支援多實例 (不同 Bot/Chat) *(已在 TA2-1 完成)*
-- [x] **TA2-5**: 重構 `LineNotifyAlertAction` - 支援多實例 (不同 Token) *(已在 TA2-1 完成)*
+- [x] **TA2-5**: 實作 `DiscordWebhookAlertAction` - Discord Webhook 支援 *(LINE Notify 已停用，改用 Discord)*
 - [ ] **TA2-6**: 新增 `EmailAlertAction` - MailKit SMTP 整合
 - [ ] **TA2-7**: 新增 `HttpClientAlertAction` - 支援 Webhook/REST API
 - [ ] **TA2-8**: 新增 `SystemShutdownAction` - 安全關機 (需確認對話框)
@@ -271,7 +271,7 @@ Phase C/D (收尾) ────────────────────�
 ### Phase 4: Alert Actions (警報動作) - 部分重構至 Phase A
 - [x] **T4-1**: `CommandLineAlertAction` - execute local commands
 - [x] **T4-2**: `TelegramAlertAction` - bot API integration
-- [x] **T4-3**: `LineNotifyAlertAction` - LINE Notify API
+- [x] **T4-3**: `DiscordWebhookAlertAction` - Discord Webhook API *(LINE Notify 已於 2025 年停用)*
 - [x] **T4-4**: Alert action configuration UI
 - [x] **T4-5**: Debug mode - destructive actions log-only
 
@@ -301,7 +301,7 @@ Phase C/D (收尾) ────────────────────�
 | T3-4 | Settings UI | 2026-01-26 | SettingsWindow + SettingsViewModel |
 | T4-1 | CommandLineAlertAction | 2026-01-26 | 變數替換、冷卻機制、跨平台 shell 支援 |
 | T4-2 | TelegramAlertAction | 2026-01-26 | Telegram Bot API 整合、HTML 格式訊息 |
-| T4-3 | LineNotifyAlertAction | 2026-01-26 | LINE Notify API 整合 |
+| T4-3 | DiscordWebhookAlertAction | 2026-01-28 | Discord Webhook API (LINE Notify 已停用) |
 | T4-4 | Alert Action UI | 2026-01-26 | TabControl 分頁設定介面 |
 | T4-5 | Debug Mode | 2026-01-26 | AlertActionsDebugMode 設定整合 |
 | T1-3 | NvApiWindowsProvider | 2026-01-26 | NVML fallback, nvapi64.dll P/Invoke |
