@@ -17,6 +17,11 @@ public static class ServiceLocator
     public static IGpuProvider? GpuProvider { get; set; }
 
     /// <summary>
+    /// 所有可用的硬體監控 Provider（啟動時偵測）
+    /// </summary>
+    public static List<IGpuProvider> AvailableProviders { get; set; } = new();
+
+    /// <summary>
     /// 設定服務
     /// </summary>
     public static ISettingsService? SettingsService { get; set; }

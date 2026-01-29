@@ -25,7 +25,11 @@
       <Button Content="{Binding Loc_AlertActions}" Click="OnAlertActionsClick" />
       <Button Content="{Binding Loc_AlertGroups}" Click="OnAlertGroupsClick" />
       <Button Content="{Binding Loc_Log}" Click="OnLogClick" />
-      <TextBlock Text="{Binding GpuName}" VerticalAlignment="Center" Foreground="White" FontWeight="Bold" Margin="20,0,0,0"/>
+      <Button Content="{Binding CurrentProviderName}" Command="{Binding SwitchProviderCommand}"
+              IsEnabled="{Binding CanSwitchProvider}" Margin="10,0,0,0"
+              ToolTip.Tip="{Binding SwitchProviderTooltip}"
+              MinWidth="60" FontSize="11" Padding="8,4"/>
+      <TextBlock Text="{Binding GpuName}" VerticalAlignment="Center" Foreground="White" FontWeight="Bold" Margin="10,0,0,0"/>
       <TextBlock Text="{Binding PowerLimit, StringFormat='(TDP: {0:F0}W)'}" VerticalAlignment="Center" Foreground="#888" Margin="10,0,0,0"/>
       <!-- 圖表時間維度選擇 -->
       <ComboBox ItemsSource="{Binding HistoryDurationOptions}"
@@ -83,9 +87,14 @@
         <DockPanel>
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,5">
             <TextBlock Text="{Binding TemperatureLabel}" Foreground="OrangeRed" FontSize="14" FontWeight="Bold"/>
-            <TextBlock Text="{Binding CurrentTemperature, StringFormat=': {0:F1} °C'}"
-                       Foreground="OrangeRed"
-                       FontSize="14" Margin="5,0"/>
+            <TextBlock Foreground="OrangeRed" FontSize="14" Margin="5,0">
+              <TextBlock.Text>
+                <MultiBinding StringFormat=": {0:F1} {1}">
+                  <Binding Path="CurrentTemperature"/>
+                  <Binding Path="TemperatureUnit"/>
+                </MultiBinding>
+              </TextBlock.Text>
+            </TextBlock>
           </StackPanel>
           <lvc:CartesianChart Series="{Binding TempSeries}"
                               XAxes="{Binding XAxes}"

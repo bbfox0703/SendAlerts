@@ -369,4 +369,10 @@
   <data name="Msg_ActionTestMessage" xml:space="preserve">
     <value>[TEST] テストメッセージです</value>
   </data>
+  <data name="SwitchProvider_Tooltip" xml:space="preserve">
+    <value>クリックして切り替え：{0}</value>
+  </data>
+  <data name="SwitchProvider_NoOther" xml:space="preserve">
+    <value>他に利用可能なプロバイダーはありません</value>
+  </data>
 </root>

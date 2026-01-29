@@ -57,6 +57,7 @@ public class NvmlWindowsProvider : IGpuProvider
     public HardwareMode Mode => HardwareMode.Gpu;
     public string PrimaryMetricLabel => "GPU Utilization";
     public string TemperatureLabel => "GPU Temperature";
+    public string TemperatureUnit => "°C";
     public string SecondaryMetricLabel => "Power Usage";
     public string SecondaryMetricUnit => "W";
 

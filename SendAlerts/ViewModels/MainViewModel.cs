@@ -22,7 +22,7 @@ namespace SendAlerts.ViewModels;
 /// </summary>
 public partial class MainViewModel : ViewModelBase
 {
-    private readonly IGpuProvider _gpuProvider;
+    private IGpuProvider _gpuProvider;
     private readonly DispatcherTimer _timer;
     private readonly LocalizationService _loc = LocalizationService.Instance;
 
@@ -45,9 +45,15 @@ public partial class MainViewModel : ViewModelBase
     // --- 動態標籤 (支援 GPU/CPU 模式切換) ---
     [ObservableProperty] private string _primaryMetricLabel = "GPU Utilization";
     [ObservableProperty] private string _temperatureLabel = "GPU Temperature";
+    [ObservableProperty] private string _temperatureUnit = "°C";
     [ObservableProperty] private string _secondaryMetricLabel = "Power Usage";
     [ObservableProperty] private string _secondaryMetricUnit = "W";
     [ObservableProperty] private bool _isGpuMode = true;
+
+    // --- Provider 切換 ---
+    [ObservableProperty] private string _currentProviderName = "";
+    [ObservableProperty] private string _switchProviderTooltip = "";
+    [ObservableProperty] private bool _canSwitchProvider;
 
     // --- TB3-2: 狀態列屬性 ---
     [ObservableProperty] private string _statusText = "System Ready";
@@ -132,11 +138,12 @@ public partial class MainViewModel : ViewModelBase
         PowerLimit = _gpuProvider.PowerLimit;
 
         // 初始化動態標籤 (支援 GPU/CPU 模式)
-        PrimaryMetricLabel = _gpuProvider.PrimaryMetricLabel;
-        TemperatureLabel = _gpuProvider.TemperatureLabel;
-        SecondaryMetricLabel = _gpuProvider.SecondaryMetricLabel;
-        SecondaryMetricUnit = _gpuProvider.SecondaryMetricUnit;
-        IsGpuMode = _gpuProvider.Mode == HardwareMode.Gpu;
+        ApplyProviderLabels();
+
+        // Provider 切換
+        CanSwitchProvider = ServiceLocator.AvailableProviders.Count > 1;
+        CurrentProviderName = GetProviderDisplayName(_gpuProvider);
+        UpdateSwitchTooltip();
 
         // 1. 初始化圖表外觀
         InitializeCharts();
@@ -209,6 +216,75 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
+    private void ApplyProviderLabels()
+    {
+        PrimaryMetricLabel = _gpuProvider.PrimaryMetricLabel;
+        TemperatureLabel = _gpuProvider.TemperatureLabel;
+        TemperatureUnit = _gpuProvider.TemperatureUnit;
+        SecondaryMetricLabel = _gpuProvider.SecondaryMetricLabel;
+        SecondaryMetricUnit = _gpuProvider.SecondaryMetricUnit;
+        IsGpuMode = _gpuProvider.Mode == HardwareMode.Gpu;
+    }
+
+    private static string GetProviderDisplayName(IGpuProvider provider)
+    {
+        var typeName = provider.GetType().Name;
+        return provider.Mode switch
+        {
+            HardwareMode.Gpu when typeName.Contains("NvApi") => "GPU (NvAPI)",
+            HardwareMode.Gpu when typeName.Contains("Nvml") => "GPU (NVML)",
+            HardwareMode.Gpu when typeName.Contains("Demo") => "Demo",
+            HardwareMode.CpuNetwork => "CPU / Memory / Network",
+            _ => typeName
+        };
+    }
+
+    private void UpdateSwitchTooltip()
+    {
+        var providers = ServiceLocator.AvailableProviders;
+        if (providers.Count <= 1)
+        {
+            SwitchProviderTooltip = _loc["SwitchProvider_NoOther"] ?? "No other provider available";
+            return;
+        }
+
+        var currentIndex = providers.IndexOf(_gpuProvider);
+        var nextIndex = (currentIndex + 1) % providers.Count;
+        var nextName = GetProviderDisplayName(providers[nextIndex]);
+        SwitchProviderTooltip = string.Format(
+            _loc["SwitchProvider_Tooltip"] ?? "Click to switch to: {0}",
+            nextName);
+    }
+
+    [RelayCommand]
+    private void SwitchProvider()
+    {
+        var providers = ServiceLocator.AvailableProviders;
+        if (providers.Count <= 1) return;
+
+        var currentIndex = providers.IndexOf(_gpuProvider);
+        var nextIndex = (currentIndex + 1) % providers.Count;
+        _gpuProvider = providers[nextIndex];
+        ServiceLocator.GpuProvider = _gpuProvider;
+
+        // 更新顯示資訊
+        GpuName = _gpuProvider.GetGpuName();
+        PowerLimit = _gpuProvider.PowerLimit;
+        CurrentProviderName = GetProviderDisplayName(_gpuProvider);
+        ApplyProviderLabels();
+        UpdateSwitchTooltip();
+
+        // 清空圖表歷史
+        UtilizationHistory.Clear();
+        TemperatureHistory.Clear();
+        PowerHistory.Clear();
+
+        // 重設 Y 軸
+        ConfigureYAxesForMode();
+
+        Log.Information("已切換 Provider: {Name} ({Type})", CurrentProviderName, _gpuProvider.GetType().Name);
+    }
+
     private void InitializeCharts()
     {
         UtilizationSeries = new ISeries[] {
@@ -237,7 +313,7 @@ public partial class MainViewModel : ViewModelBase
                 Stroke = new SolidColorPaint(SKColors.OrangeRed, 1),
                 Mapping = (tv, _) => new(tv.Timestamp.Ticks, tv.Value),
                 YToolTipLabelFormatter = p =>
-                    $"{p.Model!.Value:F1} °C  ({p.Model.Timestamp:HH:mm:ss})"
+                    $"{p.Model!.Value:F1} {TemperatureUnit}  ({p.Model.Timestamp:HH:mm:ss})"
             }
         };
 
@@ -276,14 +352,22 @@ public partial class MainViewModel : ViewModelBase
     {
         if (IsGpuMode)
         {
-            // GPU 模式: 0-600 W
+            // GPU 模式: 溫度 0-100 °C, 功耗 0-600 W
+            TempYAxes[0].MinLimit = 0;
+            TempYAxes[0].MaxLimit = 100;
+            TempYAxes[0].Labeler = v => v.ToString("F0") + " °C";
+
             PowerYAxes[0].MinLimit = 0;
             PowerYAxes[0].MaxLimit = 600;
             PowerYAxes[0].Labeler = v => v.ToString("F0") + " W";
         }
         else
         {
-            // CPU/Network 模式: 自動縮放
+            // CPU/Network 模式: 記憶體 0-100 %, 網路自動縮放
+            TempYAxes[0].MinLimit = 0;
+            TempYAxes[0].MaxLimit = 100;
+            TempYAxes[0].Labeler = v => v.ToString("F0") + " %";
+
             PowerYAxes[0].MinLimit = 0;
             PowerYAxes[0].MaxLimit = 10000; // 初始 10 MB/s
             PowerYAxes[0].Labeler = v =>

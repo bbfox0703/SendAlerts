@@ -369,4 +369,10 @@
   <data name="Msg_ActionTestMessage" xml:space="preserve">
     <value>[TEST] 這是測試訊息</value>
   </data>
+  <data name="SwitchProvider_Tooltip" xml:space="preserve">
+    <value>點擊切換至：{0}</value>
+  </data>
+  <data name="SwitchProvider_NoOther" xml:space="preserve">
+    <value>無其他可用的監控模式</value>
+  </data>
 </root>

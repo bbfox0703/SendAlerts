@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -86,7 +87,11 @@ sealed class Program
             ShutdownHttpApiServer();
             ShutdownTrayIcon();
             ShutdownNamedPipeServer();
-            ServiceLocator.GpuProvider?.Dispose();
+            foreach (var provider in ServiceLocator.AvailableProviders)
+            {
+                provider.Dispose();
+            }
+            ServiceLocator.AvailableProviders.Clear();
             _singleInstanceManager?.Dispose();
             Log.Information("=== SendAlerts 應用程式結束 ===");
             Log.CloseAndFlush();
@@ -283,12 +288,15 @@ sealed class Program
         // Settings service (cross-platform)
         ServiceLocator.SettingsService = new JsonSettingsService();
 
-        // GPU Provider (platform-specific)
-        ServiceLocator.GpuProvider = CreateGpuProvider();
+        // GPU Provider (platform-specific) - 建立所有可用 provider
+        var providers = CreateAllProviders();
+        ServiceLocator.AvailableProviders = providers;
+        ServiceLocator.GpuProvider = providers[0];
 
-        Log.Information("GPU Provider: {ProviderType}, Available: {IsAvailable}",
+        Log.Information("GPU Provider: {ProviderType}, Available: {IsAvailable}, Total Providers: {Count}",
             ServiceLocator.GpuProvider.GetType().Name,
-            ServiceLocator.GpuProvider.IsAvailable);
+            ServiceLocator.GpuProvider.IsAvailable,
+            providers.Count);
 
         // TA3-2: Alert Service (Alert Center 核心)
         InitializeAlertService();
@@ -399,60 +407,69 @@ sealed class Program
     }
 
     /// <summary>
-    /// 根據平台建立適當的 IGpuProvider
-    /// 優先順序: NvAPI -> NVML -> CpuNetwork -> Demo
+    /// 建立所有可用的 IGpuProvider
+    /// 優先順序: NvAPI -> NVML -> CpuNetwork -> Demo (保底)
     /// </summary>
-    private static IGpuProvider CreateGpuProvider()
+    private static List<IGpuProvider> CreateAllProviders()
     {
-        // Windows: 嘗試使用 NvAPI (功耗 + 溫度)
+        var providers = new List<IGpuProvider>();
+        bool hasGpuProvider = false;
+
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            // 第一優先：嘗試 NvAPI (RTX 50 系列)
-            try
+            // GPU Provider: NvAPI 與 NVML 為替代方案，只保留第一個成功的
+            if (!hasGpuProvider)
             {
-                var nvApiProvider = new NvApiWindowsProvider();
-                if (nvApiProvider.IsAvailable)
+                try
                 {
-                    Log.Information("使用 NvAPI Windows Provider");
-                    return nvApiProvider;
+                    var nvApiProvider = new NvApiWindowsProvider();
+                    if (nvApiProvider.IsAvailable)
+                    {
+                        providers.Add(nvApiProvider);
+                        hasGpuProvider = true;
+                        Log.Information("NvAPI Windows Provider 可用");
+                    }
+                    else
+                    {
+                        nvApiProvider.Dispose();
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    nvApiProvider.Dispose();
+                    Log.Warning(ex, "NvAPI 載入失敗");
                 }
-            }
-            catch (Exception ex)
-            {
-                Log.Warning(ex, "NvAPI 載入失敗");
             }
 
-            // 第二優先：嘗試 NVML (舊版 NVIDIA GPU)
-            try
+            if (!hasGpuProvider)
             {
-                var nvmlProvider = new NvmlWindowsProvider();
-                if (nvmlProvider.IsAvailable)
+                try
                 {
-                    Log.Information("使用 NVML Windows Provider");
-                    return nvmlProvider;
+                    var nvmlProvider = new NvmlWindowsProvider();
+                    if (nvmlProvider.IsAvailable)
+                    {
+                        providers.Add(nvmlProvider);
+                        hasGpuProvider = true;
+                        Log.Information("NVML Windows Provider 可用");
+                    }
+                    else
+                    {
+                        nvmlProvider.Dispose();
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    nvmlProvider.Dispose();
+                    Log.Warning(ex, "NVML 載入失敗");
                 }
-            }
-            catch (Exception ex)
-            {
-                Log.Warning(ex, "NVML 載入失敗");
             }
 
-            // 第三優先：嘗試 CPU/Network (非 NVIDIA 系統 fallback)
+            // CPU/Network: 與 GPU 為不同類別，可並存
             try
             {
                 var cpuNetworkProvider = new CpuNetworkWindowsProvider();
                 if (cpuNetworkProvider.IsAvailable)
                 {
-                    Log.Information("使用 CPU/Network Windows Provider (Fallback 模式)");
-                    return cpuNetworkProvider;
+                    providers.Add(cpuNetworkProvider);
+                    Log.Information("CPU/Network Windows Provider 可用");
                 }
                 else
                 {
@@ -464,16 +481,20 @@ sealed class Program
                 Log.Warning(ex, "CPU/Network 載入失敗");
             }
         }
-
-        // Linux: 未來可實作 NvmlLinuxProvider
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
             Log.Information("Linux 平台 - 目前使用 Demo 模式 (NVML Linux 支援待實作)");
         }
 
-        // Fallback: Demo Provider
-        Log.Information("使用 Demo GPU Provider");
-        return new DemoGpuProvider();
+        // DemoGpuProvider 只在沒有任何可用 provider 時加入作為保底
+        if (providers.Count == 0)
+        {
+            providers.Add(new DemoGpuProvider());
+            Log.Information("無可用硬體 Provider，使用 Demo GPU Provider 作為保底");
+        }
+
+        Log.Information("共偵測到 {Count} 個可用 Provider", providers.Count);
+        return providers;
     }
 
     private static void InitializeLogging()
