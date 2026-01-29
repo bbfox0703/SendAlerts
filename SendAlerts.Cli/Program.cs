@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Text;
@@ -23,17 +24,17 @@ class Program
 
         // TD1-1: send command
         var sendCommand = CreateSendCommand();
-        rootCommand.AddCommand(sendCommand);
+        rootCommand.Subcommands.Add(sendCommand);
 
         // TD1-2: list command
         var listCommand = CreateListCommand();
-        rootCommand.AddCommand(listCommand);
+        rootCommand.Subcommands.Add(listCommand);
 
         // test command (quick test)
         var testCommand = CreateTestCommand();
-        rootCommand.AddCommand(testCommand);
+        rootCommand.Subcommands.Add(testCommand);
 
-        return await rootCommand.InvokeAsync(args);
+        return await rootCommand.Parse(args).InvokeAsync();
     }
 
     /// <summary>
@@ -42,33 +43,35 @@ class Program
     /// </summary>
     private static Command CreateSendCommand()
     {
-        var groupOption = new Option<string>(
-            aliases: ["-g", "--group"],
-            description: "Alert Group name to trigger")
+        var groupOption = new Option<string>("--group", "-g")
         {
-            IsRequired = true
+            Description = "Alert Group name to trigger",
+            Required = true
         };
 
-        var messageOption = new Option<string?>(
-            aliases: ["-m", "--message"],
-            description: "Custom message (optional)");
-
-        var timeoutOption = new Option<int>(
-            aliases: ["-t", "--timeout"],
-            getDefaultValue: () => DefaultTimeout,
-            description: "Connection timeout in milliseconds");
-
-        var sendCommand = new Command("send", "Send an alert to SendAlerts")
+        var messageOption = new Option<string?>("--message", "-m")
         {
-            groupOption,
-            messageOption,
-            timeoutOption
+            Description = "Custom message (optional)"
         };
 
-        sendCommand.SetHandler(async (group, message, timeout) =>
+        var timeoutOption = new Option<int>("--timeout", "-t")
         {
+            Description = "Connection timeout in milliseconds",
+            DefaultValueFactory = _ => DefaultTimeout
+        };
+
+        var sendCommand = new Command("send", "Send an alert to SendAlerts");
+        sendCommand.Options.Add(groupOption);
+        sendCommand.Options.Add(messageOption);
+        sendCommand.Options.Add(timeoutOption);
+
+        sendCommand.SetAction(async (parseResult, _) =>
+        {
+            var group = parseResult.GetValue(groupOption)!;
+            var message = parseResult.GetValue(messageOption);
+            var timeout = parseResult.GetValue(timeoutOption);
             await SendAlertAsync(group, message, timeout);
-        }, groupOption, messageOption, timeoutOption);
+        });
 
         return sendCommand;
     }
@@ -81,7 +84,7 @@ class Program
     {
         var listCommand = new Command("list", "List available Alert Groups from settings");
 
-        listCommand.SetHandler(() =>
+        listCommand.SetAction(_ =>
         {
             ListGroups();
         });
@@ -97,7 +100,7 @@ class Program
     {
         var testCommand = new Command("test", "Send a test alert to Default group");
 
-        testCommand.SetHandler(async () =>
+        testCommand.SetAction(async (_, _) =>
         {
             await SendAlertAsync("Default", "[CLI Test] This is a test alert", DefaultTimeout);
         });
