@@ -111,7 +111,7 @@ public partial class AlertGroupsViewModel : ViewModelBase
             Groups.Add(new AlertGroupItem(group, _settings.AlertActions.Count));
         }
 
-        StatusMessage = $"已載入 {Groups.Count} 個群組";
+        StatusMessage = _loc.GetString("Msg_Loaded", Groups.Count);
         Log.Debug("[AlertGroupsViewModel] 載入 {Count} 個群組", Groups.Count);
     }
 
@@ -135,14 +135,14 @@ public partial class AlertGroupsViewModel : ViewModelBase
             // 檢查名稱是否重複
             if (_settings.AlertGroups.Any(g => g.Name.Equals(newGroup.Name, StringComparison.OrdinalIgnoreCase)))
             {
-                StatusMessage = $"群組名稱已存在: {newGroup.Name}";
+                StatusMessage = _loc.GetString("Msg_DuplicateId", newGroup.Name);
                 return;
             }
 
             _settings.AlertGroups.Add(newGroup);
             Groups.Add(new AlertGroupItem(newGroup, _settings.AlertActions.Count));
             HasChanges = true;
-            StatusMessage = $"已新增群組: {newGroup.Name}";
+            StatusMessage = _loc.GetString("Msg_Added", newGroup.Name);
             Log.Information("[AlertGroupsViewModel] 新增群組: {Name}", newGroup.Name);
         }
     }
@@ -178,7 +178,7 @@ public partial class AlertGroupsViewModel : ViewModelBase
             }
 
             HasChanges = true;
-            StatusMessage = $"已更新群組: {updatedGroup.Name}";
+            StatusMessage = _loc.GetString("Msg_Updated", updatedGroup.Name);
             Log.Information("[AlertGroupsViewModel] 更新群組: {Name}", updatedGroup.Name);
         }
     }
@@ -196,7 +196,7 @@ public partial class AlertGroupsViewModel : ViewModelBase
         // 不允許刪除預設群組
         if (groupName is "Default" or "Critical" or "Warning" or "Info")
         {
-            StatusMessage = $"無法刪除預設群組: {groupName}";
+            StatusMessage = _loc.GetString("Msg_CannotDeleteDefault", groupName);
             return;
         }
 
@@ -206,7 +206,7 @@ public partial class AlertGroupsViewModel : ViewModelBase
             _settings.AlertGroups.Remove(groupToRemove);
             Groups.Remove(SelectedGroup);
             HasChanges = true;
-            StatusMessage = $"已刪除群組: {groupName}";
+            StatusMessage = _loc.GetString("Msg_Deleted", groupName);
             Log.Information("[AlertGroupsViewModel] 刪除群組: {Name}", groupName);
         }
     }
@@ -222,12 +222,12 @@ public partial class AlertGroupsViewModel : ViewModelBase
         var alertService = ServiceLocator.AlertService;
         if (alertService == null)
         {
-            StatusMessage = "AlertService 未初始化";
+            StatusMessage = _loc["Msg_AlertServiceNotInit"];
             return;
         }
 
         IsTesting = true;
-        StatusMessage = $"測試中: {SelectedGroup.Name}...";
+        StatusMessage = _loc.GetString("Msg_Testing", SelectedGroup.Name);
 
         try
         {
@@ -244,14 +244,14 @@ public partial class AlertGroupsViewModel : ViewModelBase
                 details.Append($"  [MISS] {missing}\n");
 
             StatusMessage = result.Success
-                ? $"已發送: {SelectedGroup.Name} ({result.ExecutedActions.Count}/{result.TotalActions})，請確認收信端\n{details}"
-                : $"部分失敗: {SelectedGroup.Name} ({result.ExecutedActions.Count}/{result.TotalActions})\n{details}" +
-                  (result.ErrorMessage != null ? result.ErrorMessage : "");
+                ? _loc.GetString("Msg_GroupSent", SelectedGroup.Name, result.ExecutedActions.Count, result.TotalActions) + $"\n{details}"
+                : _loc.GetString("Msg_GroupPartialFailed", SelectedGroup.Name, result.ExecutedActions.Count, result.TotalActions) + $"\n{details}" +
+                  (result.ErrorMessage ?? "");
         }
         catch (Exception ex)
         {
-            StatusMessage = $"測試錯誤: {ex.Message}";
-            Log.Error(ex, "[AlertGroupsViewModel] 測試群組失敗: {Name}", SelectedGroup.Name);
+            StatusMessage = _loc.GetString("Msg_TestError", ex.Message);
+            Log.Error(ex, "[AlertGroupsViewModel] Test group failed: {Name}", SelectedGroup.Name);
         }
         finally
         {
@@ -273,7 +273,7 @@ public partial class AlertGroupsViewModel : ViewModelBase
             group.IsEnabled = !group.IsEnabled;
             SelectedGroup.IsEnabled = group.IsEnabled;
             HasChanges = true;
-            StatusMessage = $"{SelectedGroup.Name}: {(group.IsEnabled ? "已啟用" : "已停用")}";
+            StatusMessage = _loc.GetString("Msg_Toggled", SelectedGroup.Name, group.IsEnabled ? _loc["Enabled"] : _loc["Disabled"]);
         }
     }
 
@@ -297,12 +297,12 @@ public partial class AlertGroupsViewModel : ViewModelBase
             }
 
             HasChanges = false;
-            StatusMessage = "設定已儲存";
+            StatusMessage = _loc["Msg_SettingsSaved"];
             Log.Information("[AlertGroupsViewModel] 設定已儲存");
         }
         catch (Exception ex)
         {
-            StatusMessage = $"儲存失敗: {ex.Message}";
+            StatusMessage = _loc.GetString("Msg_SaveFailed", ex.Message);
             Log.Error(ex, "[AlertGroupsViewModel] 儲存設定失敗");
         }
     }

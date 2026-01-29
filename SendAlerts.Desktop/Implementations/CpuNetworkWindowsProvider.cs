@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Net.NetworkInformation;
+using System.Runtime.InteropServices;
 using SendAlerts.Core.Interfaces;
 using LibreHardwareMonitor.Hardware;
 using Serilog;
@@ -11,15 +12,32 @@ namespace SendAlerts.Desktop.Implementations;
 /// Windows 平台 CPU/Network 資料提供者
 /// 當 NVIDIA GPU 不可用時的 fallback 方案
 /// - CPU 使用率 via LibreHardwareMonitor
-/// - CPU 溫度 via LibreHardwareMonitor (需要管理員權限)
+/// - 記憶體使用率 via GlobalMemoryStatusEx (取代 CPU 溫度)
 /// - 網路 I/O via System.Net.NetworkInformation
 /// </summary>
 public class CpuNetworkWindowsProvider : IGpuProvider
 {
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MEMORYSTATUSEX
+    {
+        public uint dwLength;
+        public uint dwMemoryLoad;
+        public ulong ullTotalPhys;
+        public ulong ullAvailPhys;
+        public ulong ullTotalPageFile;
+        public ulong ullAvailPageFile;
+        public ulong ullTotalVirtual;
+        public ulong ullAvailVirtual;
+        public ulong ullAvailExtendedVirtual;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
+
     private readonly Computer _computer;
     private IHardware? _cpu;
     private ISensor? _cpuLoadSensor;
-    private ISensor? _cpuTempSensor;
 
     // 網路流量追蹤
     private long _prevBytesReceived;
@@ -29,7 +47,7 @@ public class CpuNetworkWindowsProvider : IGpuProvider
 
     private bool _isInitialized;
     private string _cpuName = "Unknown CPU";
-    private bool _temperatureAvailable;
+    private float _totalMemoryGB;
 
     public bool IsAvailable => _isInitialized;
     public float PowerLimit => 125000f; // 預設網路頻寬上限 (125 MB/s ≈ 1 Gbps)
@@ -37,7 +55,8 @@ public class CpuNetworkWindowsProvider : IGpuProvider
     // 硬體模式與動態標籤 (CPU/Network 模式)
     public HardwareMode Mode => HardwareMode.CpuNetwork;
     public string PrimaryMetricLabel => "CPU Utilization";
-    public string TemperatureLabel => "CPU Temperature";
+    public string TemperatureLabel => "Memory Usage";
+    public string TemperatureUnit => "%";
     public string SecondaryMetricLabel => "Network I/O";
     public string SecondaryMetricUnit => "KB/s";
 
@@ -75,24 +94,20 @@ public class CpuNetworkWindowsProvider : IGpuProvider
             _cpuLoadSensor = _cpu.Sensors
                 .FirstOrDefault(s => s.SensorType == SensorType.Load && s.Name == "CPU Total");
 
-            // 尋找 CPU 溫度感測器 (可能需要管理員權限)
-            _cpuTempSensor = _cpu.Sensors
-                .FirstOrDefault(s => s.SensorType == SensorType.Temperature &&
-                    (s.Name.Contains("Package") || s.Name.Contains("Core") || s.Name.Contains("CPU")));
-
-            _temperatureAvailable = _cpuTempSensor != null && _cpuTempSensor.Value.HasValue;
-
-            if (!_temperatureAvailable)
+            // 取得總記憶體容量
+            var memStatus = new MEMORYSTATUSEX { dwLength = (uint)Marshal.SizeOf<MEMORYSTATUSEX>() };
+            if (GlobalMemoryStatusEx(ref memStatus))
             {
-                Log.Warning("[CPU/Network] CPU 溫度感測器不可用 (可能需要管理員權限)");
+                _totalMemoryGB = memStatus.ullTotalPhys / (1024f * 1024f * 1024f);
+                Log.Information("[CPU/Network] 總記憶體: {TotalGB:F1} GB", _totalMemoryGB);
             }
 
             // 初始化網路流量基準
             InitializeNetworkBaseline();
 
             _isInitialized = true;
-            Log.Information("[CPU/Network] 初始化完成 | CPU: {CpuName} | 溫度可用: {TempAvailable}",
-                _cpuName, _temperatureAvailable);
+            Log.Information("[CPU/Network] 初始化完成 | CPU: {CpuName} | Memory: {MemGB:F1} GB",
+                _cpuName, _totalMemoryGB);
         }
         catch (Exception ex)
         {
@@ -159,17 +174,18 @@ public class CpuNetworkWindowsProvider : IGpuProvider
             cpuLoad = _cpuLoadSensor.Value.Value;
         }
 
-        // 讀取 CPU 溫度
-        float cpuTemp = 0;
-        if (_cpuTempSensor != null && _cpuTempSensor.Value.HasValue)
+        // 讀取記憶體使用率
+        float memoryUsagePercent = 0;
+        var memStatus = new MEMORYSTATUSEX { dwLength = (uint)Marshal.SizeOf<MEMORYSTATUSEX>() };
+        if (GlobalMemoryStatusEx(ref memStatus))
         {
-            cpuTemp = _cpuTempSensor.Value.Value;
+            memoryUsagePercent = memStatus.dwMemoryLoad;
         }
 
         // 計算網路吞吐量
         float networkThroughput = CalculateNetworkThroughput();
 
-        return new GpuReading(cpuLoad, cpuTemp, networkThroughput, DateTime.Now);
+        return new GpuReading(cpuLoad, memoryUsagePercent, networkThroughput, DateTime.Now);
     }
 
     private float CalculateNetworkThroughput()

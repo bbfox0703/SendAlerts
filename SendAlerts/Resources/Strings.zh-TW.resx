@@ -275,15 +275,30 @@
 
   <!-- Tray Icon -->
   <data name="Tray_Show" xml:space="preserve">
-    <value>顯示</value>
+    <value>顯示視窗</value>
+  </data>
+  <data name="Tray_AlertActions" xml:space="preserve">
+    <value>警報動作...</value>
+  </data>
+  <data name="Tray_AlertGroups" xml:space="preserve">
+    <value>警報群組...</value>
+  </data>
+  <data name="Tray_StartWithWindows" xml:space="preserve">
+    <value>開機時自動啟動</value>
   </data>
   <data name="Tray_Exit" xml:space="preserve">
     <value>結束</value>
+  </data>
+  <data name="Tray_MinimizedToast" xml:space="preserve">
+    <value>應用程式已最小化至系統匣</value>
   </data>
 
   <!-- Messages -->
   <data name="Msg_SettingsSaved" xml:space="preserve">
     <value>設定已儲存</value>
+  </data>
+  <data name="Msg_SaveFailed" xml:space="preserve">
+    <value>儲存失敗：{0}</value>
   </data>
   <data name="Msg_TestSuccess" xml:space="preserve">
     <value>測試成功</value>
@@ -291,10 +306,73 @@
   <data name="Msg_TestFailed" xml:space="preserve">
     <value>測試失敗</value>
   </data>
+  <data name="Msg_TestError" xml:space="preserve">
+    <value>測試錯誤：{0}</value>
+  </data>
+  <data name="Msg_Testing" xml:space="preserve">
+    <value>測試中：{0}...</value>
+  </data>
   <data name="Msg_DeleteConfirm" xml:space="preserve">
     <value>確定要刪除此項目嗎？</value>
   </data>
   <data name="Msg_RestartRequired" xml:space="preserve">
     <value>請重新啟動應用程式以套用變更。</value>
+  </data>
+  <data name="Msg_Loaded" xml:space="preserve">
+    <value>已載入 {0} 個項目</value>
+  </data>
+  <data name="Msg_Added" xml:space="preserve">
+    <value>已新增：{0}</value>
+  </data>
+  <data name="Msg_Updated" xml:space="preserve">
+    <value>已更新：{0}</value>
+  </data>
+  <data name="Msg_Deleted" xml:space="preserve">
+    <value>已刪除：{0}</value>
+  </data>
+  <data name="Msg_DuplicateId" xml:space="preserve">
+    <value>ID 已存在：{0}</value>
+  </data>
+  <data name="Msg_ConfigNotFound" xml:space="preserve">
+    <value>找不到設定：{0}</value>
+  </data>
+  <data name="Msg_CannotCreateAction" xml:space="preserve">
+    <value>無法建立動作：{0}</value>
+  </data>
+  <data name="Msg_CannotDeleteReferenced" xml:space="preserve">
+    <value>無法刪除：被群組 [{0}] 引用中</value>
+  </data>
+  <data name="Msg_CannotDeleteDefault" xml:space="preserve">
+    <value>無法刪除預設群組：{0}</value>
+  </data>
+  <data name="Msg_ActionSent" xml:space="preserve">
+    <value>已發送：{0} - {1}，請確認收信端</value>
+  </data>
+  <data name="Msg_ActionSendFailed" xml:space="preserve">
+    <value>發送失敗：{0} - {1}</value>
+  </data>
+  <data name="Msg_GroupSent" xml:space="preserve">
+    <value>已發送：{0}（{1}/{2}），請確認收信端</value>
+  </data>
+  <data name="Msg_GroupPartialFailed" xml:space="preserve">
+    <value>部分失敗：{0}（{1}/{2}）</value>
+  </data>
+  <data name="Msg_Toggled" xml:space="preserve">
+    <value>{0}：{1}</value>
+  </data>
+  <data name="Msg_AlertServiceNotInit" xml:space="preserve">
+    <value>AlertService 未初始化</value>
+  </data>
+  <data name="Msg_GroupTestMessage" xml:space="preserve">
+    <value>[TEST] 群組測試訊息</value>
+  </data>
+  <data name="Msg_ActionTestMessage" xml:space="preserve">
+    <value>[TEST] 這是測試訊息</value>
+  </data>
+  <data name="SwitchProvider_Tooltip" xml:space="preserve">
+    <value>點擊切換至：{0}</value>
+  </data>
+  <data name="SwitchProvider_NoOther" xml:space="preserve">
+    <value>無其他可用的監控模式</value>
   </data>
 </root>

@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using SendAlerts.Services;
 using Serilog;
 
 namespace SendAlerts.Desktop.Implementations;
@@ -73,29 +74,30 @@ public class TrayIconManager : IDisposable
     /// </summary>
     private NativeMenu CreateContextMenu()
     {
+        var loc = LocalizationService.Instance;
         var menu = new NativeMenu();
 
         // 顯示視窗
-        var showItem = new NativeMenuItem("Show Window");
+        var showItem = new NativeMenuItem(loc["Tray_Show"]);
         showItem.Click += (_, _) => ShowMainWindow();
         menu.Items.Add(showItem);
 
         menu.Items.Add(new NativeMenuItemSeparator());
 
         // Alert Actions
-        var alertActionsItem = new NativeMenuItem("Alert Actions...");
+        var alertActionsItem = new NativeMenuItem(loc["Tray_AlertActions"]);
         alertActionsItem.Click += (_, _) => OpenAlertActions();
         menu.Items.Add(alertActionsItem);
 
         // Alert Groups
-        var alertGroupsItem = new NativeMenuItem("Alert Groups...");
+        var alertGroupsItem = new NativeMenuItem(loc["Tray_AlertGroups"]);
         alertGroupsItem.Click += (_, _) => OpenAlertGroups();
         menu.Items.Add(alertGroupsItem);
 
         menu.Items.Add(new NativeMenuItemSeparator());
 
         // TD2-1: 開機啟動選項
-        var startupItem = new NativeMenuItem("Start with Windows");
+        var startupItem = new NativeMenuItem(loc["Tray_StartWithWindows"]);
         startupItem.ToggleType = NativeMenuItemToggleType.CheckBox;
         startupItem.IsChecked = StartupManager.IsStartupEnabled();
         startupItem.Click += (_, _) =>
@@ -108,7 +110,7 @@ public class TrayIconManager : IDisposable
         menu.Items.Add(new NativeMenuItemSeparator());
 
         // 退出
-        var exitItem = new NativeMenuItem("Exit");
+        var exitItem = new NativeMenuItem(loc["Tray_Exit"]);
         exitItem.Click += (_, _) => ExitApplication();
         menu.Items.Add(exitItem);
 
@@ -143,7 +145,7 @@ public class TrayIconManager : IDisposable
         {
             _mainWindow.Hide();
             _trayIcon.IsVisible = true;
-            ShowTrayToast("SendAlerts", "Application minimized to system tray");
+            ShowTrayToast("SendAlerts", LocalizationService.Instance["Tray_MinimizedToast"]);
         });
 
         Log.Debug("[TrayIcon] 已最小化至系統匣");

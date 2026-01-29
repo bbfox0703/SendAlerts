@@ -19,9 +19,10 @@ public class DemoGpuProvider : IGpuProvider
 
     // 硬體模式與動態標籤 (GPU 模式)
     public HardwareMode Mode => HardwareMode.Gpu;
-    public string PrimaryMetricLabel => "GPU Utilization";
-    public string TemperatureLabel => "GPU Temperature";
-    public string SecondaryMetricLabel => "Power Usage";
+    public string PrimaryMetricLabel => "GPU Utilization (Demo)";
+    public string TemperatureLabel => "GPU Temperature (Demo)";
+    public string TemperatureUnit => "°C";
+    public string SecondaryMetricLabel => "Power Usage (Demo)";
     public string SecondaryMetricUnit => "W";
 
     public string GetGpuName() => "Demo GPU (No NVML)";

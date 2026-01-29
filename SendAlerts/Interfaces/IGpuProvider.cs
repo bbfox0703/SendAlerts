@@ -15,7 +15,7 @@ public enum HardwareMode
 /// GPU 讀數資料 (或 CPU/Network 讀數)
 /// </summary>
 /// <param name="GpuUtilization">GPU/CPU 使用率 (%)</param>
-/// <param name="Temperature">GPU/CPU 溫度 (°C)</param>
+/// <param name="Temperature">GPU/CPU 溫度 (°C) 或記憶體使用率 (%)</param>
 /// <param name="PowerUsage">GPU 功耗 (W) 或網路 I/O (KB/s)</param>
 /// <param name="Timestamp">讀取時間</param>
 public record GpuReading(
@@ -34,7 +34,8 @@ public interface IGpuProvider : IDisposable
     // 硬體模式與動態標籤
     HardwareMode Mode { get; }
     string PrimaryMetricLabel { get; }    // "GPU Utilization" 或 "CPU Utilization"
-    string TemperatureLabel { get; }      // "GPU Temperature" 或 "CPU Temperature"
+    string TemperatureLabel { get; }      // "GPU Temperature" 或 "Memory Usage"
+    string TemperatureUnit { get; }       // "°C" 或 "%"
     string SecondaryMetricLabel { get; }  // "Power Usage" 或 "Network I/O"
     string SecondaryMetricUnit { get; }   // "W" 或 "KB/s"
 }

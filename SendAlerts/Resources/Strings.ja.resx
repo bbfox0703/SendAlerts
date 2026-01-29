@@ -275,15 +275,30 @@
 
   <!-- Tray Icon -->
   <data name="Tray_Show" xml:space="preserve">
-    <value>表示</value>
+    <value>ウィンドウを表示</value>
+  </data>
+  <data name="Tray_AlertActions" xml:space="preserve">
+    <value>アラートアクション...</value>
+  </data>
+  <data name="Tray_AlertGroups" xml:space="preserve">
+    <value>アラートグループ...</value>
+  </data>
+  <data name="Tray_StartWithWindows" xml:space="preserve">
+    <value>Windows 起動時に自動開始</value>
   </data>
   <data name="Tray_Exit" xml:space="preserve">
     <value>終了</value>
+  </data>
+  <data name="Tray_MinimizedToast" xml:space="preserve">
+    <value>アプリケーションをシステムトレイに最小化しました</value>
   </data>
 
   <!-- Messages -->
   <data name="Msg_SettingsSaved" xml:space="preserve">
     <value>設定を保存しました</value>
+  </data>
+  <data name="Msg_SaveFailed" xml:space="preserve">
+    <value>保存失敗：{0}</value>
   </data>
   <data name="Msg_TestSuccess" xml:space="preserve">
     <value>テスト成功</value>
@@ -291,10 +306,73 @@
   <data name="Msg_TestFailed" xml:space="preserve">
     <value>テスト失敗</value>
   </data>
+  <data name="Msg_TestError" xml:space="preserve">
+    <value>テストエラー：{0}</value>
+  </data>
+  <data name="Msg_Testing" xml:space="preserve">
+    <value>テスト中：{0}...</value>
+  </data>
   <data name="Msg_DeleteConfirm" xml:space="preserve">
     <value>このアイテムを削除してもよろしいですか？</value>
   </data>
   <data name="Msg_RestartRequired" xml:space="preserve">
     <value>変更を適用するにはアプリケーションを再起動してください。</value>
+  </data>
+  <data name="Msg_Loaded" xml:space="preserve">
+    <value>{0} 件読み込みました</value>
+  </data>
+  <data name="Msg_Added" xml:space="preserve">
+    <value>追加しました：{0}</value>
+  </data>
+  <data name="Msg_Updated" xml:space="preserve">
+    <value>更新しました：{0}</value>
+  </data>
+  <data name="Msg_Deleted" xml:space="preserve">
+    <value>削除しました：{0}</value>
+  </data>
+  <data name="Msg_DuplicateId" xml:space="preserve">
+    <value>ID が既に存在します：{0}</value>
+  </data>
+  <data name="Msg_ConfigNotFound" xml:space="preserve">
+    <value>設定が見つかりません：{0}</value>
+  </data>
+  <data name="Msg_CannotCreateAction" xml:space="preserve">
+    <value>アクションを作成できません：{0}</value>
+  </data>
+  <data name="Msg_CannotDeleteReferenced" xml:space="preserve">
+    <value>削除できません：グループ [{0}] で参照中</value>
+  </data>
+  <data name="Msg_CannotDeleteDefault" xml:space="preserve">
+    <value>デフォルトグループは削除できません：{0}</value>
+  </data>
+  <data name="Msg_ActionSent" xml:space="preserve">
+    <value>送信済み：{0} - {1}、受信側で確認してください</value>
+  </data>
+  <data name="Msg_ActionSendFailed" xml:space="preserve">
+    <value>送信失敗：{0} - {1}</value>
+  </data>
+  <data name="Msg_GroupSent" xml:space="preserve">
+    <value>送信済み：{0}（{1}/{2}）、受信側で確認してください</value>
+  </data>
+  <data name="Msg_GroupPartialFailed" xml:space="preserve">
+    <value>一部失敗：{0}（{1}/{2}）</value>
+  </data>
+  <data name="Msg_Toggled" xml:space="preserve">
+    <value>{0}：{1}</value>
+  </data>
+  <data name="Msg_AlertServiceNotInit" xml:space="preserve">
+    <value>AlertService が初期化されていません</value>
+  </data>
+  <data name="Msg_GroupTestMessage" xml:space="preserve">
+    <value>[TEST] グループテストメッセージ</value>
+  </data>
+  <data name="Msg_ActionTestMessage" xml:space="preserve">
+    <value>[TEST] テストメッセージです</value>
+  </data>
+  <data name="SwitchProvider_Tooltip" xml:space="preserve">
+    <value>クリックして切り替え：{0}</value>
+  </data>
+  <data name="SwitchProvider_NoOther" xml:space="preserve">
+    <value>他に利用可能なプロバイダーはありません</value>
   </data>
 </root>
