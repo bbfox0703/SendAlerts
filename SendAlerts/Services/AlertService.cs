@@ -304,13 +304,24 @@ public class AlertService
             {
                 try
                 {
-                    await action.ExecuteAsync(formattedMessage);
-                    result.ExecutedActions.Add(action.InstanceId);
-                    Log.Debug("[AlertService] Action 執行成功: {InstanceId}", action.InstanceId);
+                    var actionResult = await action.ExecuteAsync(formattedMessage);
+                    if (actionResult.Success)
+                    {
+                        result.ExecutedActions.Add(action.InstanceId);
+                        result.ActionResults[action.InstanceId] = actionResult;
+                        Log.Debug("[AlertService] Action 執行成功: {InstanceId} - {Message}", action.InstanceId, actionResult.Message);
+                    }
+                    else
+                    {
+                        result.FailedActions.Add(action.InstanceId);
+                        result.ActionResults[action.InstanceId] = actionResult;
+                        Log.Warning("[AlertService] Action 執行失敗: {InstanceId} - {Message}", action.InstanceId, actionResult.Message);
+                    }
                 }
                 catch (Exception ex)
                 {
                     result.FailedActions.Add(action.InstanceId);
+                    result.ActionResults[action.InstanceId] = AlertActionExecuteResult.Fail($"例外: {ex.Message}");
                     Log.Error(ex, "[AlertService] Action 執行失敗: {InstanceId}", action.InstanceId);
                 }
             });
@@ -353,25 +364,24 @@ public class AlertService
     /// <summary>
     /// 測試執行單一 Action (不經過群組)
     /// </summary>
-    public async Task<bool> TestActionAsync(string instanceId, string testMessage = "測試訊息")
+    public async Task<AlertActionExecuteResult> TestActionAsync(string instanceId, string testMessage = "測試訊息")
     {
         var action = GetAction(instanceId);
         if (action == null)
         {
             Log.Warning("[AlertService] 測試失敗 - 找不到 Action: {InstanceId}", instanceId);
-            return false;
+            return AlertActionExecuteResult.Fail($"找不到 Action: {instanceId}");
         }
 
         try
         {
             Log.Information("[AlertService] 測試 Action: {InstanceId}", instanceId);
-            await action.ExecuteAsync($"[TEST] {testMessage}");
-            return true;
+            return await action.ExecuteAsync($"[TEST] {testMessage}");
         }
         catch (Exception ex)
         {
             Log.Error(ex, "[AlertService] 測試 Action 失敗: {InstanceId}", instanceId);
-            return false;
+            return AlertActionExecuteResult.Fail($"例外: {ex.Message}");
         }
     }
 
@@ -460,6 +470,9 @@ public class AlertExecutionResult
 
     /// <summary>找不到的 Action ID 清單</summary>
     public List<string> MissingActions { get; } = new();
+
+    /// <summary>每個 Action 的詳細執行結果</summary>
+    public Dictionary<string, AlertActionExecuteResult> ActionResults { get; } = new();
 }
 
 /// <summary>

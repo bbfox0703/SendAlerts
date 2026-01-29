@@ -82,26 +82,24 @@ public class TelegramAlertAction : IAlertAction
         return AlertActionValidationResult.Valid();
     }
 
-    public async Task ExecuteAsync(string message)
+    public async Task<AlertActionExecuteResult> ExecuteAsync(string message)
     {
         if (!IsEnabled)
-        {
-            return;
-        }
+            return AlertActionExecuteResult.Skipped("動作已停用");
 
         if (string.IsNullOrWhiteSpace(BotToken) || string.IsNullOrWhiteSpace(ChatId))
         {
             Log.Warning("[TelegramAlertAction] Bot Token 或 Chat ID 未設定，無法發送訊息");
-            return;
+            return AlertActionExecuteResult.Fail("Bot Token 或 Chat ID 未設定");
         }
 
         // 冷卻檢查
         var elapsed = DateTime.Now - _lastExecutionTime;
         if (elapsed.TotalSeconds < CooldownSeconds)
         {
-            Log.Debug("[TelegramAlertAction] 冷卻中，跳過發送 (剩餘 {Remaining:F0} 秒)",
-                CooldownSeconds - elapsed.TotalSeconds);
-            return;
+            var msg = $"冷卻中，跳過發送 (剩餘 {CooldownSeconds - elapsed.TotalSeconds:F0} 秒)";
+            Log.Debug("[TelegramAlertAction] {Message}", msg);
+            return AlertActionExecuteResult.Skipped(msg);
         }
 
         // Debug 模式：僅記錄
@@ -109,7 +107,7 @@ public class TelegramAlertAction : IAlertAction
         {
             Log.Information("[TelegramAlertAction][DEBUG MODE] 將發送訊息: {Message}", message);
             _lastExecutionTime = DateTime.Now;
-            return;
+            return AlertActionExecuteResult.Ok("[DEBUG] 模擬發送成功");
         }
 
         try
@@ -119,24 +117,16 @@ public class TelegramAlertAction : IAlertAction
             var formattedMessage = FormatMessage(message);
             Log.Information("[TelegramAlertAction] 發送 Telegram 訊息...");
 
-            var success = await SendMessageAsync(formattedMessage);
-
-            if (success)
-            {
-                Log.Information("[TelegramAlertAction] Telegram 訊息發送成功");
-            }
-            else
-            {
-                Log.Warning("[TelegramAlertAction] Telegram 訊息發送失敗");
-            }
+            return await SendMessageAsync(formattedMessage);
         }
         catch (Exception ex)
         {
             Log.Error(ex, "[TelegramAlertAction] 發送 Telegram 訊息時發生例外");
+            return AlertActionExecuteResult.Fail($"例外: {ex.Message}");
         }
     }
 
-    private async Task<bool> SendMessageAsync(string text)
+    private async Task<AlertActionExecuteResult> SendMessageAsync(string text)
     {
         var url = $"{TelegramApiBaseUrl}{BotToken}/sendMessage";
 
@@ -153,26 +143,38 @@ public class TelegramAlertAction : IAlertAction
         try
         {
             var response = await _httpClient.PostAsync(url, content);
+            var responseBody = await response.Content.ReadAsStringAsync();
+            var statusCode = (int)response.StatusCode;
 
             if (response.IsSuccessStatusCode)
             {
-                return true;
+                Log.Information("[TelegramAlertAction] Telegram 訊息發送成功");
+                return AlertActionExecuteResult.Ok($"HTTP {statusCode} OK");
             }
 
-            var responseBody = await response.Content.ReadAsStringAsync();
+            // 嘗試解析 Telegram API 錯誤訊息
+            var errorDetail = responseBody;
+            try
+            {
+                using var doc = JsonDocument.Parse(responseBody);
+                if (doc.RootElement.TryGetProperty("description", out var desc))
+                    errorDetail = desc.GetString() ?? responseBody;
+            }
+            catch { /* 無法解析就用原始 body */ }
+
             Log.Warning("[TelegramAlertAction] API 回應錯誤: {StatusCode} - {Body}",
-                response.StatusCode, responseBody);
-            return false;
+                statusCode, responseBody);
+            return AlertActionExecuteResult.Fail($"HTTP {statusCode}: {errorDetail}", statusCode);
         }
         catch (TaskCanceledException)
         {
             Log.Warning("[TelegramAlertAction] 請求逾時");
-            return false;
+            return AlertActionExecuteResult.Fail("請求逾時 (10 秒)");
         }
         catch (HttpRequestException ex)
         {
             Log.Warning(ex, "[TelegramAlertAction] 網路請求失敗");
-            return false;
+            return AlertActionExecuteResult.Fail($"網路錯誤: {ex.Message}");
         }
     }
 

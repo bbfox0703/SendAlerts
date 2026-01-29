@@ -119,8 +119,9 @@ public partial class MainViewModel : ViewModelBase
 
     public Axis[] XAxes { get; set; } = {
         new Axis {
-            Labeler = v => string.Empty,
-            ShowSeparatorLines = false
+            Labeler = v => new DateTime((long)v).ToString("HH:mm:ss"),
+            ShowSeparatorLines = false,
+            TextSize = 10
         }
     };
 
@@ -213,13 +214,13 @@ public partial class MainViewModel : ViewModelBase
         UtilizationSeries = new ISeries[] {
             new LineSeries<TimestampedValue> {
                 Values = UtilizationHistory,
-                Fill = null,
+                Fill = new SolidColorPaint(SKColors.LimeGreen.WithAlpha(40)),
                 GeometrySize = 0,
                 GeometryFill = null,
                 GeometryStroke = null,
                 LineSmoothness = 0,
                 Stroke = new SolidColorPaint(SKColors.LimeGreen, 1),
-                Mapping = (tv, index) => new(index, tv.Value),
+                Mapping = (tv, _) => new(tv.Timestamp.Ticks, tv.Value),
                 YToolTipLabelFormatter = p =>
                     $"{p.Model!.Value:F1} %  ({p.Model.Timestamp:HH:mm:ss})"
             }
@@ -228,13 +229,13 @@ public partial class MainViewModel : ViewModelBase
         TempSeries = new ISeries[] {
             new LineSeries<TimestampedValue> {
                 Values = TemperatureHistory,
-                Fill = null,
+                Fill = new SolidColorPaint(SKColors.OrangeRed.WithAlpha(40)),
                 GeometrySize = 0,
                 GeometryFill = null,
                 GeometryStroke = null,
                 LineSmoothness = 0,
                 Stroke = new SolidColorPaint(SKColors.OrangeRed, 1),
-                Mapping = (tv, index) => new(index, tv.Value),
+                Mapping = (tv, _) => new(tv.Timestamp.Ticks, tv.Value),
                 YToolTipLabelFormatter = p =>
                     $"{p.Model!.Value:F1} °C  ({p.Model.Timestamp:HH:mm:ss})"
             }
@@ -243,13 +244,13 @@ public partial class MainViewModel : ViewModelBase
         PowerSeries = new ISeries[] {
             new LineSeries<TimestampedValue> {
                 Values = PowerHistory,
-                Fill = null,
+                Fill = new SolidColorPaint(SKColors.Cyan.WithAlpha(40)),
                 GeometrySize = 0,
                 GeometryFill = null,
                 GeometryStroke = null,
                 LineSmoothness = 0,
                 Stroke = new SolidColorPaint(SKColors.Cyan, 1),
-                Mapping = (tv, index) => new(index, tv.Value),
+                Mapping = (tv, _) => new(tv.Timestamp.Ticks, tv.Value),
                 YToolTipLabelFormatter = p => FormatPowerTooltip(p.Model!)
             }
         };
@@ -336,7 +337,11 @@ public partial class MainViewModel : ViewModelBase
             UpdateHistory(TemperatureHistory, new TimestampedValue(CurrentTemperature, now));
             UpdateHistory(PowerHistory, new TimestampedValue(CurrentPower, now));
 
-            // C. 動態 Y 軸調整
+            // C. 更新 X 軸時間範圍 (固定寬度，資料由右向左推進)
+            XAxes[0].MinLimit = now.AddSeconds(-SelectedHistoryDuration).Ticks;
+            XAxes[0].MaxLimit = now.Ticks;
+
+            // D. 動態 Y 軸調整
             AdjustYAxisDynamically();
 
             // TC1-1: 不再執行警報判定與觸發
