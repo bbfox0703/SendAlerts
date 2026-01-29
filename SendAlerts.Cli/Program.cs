@@ -2,6 +2,7 @@ using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.IO.Pipes;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using SendAlerts.Models;
@@ -12,14 +13,26 @@ namespace SendAlerts.Cli;
 /// <summary>
 /// TD1-1/TD1-2: SendAlerts CLI 工具
 /// 用於發送警報和查詢群組清單
+/// OutputType=WinExe 避免被 HWiNFO 等工具呼叫時閃現主控台視窗，
+/// 透過 AttachConsole 讓從 terminal 手動執行時仍可看到輸出。
 /// </summary>
 class Program
 {
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool AttachConsole(int dwProcessId);
+
+    private const int ATTACH_PARENT_PROCESS = -1;
     private const string PipeName = "sendalerts-pipe";
     private const int DefaultTimeout = 3000;
 
     static async Task<int> Main(string[] args)
     {
+        // WinExe 模式下，嘗試附著到父 process 的 console (terminal 手動執行時)
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            AttachConsole(ATTACH_PARENT_PROCESS);
+        }
+
         var rootCommand = new RootCommand("SendAlerts CLI - Alert Center command line tool");
 
         // TD1-1: send command
