@@ -14,7 +14,7 @@ HWiNFO64 (監控硬體)
 SendAlerts Alert Center
     │
     ▼ 執行警報動作
-[Telegram] [LINE] [Email] [Webhook] ...
+[Telegram] [Webhook] [Command Line]...
 ```
 
 ## 前置需求
