@@ -141,10 +141,12 @@ curl -X POST http://localhost:58080/api/send \
 
 ## 訊息接收範例
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="./docs/ScreenShots/Discord_Sample.png" style="flex: 1 1 18%; height: auto;">
-  <img src="./docs/ScreenShots/Telegram_Sample.png" style="flex: 1 1 18%; height: auto;">
+  <img src="./docs/ScreenShots/Discord_Sample.png" style="width: 75%; height: auto;">
 </div>
 
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="./docs/ScreenShots/Telegram_Sample.png" style="width: 75%; height: auto;">
+</div>
 
 ## 開發文件
 
