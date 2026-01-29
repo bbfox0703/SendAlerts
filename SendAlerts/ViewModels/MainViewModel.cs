@@ -215,6 +215,9 @@ public partial class MainViewModel : ViewModelBase
                 Values = UtilizationHistory,
                 Fill = null,
                 GeometrySize = 0,
+                GeometryFill = null,
+                GeometryStroke = null,
+                LineSmoothness = 0,
                 Stroke = new SolidColorPaint(SKColors.LimeGreen, 1),
                 Mapping = (tv, index) => new(index, tv.Value),
                 YToolTipLabelFormatter = p =>
@@ -227,6 +230,9 @@ public partial class MainViewModel : ViewModelBase
                 Values = TemperatureHistory,
                 Fill = null,
                 GeometrySize = 0,
+                GeometryFill = null,
+                GeometryStroke = null,
+                LineSmoothness = 0,
                 Stroke = new SolidColorPaint(SKColors.OrangeRed, 1),
                 Mapping = (tv, index) => new(index, tv.Value),
                 YToolTipLabelFormatter = p =>
@@ -239,6 +245,9 @@ public partial class MainViewModel : ViewModelBase
                 Values = PowerHistory,
                 Fill = null,
                 GeometrySize = 0,
+                GeometryFill = null,
+                GeometryStroke = null,
+                LineSmoothness = 0,
                 Stroke = new SolidColorPaint(SKColors.Cyan, 1),
                 Mapping = (tv, index) => new(index, tv.Value),
                 YToolTipLabelFormatter = p => FormatPowerTooltip(p.Model!)
