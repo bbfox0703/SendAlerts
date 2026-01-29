@@ -8,7 +8,10 @@
     <Nullable>enable</Nullable>
     <AssemblyName>SendAlerts-cli</AssemblyName>
     <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>false</SelfContained>
+    <SelfContained>true</SelfContained>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <!-- 與 Desktop 共用輸出資料夾 -->
     <OutputPath>..\SendAlerts.Desktop\bin\$(Configuration)\$(TargetFramework)</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>

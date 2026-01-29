@@ -5,6 +5,12 @@
     <RootNamespace>SendAlerts.Desktop</RootNamespace>
     <AssemblyName>SendAlerts.Desktop</AssemblyName>
     <Nullable>enable</Nullable>
+    <!-- Publish: Self-Contained，使用者不需安裝 .NET Runtime -->
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 
   <PropertyGroup>
