@@ -10,7 +10,7 @@ namespace SendAlerts.Desktop.Implementations;
 /// </summary>
 public sealed class SingleInstanceManager : IDisposable
 {
-    private const string MutexName = "Global\\SendAlerts-single-instance";
+    private const string MutexName = "Local\\SendAlerts-single-instance";
     private const string PipeName = "sendalerts-pipe";
 
     private Mutex? _mutex;
@@ -81,8 +81,10 @@ public sealed class SingleInstanceManager : IDisposable
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "[SingleInstance] 取得單一實例鎖定時發生錯誤");
-            return false;
+            Log.Error(ex, "[SingleInstance] 取得單一實例鎖定時發生錯誤，將以無鎖模式繼續啟動");
+            // Mutex 取得失敗不應阻止程式啟動
+            _hasHandle = false;
+            return true;
         }
     }
 

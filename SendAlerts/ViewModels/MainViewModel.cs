@@ -72,7 +72,6 @@ public partial class MainViewModel : ViewModelBase
         TrimHistory(UtilizationHistory, value);
         TrimHistory(TemperatureHistory, value);
         TrimHistory(PowerHistory, value);
-        XAxes[0].MaxLimit = value;
         Log.Information("圖表時間維度已切換為 {Duration} 秒", value);
     }
 
@@ -121,9 +120,7 @@ public partial class MainViewModel : ViewModelBase
     public Axis[] XAxes { get; set; } = {
         new Axis {
             Labeler = v => string.Empty,
-            ShowSeparatorLines = false,
-            MinLimit = 0,
-            MaxLimit = 900
+            ShowSeparatorLines = false
         }
     };
 
