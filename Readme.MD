@@ -20,7 +20,7 @@ SendAlerts 是一款「硬體警報中繼站」，接收來自外部工具（如
 
 主畫面顯示 GPU/CPU 即時監控資訊（僅供參考），**警報功能由外部工具透過 Named Pipe 或 HTTP API 觸發**。
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="./docs/ScreenShots/MainUI.png" style="width: 75%; height: auto;">
+  <img src="./docs/ScreenShots/MainUI.png" style="width: 90%; height: auto;">
 </div>
 
 ### 核心功能
@@ -141,8 +141,8 @@ curl -X POST http://localhost:58080/api/send \
 
 ## 訊息接收範例
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="./docs/ScreenShots/Discord_Sample.png" style="flex: 1 1 46%; height: auto;">
-  <img src="./docs/ScreenShots/Telegram_Sample.png" style="flex: 1 1 46%; height: auto;">
+  <img src="./docs/ScreenShots/Discord_Sample.png" style="flex: 1 1 18%; height: auto;">
+  <img src="./docs/ScreenShots/Telegram_Sample.png" style="flex: 1 1 18%; height: auto;">
 </div>
 
 
