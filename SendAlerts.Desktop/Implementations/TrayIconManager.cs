@@ -154,6 +154,11 @@ public class TrayIconManager : IDisposable
     /// </summary>
     private static void ShowTrayToast(string title, string message, int durationMs = 2000)
     {
+        var screen = Avalonia.Application.Current?.ApplicationLifetime is
+            Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow?.Screens.Primary
+            : null;
+
         var toast = new Window
         {
             SystemDecorations = SystemDecorations.None,
@@ -187,19 +192,17 @@ public class TrayIconManager : IDisposable
             }
         };
 
-        // 定位到螢幕右下角
-        toast.Opened += (_, _) =>
+        // 在 Show 前先定位到螢幕右下角
+        if (screen != null)
         {
-            var screen = toast.Screens.Primary;
-            if (screen != null)
-            {
-                var workArea = screen.WorkingArea;
-                var scaling = screen.Scaling;
-                toast.Position = new PixelPoint(
-                    (int)(workArea.Right / scaling - toast.Width - 10),
-                    (int)(workArea.Bottom / scaling - toast.Height - 10));
-            }
-        };
+            var workArea = screen.WorkingArea;
+            var scaling = screen.Scaling;
+            var w = (int)(300 * scaling);
+            var h = (int)(60 * scaling);
+            toast.Position = new PixelPoint(
+                workArea.Right - w - 10,
+                workArea.Bottom - h - 10);
+        }
 
         toast.Show();
 
