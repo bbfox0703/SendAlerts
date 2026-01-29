@@ -66,25 +66,73 @@ public class HttpApiServer : IDisposable
             _listener.Prefixes.Add($"http://+:{_port}/");
 
             _cts = new CancellationTokenSource();
-            _listener.Start();
-            IsRunning = true;
 
+            try
+            {
+                _listener.Start();
+            }
+            catch (HttpListenerException ex) when (ex.ErrorCode == 5)
+            {
+                // Access Denied — 嘗試自動註冊 URL ACL
+                Log.Warning("[HttpApiServer] Access denied on http://+:{Port}/, attempting to register URL ACL...", _port);
+                if (TryRegisterUrlAcl())
+                {
+                    _listener.Start();
+                }
+                else
+                {
+                    // Fallback: 僅綁定 localhost（無法接受遠端連線）
+                    Log.Warning("[HttpApiServer] URL ACL registration failed, falling back to localhost only");
+                    _listener.Close();
+                    _listener = new HttpListener();
+                    _listener.Prefixes.Add($"http://localhost:{_port}/");
+                    _listener.Start();
+                }
+            }
+
+            IsRunning = true;
             _listenerTask = Task.Run(() => ListenAsync(_cts.Token));
 
-            Log.Information("[HttpApiServer] Started on port {Port}", _port);
-        }
-        catch (HttpListenerException ex) when (ex.ErrorCode == 5)
-        {
-            // Access Denied - 需要管理員權限或 URL 保留
-            Log.Error("[HttpApiServer] Access denied. Try running as administrator or use: " +
-                      "netsh http add urlacl url=http://+:{Port}/ user=Everyone", _port);
-            throw new InvalidOperationException(
-                $"Access denied for port {_port}. Run as administrator or configure URL ACL.", ex);
+            var prefix = _listener.Prefixes.FirstOrDefault() ?? "unknown";
+            Log.Information("[HttpApiServer] Started on {Prefix}", prefix);
         }
         catch (Exception ex)
         {
             Log.Error(ex, "[HttpApiServer] Failed to start");
             throw;
+        }
+    }
+
+    /// <summary>
+    /// 嘗試用 netsh 註冊 URL ACL (會彈出 UAC 提示)
+    /// </summary>
+    private bool TryRegisterUrlAcl()
+    {
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "netsh",
+                Arguments = $"http add urlacl url=http://+:{_port}/ user=Everyone",
+                Verb = "runas",
+                UseShellExecute = true,
+                CreateNoWindow = true,
+                WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
+            };
+            var process = System.Diagnostics.Process.Start(psi);
+            if (process == null) return false;
+            process.WaitForExit(10000);
+            var success = process.ExitCode == 0;
+            if (success)
+                Log.Information("[HttpApiServer] URL ACL registered successfully for port {Port}", _port);
+            else
+                Log.Warning("[HttpApiServer] URL ACL registration returned exit code {Code}", process.ExitCode);
+            return success;
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "[HttpApiServer] URL ACL registration failed (user may have cancelled UAC)");
+            return false;
         }
     }
 
