@@ -339,12 +339,27 @@ public partial class AlertGroupsViewModel : ViewModelBase
             === SendAlerts CLI ===
             {SelectedGroup.GetCliCommand()}
 
+            === SendAlerts CLI (Silent / HWiNFO) ===
+            {SelectedGroup.GetCliSilentCommand()}
+
             === PowerShell (Named Pipe) ===
             {SelectedGroup.GetPowerShellCommand()}
 
             === Python (Named Pipe) ===
             {SelectedGroup.GetPythonCommand()}
             """;
+
+        // HTTP API 啟用時，加入遠端 PowerShell 指令
+        var settings = ServiceLocator.SettingsService?.Load();
+        if (settings is { HttpApiEnabled: true })
+        {
+            content += $"""
+
+
+                === PowerShell (HTTP API - Remote) ===
+                {SelectedGroup.GetHttpApiPowerShellCommand(settings.HttpApiPort)}
+                """;
+        }
 
         ShowCliCommandRequested?.Invoke(title, content);
     }
@@ -376,11 +391,52 @@ public partial class AlertGroupItem : ObservableObject
     }
 
     /// <summary>
+    /// 取得 SendAlerts-cli.exe 的完整路徑
+    /// </summary>
+    private static string GetCliFullPath()
+    {
+        var processPath = Environment.ProcessPath;
+        if (!string.IsNullOrEmpty(processPath))
+        {
+            var dir = System.IO.Path.GetDirectoryName(processPath);
+            if (!string.IsNullOrEmpty(dir))
+            {
+                return System.IO.Path.Combine(dir, "SendAlerts-cli.exe");
+            }
+        }
+        return "SendAlerts-cli.exe";
+    }
+
+    /// <summary>
     /// 取得呼叫此 Group 的 CLI 指令
     /// </summary>
     public string GetCliCommand()
     {
-        return $"SendAlerts-cli send -g {Name} -m \"Your message here\"";
+        var cliPath = GetCliFullPath();
+        return $"\"{cliPath}\" send -g {Name} -m \"Your message here\"";
+    }
+
+    /// <summary>
+    /// 取得呼叫此 Group 的 CLI 無視窗指令 (HWiNFO 用)
+    /// </summary>
+    public string GetCliSilentCommand()
+    {
+        var cliPath = GetCliFullPath();
+        var vbsPath = System.IO.Path.Combine(
+            System.IO.Path.GetDirectoryName(cliPath) ?? "",
+            "SendAlerts-cli-silent.vbs");
+        return $"wscript.exe \"{vbsPath}\" send -g {Name} -m \"Your message here\"";
+    }
+
+    /// <summary>
+    /// 取得呼叫此 Group 的 HTTP API PowerShell 指令 (遠端用)
+    /// </summary>
+    public string GetHttpApiPowerShellCommand(int port)
+    {
+        return $"Invoke-RestMethod -Uri \"http://<HOST>:{port}/api/send\" -Method POST " +
+               $"-Headers @{{ \"X-API-Key\" = \"<YOUR_API_KEY>\" }} " +
+               $"-ContentType \"application/json\" " +
+               $"-Body '{{\"GroupName\":\"{Name}\",\"CustomMessage\":\"Your message here\"}}'";
     }
 
     /// <summary>
