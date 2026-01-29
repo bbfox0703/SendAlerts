@@ -20,6 +20,9 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        // Enable UI dispatching for log sink now that Avalonia is initialized
+        InMemoryLogSink.Instance.MarkDispatcherReady();
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             DisableAvaloniaDataAnnotationValidation();

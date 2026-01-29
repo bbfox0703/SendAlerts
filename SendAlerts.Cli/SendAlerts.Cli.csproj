@@ -12,7 +12,12 @@
     <!-- 與 Desktop 共用輸出資料夾 -->
     <OutputPath>..\SendAlerts.Desktop\bin\$(Configuration)\$(TargetFramework)</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <ApplicationIcon>SendAlerts-CLI.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="SendAlerts-CLI.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="System.CommandLine" />
