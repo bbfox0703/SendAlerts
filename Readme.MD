@@ -1,6 +1,6 @@
 # SendAlerts
 
-硬體警報中繼站 (Hardware Alert Relay Station)
+警報中繼站 (Alert Relay Station)
 
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 [![Avalonia](https://img.shields.io/badge/Avalonia-UI-8B5CF6)](https://avaloniaui.net/)
@@ -17,6 +17,8 @@
 ## 簡介
 
 SendAlerts 是一款「硬體警報中繼站」，接收來自外部工具（如 HWiNFO64）的警報觸發指令，並透過多種管道（Discord、Telegram、命令列等）一次發送通知。
+原本是想要做一個簡單的 16pin 12VHPWR 顯卡電源監控警報工具，但是試了不少 NvApi，經由它的 Repos 的文件去查，再進行測試，結果就是讀不出來，那轉個念想，市面上已經有 HWiNFO 這種超強工具了，直接用它當前端就好。HWiNFO 可以發送警示，要丟 Discord 也不困難，原則上不用手頭上這個工具也行，不過到時設定會散在各個地方。結果就把這工具改成警報中繼站。
+變成一些警示設定設在這，HWiNFO 負責監控硬體狀態並觸發警報。
 
 主畫面顯示 GPU/CPU 即時監控資訊（僅供參考），**警報功能由外部工具透過 Named Pipe 或 HTTP API 觸發**。
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
