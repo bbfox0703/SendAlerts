@@ -122,27 +122,14 @@ public class TrayIconManager : IDisposable
     {
         if (_trayIcon == null) return;
 
-        try
-        {
-            var iconPath = System.IO.Path.Combine(
-                AppContext.BaseDirectory, "SendAlerts.ico");
-
-            if (System.IO.File.Exists(iconPath))
-            {
-                _trayIcon.Icon = new WindowIcon(iconPath);
-                return;
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex, "[TrayIcon] 載入圖示失敗，使用預設");
-        }
-
-        // Fallback: 嘗試使用主視窗圖示
+        // 使用主視窗圖示 (從 AvaloniaResource 載入的 SendAlerts.ico)
         if (_mainWindow?.Icon != null)
         {
             _trayIcon.Icon = _mainWindow.Icon;
+            return;
         }
+
+        Log.Warning("[TrayIcon] 無法載入圖示，主視窗圖示為 null");
     }
 
     /// <summary>
