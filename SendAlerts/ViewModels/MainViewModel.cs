@@ -6,6 +6,7 @@ using SendAlerts.Core.Interfaces;
 using SendAlerts.Services;
 using Serilog;
 using LiveChartsCore;
+using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using SkiaSharp;
@@ -56,9 +57,9 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<AlertHistoryItem> AlertHistoryItems { get; } = new();
 
     // --- LiveCharts2 數據結構 ---
-    public ObservableCollection<float> UtilizationHistory { get; } = new();
-    public ObservableCollection<float> TemperatureHistory { get; } = new();
-    public ObservableCollection<float> PowerHistory { get; } = new();
+    public ObservableCollection<TimestampedValue> UtilizationHistory { get; } = new();
+    public ObservableCollection<TimestampedValue> TemperatureHistory { get; } = new();
+    public ObservableCollection<TimestampedValue> PowerHistory { get; } = new();
 
     public ISeries[] UtilizationSeries { get; set; } = [];
     public ISeries[] TempSeries { get; set; } = [];
@@ -182,34 +183,52 @@ public partial class MainViewModel : ViewModelBase
     private void InitializeCharts()
     {
         UtilizationSeries = new ISeries[] {
-            new LineSeries<float> {
+            new LineSeries<TimestampedValue> {
                 Values = UtilizationHistory,
                 Fill = null,
                 GeometrySize = 0,
-                Stroke = new SolidColorPaint(SKColors.LimeGreen, 2)
+                Stroke = new SolidColorPaint(SKColors.LimeGreen, 2),
+                Mapping = (tv, _) => new(tv.Value, tv.Value),
+                YToolTipLabelFormatter = p =>
+                    $"{p.Model!.Value:F1} %  ({p.Model.Timestamp:HH:mm:ss})"
             }
         };
 
         TempSeries = new ISeries[] {
-            new LineSeries<float> {
+            new LineSeries<TimestampedValue> {
                 Values = TemperatureHistory,
                 Fill = null,
                 GeometrySize = 0,
-                Stroke = new SolidColorPaint(SKColors.OrangeRed, 2)
+                Stroke = new SolidColorPaint(SKColors.OrangeRed, 2),
+                Mapping = (tv, _) => new(tv.Value, tv.Value),
+                YToolTipLabelFormatter = p =>
+                    $"{p.Model!.Value:F1} °C  ({p.Model.Timestamp:HH:mm:ss})"
             }
         };
 
         PowerSeries = new ISeries[] {
-            new LineSeries<float> {
+            new LineSeries<TimestampedValue> {
                 Values = PowerHistory,
                 Fill = null,
                 GeometrySize = 0,
-                Stroke = new SolidColorPaint(SKColors.Cyan, 2)
+                Stroke = new SolidColorPaint(SKColors.Cyan, 2),
+                Mapping = (tv, _) => new(tv.Value, tv.Value),
+                YToolTipLabelFormatter = p => FormatPowerTooltip(p.Model!)
             }
         };
 
         // 根據硬體模式設定 Y 軸
         ConfigureYAxesForMode();
+    }
+
+    private string FormatPowerTooltip(TimestampedValue tv)
+    {
+        var valueText = IsGpuMode
+            ? $"{tv.Value:F1} W"
+            : tv.Value >= 1000
+                ? $"{tv.Value / 1000:F1} MB/s"
+                : $"{tv.Value:F0} KB/s";
+        return $"{valueText}  ({tv.Timestamp:HH:mm:ss})";
     }
 
     /// <summary>
@@ -275,9 +294,10 @@ public partial class MainViewModel : ViewModelBase
             CurrentPower = reading.PowerUsage;
 
             // B. 更新圖表數據 (保留最近 900 秒)
-            UpdateHistory(UtilizationHistory, CurrentUtilization);
-            UpdateHistory(TemperatureHistory, CurrentTemperature);
-            UpdateHistory(PowerHistory, CurrentPower);
+            var now = DateTime.Now;
+            UpdateHistory(UtilizationHistory, new TimestampedValue(CurrentUtilization, now));
+            UpdateHistory(TemperatureHistory, new TimestampedValue(CurrentTemperature, now));
+            UpdateHistory(PowerHistory, new TimestampedValue(CurrentPower, now));
 
             // C. 動態 Y 軸調整
             AdjustYAxisDynamically();
@@ -291,9 +311,14 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    private void UpdateHistory(ObservableCollection<float> history, float newValue)
+    private void UpdateHistory(ObservableCollection<TimestampedValue> history, TimestampedValue newValue)
     {
         history.Add(newValue);
         if (history.Count > 900) history.RemoveAt(0);
     }
 }
+
+/// <summary>
+/// 帶時間戳的圖表資料點
+/// </summary>
+public record TimestampedValue(float Value, DateTime Timestamp);
