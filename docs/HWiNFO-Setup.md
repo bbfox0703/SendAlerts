@@ -53,11 +53,6 @@ SendAlerts Alert Center
 ```
 3. 也可參考在 SendAlerts 中群組設定的 CLI 範例
 
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="./docs/ScreenShots/HWiNFO_Alerts.png" style="width: 75%; height: auto;">
-</div>
-
-
 #### 參數說明
 
 | 變數 | 說明 |
@@ -65,6 +60,12 @@ SendAlerts Alert Center
 | `GroupName` | SendAlerts 中的 Alert Group 名稱 |
 | `CustomMessage` | 自訂訊息，可包含 HWiNFO64 變數 |
 | `<#GPU Core Temp#>` | HWiNFO64 感測器值變數 |
+
+#### 範例 (非上述設定)
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="./ScreenShots/HWiNFO_Alerts.png" style="width: 75%; height: auto;">
+</div>
 
 ### 步驟 4：測試警報
 
