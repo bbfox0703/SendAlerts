@@ -30,7 +30,7 @@
               ToolTip.Tip="{Binding SwitchProviderTooltip}"
               MinWidth="60" FontSize="11" Padding="8,4"/>
       <TextBlock Text="{Binding GpuName}" VerticalAlignment="Center" Foreground="White" FontWeight="Bold" Margin="10,0,0,0"/>
-      <TextBlock Text="{Binding PowerLimit, StringFormat='(TDP: {0:F0}W)'}" VerticalAlignment="Center" Foreground="#888" Margin="10,0,0,0"/>
+      <TextBlock Text="{Binding PowerLimitDisplay}" VerticalAlignment="Center" Foreground="#888" Margin="10,0,0,0"/>
       <!-- 圖表時間維度選擇 -->
       <ComboBox ItemsSource="{Binding HistoryDurationOptions}"
                 SelectedValue="{Binding SelectedHistoryDuration}"

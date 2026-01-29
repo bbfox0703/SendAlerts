@@ -127,6 +127,20 @@ SendAlerts Alert Center
 1. 確認 PowerShell 執行政策允許執行腳本
 2. 嘗試在命令提示字元中手動執行測試
 
+## 進階：使用 SendAlerts-cli（推薦）
+
+使用 CLI 工具比 PowerShell 更簡潔，但直接呼叫 `SendAlerts-cli.exe` 會閃現主控台視窗。
+請使用提供的 VBS wrapper 以無視窗模式執行：
+
+1. **Action Type**: 選擇 **Run Program**
+2. **Program**: `wscript.exe`
+3. **Arguments**:
+   ```
+   "C:\path\to\SendAlerts-cli-silent.vbs" send -g Critical -m "GPU Temp: <#GPU Core Temp#>°C"
+   ```
+
+> `SendAlerts-cli-silent.vbs` 位於 `scripts/` 目錄，會以隱藏視窗模式呼叫 `SendAlerts-cli.exe`，不會閃現主控台視窗。
+
 ## 進階：使用腳本檔案
 
 若 Arguments 欄位長度限制，可將 PowerShell 腳本存為檔案：
