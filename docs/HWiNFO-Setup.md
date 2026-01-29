@@ -54,7 +54,7 @@ SendAlerts Alert Center
 3. 也可參考在 SendAlerts 中群組設定的 CLI 範例
 
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="./docs/ScreenShots/HWiNFO_Alerts.png" style="width: 75%; height: auto;">
+  <img src="./ScreenShots/HWiNFO_Alerts.png" style="width: 75%; height: auto;">
 </div>
 
 
