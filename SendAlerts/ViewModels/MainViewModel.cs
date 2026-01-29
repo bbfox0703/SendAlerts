@@ -188,7 +188,7 @@ public partial class MainViewModel : ViewModelBase
                 Fill = null,
                 GeometrySize = 0,
                 Stroke = new SolidColorPaint(SKColors.LimeGreen, 2),
-                Mapping = (tv, _) => new(tv.Value, tv.Value),
+                Mapping = (tv, index) => new(index, tv.Value),
                 YToolTipLabelFormatter = p =>
                     $"{p.Model!.Value:F1} %  ({p.Model.Timestamp:HH:mm:ss})"
             }
@@ -200,7 +200,7 @@ public partial class MainViewModel : ViewModelBase
                 Fill = null,
                 GeometrySize = 0,
                 Stroke = new SolidColorPaint(SKColors.OrangeRed, 2),
-                Mapping = (tv, _) => new(tv.Value, tv.Value),
+                Mapping = (tv, index) => new(index, tv.Value),
                 YToolTipLabelFormatter = p =>
                     $"{p.Model!.Value:F1} °C  ({p.Model.Timestamp:HH:mm:ss})"
             }
@@ -212,7 +212,7 @@ public partial class MainViewModel : ViewModelBase
                 Fill = null,
                 GeometrySize = 0,
                 Stroke = new SolidColorPaint(SKColors.Cyan, 2),
-                Mapping = (tv, _) => new(tv.Value, tv.Value),
+                Mapping = (tv, index) => new(index, tv.Value),
                 YToolTipLabelFormatter = p => FormatPowerTooltip(p.Model!)
             }
         };
