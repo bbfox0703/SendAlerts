@@ -1,33 +1,36 @@
 using System;
-using System.Drawing;
 using System.Runtime.InteropServices;
-using System.Windows.Forms;
+using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Serilog;
-using Window = Avalonia.Controls.Window;
 
 namespace SendAlerts.Desktop.Implementations;
 
 /// <summary>
-/// TD2-2/TD2-3: Windows 系統匣圖示管理器
+/// TD2-2/TD2-3: 系統匣圖示管理器 (Avalonia Native TrayIcon)
 /// 提供最小化到系統匣和右鍵選單功能
 /// </summary>
 public class TrayIconManager : IDisposable
 {
-    private NotifyIcon? _notifyIcon;
+    private TrayIcon? _trayIcon;
     private Window? _mainWindow;
     private bool _disposed;
 
     /// <summary>
-    /// 是否支援系統匣功能 (僅 Windows)
+    /// 是否支援系統匣功能 (Windows / Linux with tray support)
     /// </summary>
-    public static bool IsSupported => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+    public static bool IsSupported =>
+        RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ||
+        RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
 
     /// <summary>
     /// 系統匣圖示是否可見
     /// </summary>
-    public bool IsVisible => _notifyIcon?.Visible ?? false;
+    public bool IsVisible => _trayIcon?.IsVisible ?? false;
 
     /// <summary>
     /// 初始化系統匣圖示
@@ -36,7 +39,7 @@ public class TrayIconManager : IDisposable
     {
         if (!IsSupported)
         {
-            Log.Debug("[TrayIcon] 系統匣功能僅支援 Windows");
+            Log.Debug("[TrayIcon] 系統匣功能不支援此平台");
             return;
         }
 
@@ -44,23 +47,20 @@ public class TrayIconManager : IDisposable
 
         try
         {
-            // 建立 NotifyIcon
-            _notifyIcon = new NotifyIcon
+            _trayIcon = new TrayIcon
             {
-                Text = "SendAlerts - Hardware Monitor",
-                Visible = false
+                ToolTipText = "SendAlerts - Hardware Alert Relay Station",
+                IsVisible = false,
+                Menu = CreateContextMenu()
             };
 
-            // 設定圖示 (使用內嵌資源或系統圖示)
-            _notifyIcon.Icon = LoadIcon();
+            // 載入圖示
+            LoadIcon();
 
-            // TD2-3: 建立右鍵選單
-            CreateContextMenu();
+            // 雙擊/點擊顯示視窗
+            _trayIcon.Clicked += OnTrayIconClicked;
 
-            // 雙擊顯示視窗
-            _notifyIcon.DoubleClick += OnTrayIconDoubleClick;
-
-            Log.Information("[TrayIcon] 系統匣圖示已初始化");
+            Log.Information("[TrayIcon] 系統匣圖示已初始化 (Avalonia Native)");
         }
         catch (Exception ex)
         {
@@ -71,74 +71,65 @@ public class TrayIconManager : IDisposable
     /// <summary>
     /// TD2-3: 建立右鍵選單
     /// </summary>
-    private void CreateContextMenu()
+    private NativeMenu CreateContextMenu()
     {
-        if (_notifyIcon == null) return;
+        var menu = new NativeMenu();
 
-        var contextMenu = new ContextMenuStrip();
+        // 顯示視窗
+        var showItem = new NativeMenuItem("Show Window");
+        showItem.Click += (_, _) => ShowMainWindow();
+        menu.Items.Add(showItem);
 
-        // 顯示/隱藏
-        var showHideItem = new ToolStripMenuItem("Show Window");
-        showHideItem.Click += (_, _) => ShowMainWindow();
-        contextMenu.Items.Add(showHideItem);
-
-        contextMenu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(new NativeMenuItemSeparator());
 
         // Alert Actions
-        var alertActionsItem = new ToolStripMenuItem("Alert Actions...");
+        var alertActionsItem = new NativeMenuItem("Alert Actions...");
         alertActionsItem.Click += (_, _) => OpenAlertActions();
-        contextMenu.Items.Add(alertActionsItem);
+        menu.Items.Add(alertActionsItem);
 
         // Alert Groups
-        var alertGroupsItem = new ToolStripMenuItem("Alert Groups...");
+        var alertGroupsItem = new NativeMenuItem("Alert Groups...");
         alertGroupsItem.Click += (_, _) => OpenAlertGroups();
-        contextMenu.Items.Add(alertGroupsItem);
+        menu.Items.Add(alertGroupsItem);
 
-        contextMenu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(new NativeMenuItemSeparator());
 
         // TD2-1: 開機啟動選項
-        var startupItem = new ToolStripMenuItem("Start with Windows");
-        startupItem.Checked = StartupManager.IsStartupEnabled();
+        var startupItem = new NativeMenuItem("Start with Windows");
+        startupItem.ToggleType = NativeMenuItemToggleType.CheckBox;
+        startupItem.IsChecked = StartupManager.IsStartupEnabled();
         startupItem.Click += (_, _) =>
         {
             StartupManager.ToggleStartup();
-            startupItem.Checked = StartupManager.IsStartupEnabled();
+            startupItem.IsChecked = StartupManager.IsStartupEnabled();
         };
-        contextMenu.Items.Add(startupItem);
+        menu.Items.Add(startupItem);
 
-        contextMenu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(new NativeMenuItemSeparator());
 
         // 退出
-        var exitItem = new ToolStripMenuItem("Exit");
+        var exitItem = new NativeMenuItem("Exit");
         exitItem.Click += (_, _) => ExitApplication();
-        contextMenu.Items.Add(exitItem);
+        menu.Items.Add(exitItem);
 
-        _notifyIcon.ContextMenuStrip = contextMenu;
+        return menu;
     }
 
     /// <summary>
     /// 載入圖示
     /// </summary>
-    private Icon LoadIcon()
+    private void LoadIcon()
     {
-        // 嘗試載入應用程式圖示
-        try
-        {
-            var iconPath = System.IO.Path.Combine(
-                AppContext.BaseDirectory, "Assets", "icon.ico");
+        if (_trayIcon == null) return;
 
-            if (System.IO.File.Exists(iconPath))
-            {
-                return new Icon(iconPath);
-            }
-        }
-        catch
+        // 使用主視窗圖示 (從 AvaloniaResource 載入的 SendAlerts.ico)
+        if (_mainWindow?.Icon != null)
         {
-            // 忽略錯誤
+            _trayIcon.Icon = _mainWindow.Icon;
+            return;
         }
 
-        // Fallback: 使用系統預設圖示
-        return SystemIcons.Application;
+        Log.Warning("[TrayIcon] 無法載入圖示，主視窗圖示為 null");
     }
 
     /// <summary>
@@ -146,20 +137,75 @@ public class TrayIconManager : IDisposable
     /// </summary>
     public void MinimizeToTray()
     {
-        if (_notifyIcon == null || _mainWindow == null) return;
+        if (_trayIcon == null || _mainWindow == null) return;
 
         Dispatcher.UIThread.Post(() =>
         {
             _mainWindow.Hide();
-            _notifyIcon.Visible = true;
-            _notifyIcon.ShowBalloonTip(
-                2000,
-                "SendAlerts",
-                "Application minimized to system tray",
-                ToolTipIcon.Info);
+            _trayIcon.IsVisible = true;
+            ShowTrayToast("SendAlerts", "Application minimized to system tray");
         });
 
         Log.Debug("[TrayIcon] 已最小化至系統匣");
+    }
+
+    /// <summary>
+    /// 顯示短暫的 toast 通知視窗 (螢幕右下角)
+    /// </summary>
+    private static void ShowTrayToast(string title, string message, int durationMs = 2000)
+    {
+        var toast = new Window
+        {
+            SystemDecorations = SystemDecorations.None,
+            CanResize = false,
+            ShowInTaskbar = false,
+            Topmost = true,
+            Background = new SolidColorBrush(Color.FromRgb(45, 45, 48)),
+            Width = 300,
+            Height = 60,
+            WindowStartupLocation = WindowStartupLocation.Manual,
+            Content = new StackPanel
+            {
+                Margin = new Thickness(12, 8),
+                VerticalAlignment = VerticalAlignment.Center,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = title,
+                        FontWeight = FontWeight.Bold,
+                        FontSize = 13,
+                        Foreground = Brushes.White
+                    },
+                    new TextBlock
+                    {
+                        Text = message,
+                        FontSize = 12,
+                        Foreground = new SolidColorBrush(Color.FromRgb(200, 200, 200))
+                    }
+                }
+            }
+        };
+
+        // 定位到螢幕右下角
+        toast.Opened += (_, _) =>
+        {
+            var screen = toast.Screens.Primary;
+            if (screen != null)
+            {
+                var workArea = screen.WorkingArea;
+                var scaling = screen.Scaling;
+                toast.Position = new PixelPoint(
+                    (int)(workArea.Right / scaling - toast.Width - 10),
+                    (int)(workArea.Bottom / scaling - toast.Height - 10));
+            }
+        };
+
+        toast.Show();
+
+        // 自動關閉
+        Task.Delay(durationMs).ContinueWith(_ =>
+            Dispatcher.UIThread.Post(() => toast.Close()));
     }
 
     /// <summary>
@@ -175,9 +221,9 @@ public class TrayIconManager : IDisposable
             _mainWindow.WindowState = WindowState.Normal;
             _mainWindow.Activate();
 
-            if (_notifyIcon != null)
+            if (_trayIcon != null)
             {
-                _notifyIcon.Visible = false;
+                _trayIcon.IsVisible = false;
             }
         });
 
@@ -189,9 +235,9 @@ public class TrayIconManager : IDisposable
     /// </summary>
     public void Hide()
     {
-        if (_notifyIcon != null)
+        if (_trayIcon != null)
         {
-            _notifyIcon.Visible = false;
+            _trayIcon.IsVisible = false;
         }
     }
 
@@ -200,29 +246,25 @@ public class TrayIconManager : IDisposable
     /// </summary>
     public void Show()
     {
-        if (_notifyIcon != null)
+        if (_trayIcon != null)
         {
-            _notifyIcon.Visible = true;
+            _trayIcon.IsVisible = true;
         }
     }
 
-    private void OnTrayIconDoubleClick(object? sender, EventArgs e)
+    private void OnTrayIconClicked(object? sender, EventArgs e)
     {
         ShowMainWindow();
     }
 
     private void OpenAlertActions()
     {
-        // 透過主視窗開啟 Alert Actions
         ShowMainWindow();
-        // Note: 實際開啟對話框的邏輯可以透過事件或 ServiceLocator 實現
     }
 
     private void OpenAlertGroups()
     {
-        // 透過主視窗開啟 Alert Groups
         ShowMainWindow();
-        // Note: 實際開啟對話框的邏輯可以透過事件或 ServiceLocator 實現
     }
 
     private void ExitApplication()
@@ -231,7 +273,10 @@ public class TrayIconManager : IDisposable
 
         Dispatcher.UIThread.Post(() =>
         {
-            _notifyIcon?.Dispose();
+            if (_trayIcon != null)
+            {
+                _trayIcon.IsVisible = false;
+            }
             _mainWindow?.Close();
             Environment.Exit(0);
         });
@@ -242,7 +287,7 @@ public class TrayIconManager : IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        _notifyIcon?.Dispose();
-        _notifyIcon = null;
+        _trayIcon?.Dispose();
+        _trayIcon = null;
     }
 }

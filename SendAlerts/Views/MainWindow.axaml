@@ -6,7 +6,7 @@
         xmlns:views="using:SendAlerts.Views"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="SendAlerts.Views.MainWindow"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/SendAlerts.ico"
         Title="SendAlerts">
         <views:MainView />
 </Window>
