@@ -161,6 +161,17 @@
   <data name="Main_RecentAlerts" xml:space="preserve">
     <value>Recent Alerts</value>
   </data>
+  <data name="Main_Log" xml:space="preserve">
+    <value>Log</value>
+  </data>
+
+  <!-- Log Window -->
+  <data name="Log_Title" xml:space="preserve">
+    <value>Log Viewer</value>
+  </data>
+  <data name="Log_Clear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
 
   <!-- Alert Actions Window -->
   <data name="AlertActions_Title" xml:space="preserve">
