@@ -72,6 +72,7 @@ public partial class MainViewModel : ViewModelBase
         TrimHistory(UtilizationHistory, value);
         TrimHistory(TemperatureHistory, value);
         TrimHistory(PowerHistory, value);
+        XAxes[0].MaxLimit = value;
         Log.Information("圖表時間維度已切換為 {Duration} 秒", value);
     }
 
@@ -120,7 +121,9 @@ public partial class MainViewModel : ViewModelBase
     public Axis[] XAxes { get; set; } = {
         new Axis {
             Labeler = v => string.Empty,
-            ShowSeparatorLines = false
+            ShowSeparatorLines = false,
+            MinLimit = 0,
+            MaxLimit = 900
         }
     };
 
@@ -215,6 +218,9 @@ public partial class MainViewModel : ViewModelBase
                 Values = UtilizationHistory,
                 Fill = null,
                 GeometrySize = 0,
+                GeometryFill = null,
+                GeometryStroke = null,
+                LineSmoothness = 0,
                 Stroke = new SolidColorPaint(SKColors.LimeGreen, 1),
                 Mapping = (tv, index) => new(index, tv.Value),
                 YToolTipLabelFormatter = p =>
@@ -227,6 +233,9 @@ public partial class MainViewModel : ViewModelBase
                 Values = TemperatureHistory,
                 Fill = null,
                 GeometrySize = 0,
+                GeometryFill = null,
+                GeometryStroke = null,
+                LineSmoothness = 0,
                 Stroke = new SolidColorPaint(SKColors.OrangeRed, 1),
                 Mapping = (tv, index) => new(index, tv.Value),
                 YToolTipLabelFormatter = p =>
@@ -239,6 +248,9 @@ public partial class MainViewModel : ViewModelBase
                 Values = PowerHistory,
                 Fill = null,
                 GeometrySize = 0,
+                GeometryFill = null,
+                GeometryStroke = null,
+                LineSmoothness = 0,
                 Stroke = new SolidColorPaint(SKColors.Cyan, 1),
                 Mapping = (tv, index) => new(index, tv.Value),
                 YToolTipLabelFormatter = p => FormatPowerTooltip(p.Model!)
