@@ -29,6 +29,7 @@ public partial class MainViewModel : ViewModelBase
     public string Loc_AlertGroups => _loc["Main_AlertGroups"];
     public string Loc_DisplayModeHint => _loc["Main_DisplayOnly"];
     public string Loc_RecentAlerts => _loc["Main_RecentAlerts"];
+    public string Loc_Log => _loc["Main_Log"];
     #endregion
 
     // --- 介面綁定屬性 ---

@@ -24,6 +24,7 @@
       <Button Content="{Binding Loc_Settings}" Margin="10,0,0,0" Click="OnSettingsClick" />
       <Button Content="{Binding Loc_AlertActions}" Click="OnAlertActionsClick" />
       <Button Content="{Binding Loc_AlertGroups}" Click="OnAlertGroupsClick" />
+      <Button Content="{Binding Loc_Log}" Click="OnLogClick" />
       <TextBlock Text="{Binding GpuName}" VerticalAlignment="Center" Foreground="White" FontWeight="Bold" Margin="20,0,0,0"/>
       <TextBlock Text="{Binding PowerLimit, StringFormat='(TDP: {0:F0}W)'}" VerticalAlignment="Center" Foreground="#888" Margin="10,0,0,0"/>
       <!-- TC1-3: 顯示模式提示 -->

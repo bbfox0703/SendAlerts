@@ -1,0 +1,41 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:SendAlerts.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="500"
+        x:Class="SendAlerts.Views.LogWindow"
+        x:DataType="vm:LogViewModel"
+        Title="{Binding Loc_Title}"
+        Width="800" Height="500"
+        MinWidth="400" MinHeight="300"
+        WindowStartupLocation="CenterOwner"
+        SystemDecorations="Full">
+
+    <Design.DataContext>
+        <vm:LogViewModel />
+    </Design.DataContext>
+
+    <DockPanel>
+        <!-- Toolbar -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="8">
+            <Button Content="{Binding Loc_Clear}" Command="{Binding ClearCommand}" />
+            <CheckBox Content="Auto Scroll" IsChecked="{Binding AutoScroll}" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <!-- Log ListBox -->
+        <ListBox x:Name="LogListBox"
+                 ItemsSource="{Binding LogEntries}"
+                 Background="#1a1a1a"
+                 Foreground="#cccccc"
+                 FontFamily="Consolas, Courier New, monospace"
+                 FontSize="12"
+                 Margin="8,0,8,8">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding}" TextWrapping="NoWrap" />
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</Window>

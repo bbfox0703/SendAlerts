@@ -499,6 +499,7 @@ sealed class Program
                 retainedFileCountLimit: 30,
                 outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
                 shared: true)
+            .WriteTo.Sink(SendAlerts.Services.InMemoryLogSink.Instance)
             .CreateLogger();
     }
 

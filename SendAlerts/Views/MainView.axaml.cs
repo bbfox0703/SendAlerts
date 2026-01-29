@@ -50,6 +50,9 @@ public partial class MainView : UserControl
         }
     }
 
-    // TC1-1: 移除 OnTestAlertClick - 警報功能已移至 Alert Center
-    // 測試警報請透過 AlertGroupsWindow 的測試按鈕或 Named Pipe 發送
+    private void OnLogClick(object? sender, RoutedEventArgs e)
+    {
+        var logWindow = new LogWindow();
+        logWindow.Show();
+    }
 }
