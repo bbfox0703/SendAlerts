@@ -4,7 +4,7 @@
 
 ## 概述
 
-SendAlerts 作為「硬體警報中繼站」，透過 Named Pipe 接收外部工具（如 HWiNFO64）的警報觸發訊息，並執行預設的警報動作（Telegram、LINE Notify、Email 等）。
+SendAlerts 作為「硬體警報中繼站」，透過 Named Pipe 接收外部工具（如 HWiNFO64）的警報觸發訊息，並執行預設的警報動作（Telegram、Discord 等）。
 
 ```
 HWiNFO64 (監控硬體)
@@ -51,6 +51,12 @@ SendAlerts Alert Center
 ```powershell
 -NoProfile -Command "$msg = '{\"GroupName\":\"Critical\",\"CustomMessage\":\"GPU Temperature: <#GPU Core Temp#>°C\"}'; $pipe = New-Object System.IO.Pipes.NamedPipeClientStream('.', 'sendalerts-pipe', 'Out'); $pipe.Connect(1000); $writer = New-Object System.IO.StreamWriter($pipe); $writer.Write($msg); $writer.Flush(); $pipe.Close()"
 ```
+3. 也可參考在 SendAlerts 中群組設定的 CLI 範例
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="./docs/ScreenShots/HWiNFO_Alerts.png" style="width: 75%; height: auto;">
+</div>
+
 
 #### 參數說明
 
