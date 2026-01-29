@@ -41,6 +41,7 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private float _currentTemperature;
     [ObservableProperty] private float _currentPower;
     [ObservableProperty] private float _powerLimit;
+    [ObservableProperty] private string _powerLimitDisplay = "";
 
     // --- 動態標籤 (支援 GPU/CPU 模式切換) ---
     [ObservableProperty] private string _primaryMetricLabel = "GPU Utilization";
@@ -224,6 +225,10 @@ public partial class MainViewModel : ViewModelBase
         SecondaryMetricLabel = _gpuProvider.SecondaryMetricLabel;
         SecondaryMetricUnit = _gpuProvider.SecondaryMetricUnit;
         IsGpuMode = _gpuProvider.Mode == HardwareMode.Gpu;
+
+        PowerLimitDisplay = IsGpuMode
+            ? $"(TDP: {PowerLimit:F0}W)"
+            : $"(Mem: {PowerLimit:F0}G)";
     }
 
     private static string GetProviderDisplayName(IGpuProvider provider)

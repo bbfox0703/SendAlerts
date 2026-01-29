@@ -50,7 +50,7 @@ public class CpuNetworkWindowsProvider : IGpuProvider
     private float _totalMemoryGB;
 
     public bool IsAvailable => _isInitialized;
-    public float PowerLimit => 125000f; // 預設網路頻寬上限 (125 MB/s ≈ 1 Gbps)
+    public float PowerLimit => _totalMemoryGB; // 總記憶體容量 (GB)
 
     // 硬體模式與動態標籤 (CPU/Network 模式)
     public HardwareMode Mode => HardwareMode.CpuNetwork;
@@ -98,7 +98,7 @@ public class CpuNetworkWindowsProvider : IGpuProvider
             var memStatus = new MEMORYSTATUSEX { dwLength = (uint)Marshal.SizeOf<MEMORYSTATUSEX>() };
             if (GlobalMemoryStatusEx(ref memStatus))
             {
-                _totalMemoryGB = memStatus.ullTotalPhys / (1024f * 1024f * 1024f);
+                _totalMemoryGB = (float)Math.Ceiling(memStatus.ullTotalPhys / (1024.0 * 1024.0 * 1024.0));
                 Log.Information("[CPU/Network] 總記憶體: {TotalGB:F1} GB", _totalMemoryGB);
             }
 
