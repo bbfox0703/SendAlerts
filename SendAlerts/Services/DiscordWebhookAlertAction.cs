@@ -64,26 +64,24 @@ public class DiscordWebhookAlertAction : IAlertAction
         return AlertActionValidationResult.Valid();
     }
 
-    public async Task ExecuteAsync(string message)
+    public async Task<AlertActionExecuteResult> ExecuteAsync(string message)
     {
         if (!IsEnabled)
-        {
-            return;
-        }
+            return AlertActionExecuteResult.Skipped("動作已停用");
 
         if (string.IsNullOrWhiteSpace(WebhookUrl))
         {
             Log.Warning("[DiscordWebhookAlertAction] Webhook URL 未設定，無法發送訊息");
-            return;
+            return AlertActionExecuteResult.Fail("Webhook URL 未設定");
         }
 
         // 冷卻檢查
         var elapsed = DateTime.Now - _lastExecutionTime;
         if (elapsed.TotalSeconds < CooldownSeconds)
         {
-            Log.Debug("[DiscordWebhookAlertAction] 冷卻中，跳過發送 (剩餘 {Remaining:F0} 秒)",
-                CooldownSeconds - elapsed.TotalSeconds);
-            return;
+            var msg = $"冷卻中，跳過發送 (剩餘 {CooldownSeconds - elapsed.TotalSeconds:F0} 秒)";
+            Log.Debug("[DiscordWebhookAlertAction] {Message}", msg);
+            return AlertActionExecuteResult.Skipped(msg);
         }
 
         // Debug 模式：僅記錄
@@ -91,7 +89,7 @@ public class DiscordWebhookAlertAction : IAlertAction
         {
             Log.Information("[DiscordWebhookAlertAction][DEBUG MODE] 將發送訊息: {Message}", message);
             _lastExecutionTime = DateTime.Now;
-            return;
+            return AlertActionExecuteResult.Ok("[DEBUG] 模擬發送成功");
         }
 
         try
@@ -101,24 +99,16 @@ public class DiscordWebhookAlertAction : IAlertAction
             var formattedMessage = FormatMessage(message);
             Log.Information("[DiscordWebhookAlertAction] 發送 Discord Webhook 訊息...");
 
-            var success = await SendMessageAsync(formattedMessage);
-
-            if (success)
-            {
-                Log.Information("[DiscordWebhookAlertAction] Discord Webhook 訊息發送成功");
-            }
-            else
-            {
-                Log.Warning("[DiscordWebhookAlertAction] Discord Webhook 訊息發送失敗");
-            }
+            return await SendMessageAsync(formattedMessage);
         }
         catch (Exception ex)
         {
             Log.Error(ex, "[DiscordWebhookAlertAction] 發送 Discord Webhook 訊息時發生例外");
+            return AlertActionExecuteResult.Fail($"例外: {ex.Message}");
         }
     }
 
-    private async Task<bool> SendMessageAsync(string text)
+    private async Task<AlertActionExecuteResult> SendMessageAsync(string text)
     {
         try
         {
@@ -132,26 +122,39 @@ public class DiscordWebhookAlertAction : IAlertAction
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var response = await _httpClient.PostAsync(WebhookUrl, content);
+            var statusCode = (int)response.StatusCode;
 
             if (response.IsSuccessStatusCode)
             {
-                return true;
+                Log.Information("[DiscordWebhookAlertAction] Discord Webhook 訊息發送成功");
+                return AlertActionExecuteResult.Ok($"HTTP {statusCode} OK");
             }
 
             var responseBody = await response.Content.ReadAsStringAsync();
+
+            // 嘗試解析 Discord API 錯誤訊息
+            var errorDetail = responseBody;
+            try
+            {
+                using var doc = JsonDocument.Parse(responseBody);
+                if (doc.RootElement.TryGetProperty("message", out var msg))
+                    errorDetail = msg.GetString() ?? responseBody;
+            }
+            catch { /* 無法解析就用原始 body */ }
+
             Log.Warning("[DiscordWebhookAlertAction] API 回應錯誤: {StatusCode} - {Body}",
-                response.StatusCode, responseBody);
-            return false;
+                statusCode, responseBody);
+            return AlertActionExecuteResult.Fail($"HTTP {statusCode}: {errorDetail}", statusCode);
         }
         catch (TaskCanceledException)
         {
             Log.Warning("[DiscordWebhookAlertAction] 請求逾時");
-            return false;
+            return AlertActionExecuteResult.Fail("請求逾時 (10 秒)");
         }
         catch (HttpRequestException ex)
         {
             Log.Warning(ex, "[DiscordWebhookAlertAction] 網路請求失敗");
-            return false;
+            return AlertActionExecuteResult.Fail($"網路錯誤: {ex.Message}");
         }
     }
 

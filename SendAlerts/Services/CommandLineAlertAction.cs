@@ -78,20 +78,18 @@ public class CommandLineAlertAction : IAlertAction
         return AlertActionValidationResult.Valid();
     }
 
-    public async Task ExecuteAsync(string message)
+    public async Task<AlertActionExecuteResult> ExecuteAsync(string message)
     {
         if (!IsEnabled || string.IsNullOrWhiteSpace(Command))
-        {
-            return;
-        }
+            return AlertActionExecuteResult.Skipped("動作已停用或命令為空");
 
         // 冷卻檢查
         var elapsed = DateTime.Now - _lastExecutionTime;
         if (elapsed.TotalSeconds < CooldownSeconds)
         {
-            Log.Debug("[CommandLineAlertAction] 冷卻中，跳過執行 (剩餘 {Remaining:F0} 秒)",
-                CooldownSeconds - elapsed.TotalSeconds);
-            return;
+            var msg = $"冷卻中，跳過執行 (剩餘 {CooldownSeconds - elapsed.TotalSeconds:F0} 秒)";
+            Log.Debug("[CommandLineAlertAction] {Message}", msg);
+            return AlertActionExecuteResult.Skipped(msg);
         }
 
         // Debug 模式：僅記錄
@@ -99,7 +97,7 @@ public class CommandLineAlertAction : IAlertAction
         {
             Log.Information("[CommandLineAlertAction][DEBUG MODE] 將執行命令: {Command}", Command);
             _lastExecutionTime = DateTime.Now;
-            return;
+            return AlertActionExecuteResult.Ok("[DEBUG] 模擬執行成功");
         }
 
         try
@@ -132,30 +130,26 @@ public class CommandLineAlertAction : IAlertAction
                 if (process.ExitCode == 0)
                 {
                     Log.Information("[CommandLineAlertAction] 命令執行成功 (ExitCode: 0)");
-                    if (!string.IsNullOrWhiteSpace(stdout))
-                    {
-                        Log.Debug("[CommandLineAlertAction] stdout: {Output}", stdout.Trim());
-                    }
+                    return AlertActionExecuteResult.Ok($"ExitCode: 0");
                 }
                 else
                 {
-                    Log.Warning("[CommandLineAlertAction] 命令執行失敗 (ExitCode: {ExitCode})",
-                        process.ExitCode);
-                    if (!string.IsNullOrWhiteSpace(stderr))
-                    {
-                        Log.Warning("[CommandLineAlertAction] stderr: {Error}", stderr.Trim());
-                    }
+                    var errMsg = string.IsNullOrWhiteSpace(stderr) ? "" : $" - {stderr.Trim()}";
+                    Log.Warning("[CommandLineAlertAction] 命令執行失敗 (ExitCode: {ExitCode})", process.ExitCode);
+                    return AlertActionExecuteResult.Fail($"ExitCode: {process.ExitCode}{errMsg}");
                 }
             }
             else
             {
                 Log.Warning("[CommandLineAlertAction] 命令執行逾時 (超過 30 秒)");
                 process.Kill();
+                return AlertActionExecuteResult.Fail("命令執行逾時 (超過 30 秒)");
             }
         }
         catch (Exception ex)
         {
             Log.Error(ex, "[CommandLineAlertAction] 命令執行發生例外");
+            return AlertActionExecuteResult.Fail($"例外: {ex.Message}");
         }
     }
 

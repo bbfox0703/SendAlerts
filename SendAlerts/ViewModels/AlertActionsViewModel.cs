@@ -244,8 +244,10 @@ public partial class AlertActionsViewModel : ViewModelBase
             }
 
             Log.Information("[AlertActionsViewModel] 測試 Action: {InstanceId}", SelectedAction.InstanceId);
-            await action.ExecuteAsync($"[TEST] 這是測試訊息 - {DateTime.Now:HH:mm:ss}");
-            StatusMessage = $"測試成功: {SelectedAction.InstanceId}";
+            var result = await action.ExecuteAsync($"[TEST] 這是測試訊息 - {DateTime.Now:HH:mm:ss}");
+            StatusMessage = result.Success
+                ? $"已發送: {SelectedAction.InstanceId} - {result.Message}，請確認收信端"
+                : $"發送失敗: {SelectedAction.InstanceId} - {result.Message}";
         }
         catch (Exception ex)
         {

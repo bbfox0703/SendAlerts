@@ -232,9 +232,21 @@ public partial class AlertGroupsViewModel : ViewModelBase
         try
         {
             var result = await alertService.TestGroupAsync(SelectedGroup.Name);
+
+            // 組合每個 Action 的詳細結果
+            var details = new System.Text.StringBuilder();
+            foreach (var (actionId, actionResult) in result.ActionResults)
+            {
+                var icon = actionResult.Success ? "OK" : "FAIL";
+                details.Append($"  [{icon}] {actionId}: {actionResult.Message}\n");
+            }
+            foreach (var missing in result.MissingActions)
+                details.Append($"  [MISS] {missing}\n");
+
             StatusMessage = result.Success
-                ? $"測試成功: {SelectedGroup.Name} ({result.ExecutedActions.Count} actions)"
-                : $"測試失敗: {SelectedGroup.Name} - {result.ErrorMessage}";
+                ? $"已發送: {SelectedGroup.Name} ({result.ExecutedActions.Count}/{result.TotalActions})，請確認收信端\n{details}"
+                : $"部分失敗: {SelectedGroup.Name} ({result.ExecutedActions.Count}/{result.TotalActions})\n{details}" +
+                  (result.ErrorMessage != null ? result.ErrorMessage : "");
         }
         catch (Exception ex)
         {
