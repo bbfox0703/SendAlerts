@@ -275,15 +275,30 @@
 
   <!-- Tray Icon -->
   <data name="Tray_Show" xml:space="preserve">
-    <value>Show</value>
+    <value>Show Window</value>
+  </data>
+  <data name="Tray_AlertActions" xml:space="preserve">
+    <value>Alert Actions...</value>
+  </data>
+  <data name="Tray_AlertGroups" xml:space="preserve">
+    <value>Alert Groups...</value>
+  </data>
+  <data name="Tray_StartWithWindows" xml:space="preserve">
+    <value>Start with Windows</value>
   </data>
   <data name="Tray_Exit" xml:space="preserve">
     <value>Exit</value>
+  </data>
+  <data name="Tray_MinimizedToast" xml:space="preserve">
+    <value>Application minimized to system tray</value>
   </data>
 
   <!-- Messages -->
   <data name="Msg_SettingsSaved" xml:space="preserve">
     <value>Settings saved</value>
+  </data>
+  <data name="Msg_SaveFailed" xml:space="preserve">
+    <value>Save failed: {0}</value>
   </data>
   <data name="Msg_TestSuccess" xml:space="preserve">
     <value>Test successful</value>
@@ -291,10 +306,67 @@
   <data name="Msg_TestFailed" xml:space="preserve">
     <value>Test failed</value>
   </data>
+  <data name="Msg_TestError" xml:space="preserve">
+    <value>Test error: {0}</value>
+  </data>
+  <data name="Msg_Testing" xml:space="preserve">
+    <value>Testing: {0}...</value>
+  </data>
   <data name="Msg_DeleteConfirm" xml:space="preserve">
     <value>Are you sure you want to delete this item?</value>
   </data>
   <data name="Msg_RestartRequired" xml:space="preserve">
     <value>Please restart the application for changes to take effect.</value>
+  </data>
+  <data name="Msg_Loaded" xml:space="preserve">
+    <value>Loaded {0} items</value>
+  </data>
+  <data name="Msg_Added" xml:space="preserve">
+    <value>Added: {0}</value>
+  </data>
+  <data name="Msg_Updated" xml:space="preserve">
+    <value>Updated: {0}</value>
+  </data>
+  <data name="Msg_Deleted" xml:space="preserve">
+    <value>Deleted: {0}</value>
+  </data>
+  <data name="Msg_DuplicateId" xml:space="preserve">
+    <value>ID already exists: {0}</value>
+  </data>
+  <data name="Msg_ConfigNotFound" xml:space="preserve">
+    <value>Config not found: {0}</value>
+  </data>
+  <data name="Msg_CannotCreateAction" xml:space="preserve">
+    <value>Cannot create action: {0}</value>
+  </data>
+  <data name="Msg_CannotDeleteReferenced" xml:space="preserve">
+    <value>Cannot delete: referenced by groups [{0}]</value>
+  </data>
+  <data name="Msg_CannotDeleteDefault" xml:space="preserve">
+    <value>Cannot delete default group: {0}</value>
+  </data>
+  <data name="Msg_ActionSent" xml:space="preserve">
+    <value>Sent: {0} - {1}, please verify on the receiving end</value>
+  </data>
+  <data name="Msg_ActionSendFailed" xml:space="preserve">
+    <value>Send failed: {0} - {1}</value>
+  </data>
+  <data name="Msg_GroupSent" xml:space="preserve">
+    <value>Sent: {0} ({1}/{2}), please verify on the receiving end</value>
+  </data>
+  <data name="Msg_GroupPartialFailed" xml:space="preserve">
+    <value>Partial failure: {0} ({1}/{2})</value>
+  </data>
+  <data name="Msg_Toggled" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="Msg_AlertServiceNotInit" xml:space="preserve">
+    <value>AlertService not initialized</value>
+  </data>
+  <data name="Msg_GroupTestMessage" xml:space="preserve">
+    <value>[TEST] Group test message</value>
+  </data>
+  <data name="Msg_ActionTestMessage" xml:space="preserve">
+    <value>[TEST] This is a test message</value>
   </data>
 </root>

@@ -98,7 +98,7 @@ public partial class AlertActionsViewModel : ViewModelBase
             Actions.Add(new AlertActionConfigItem(config));
         }
 
-        StatusMessage = $"已載入 {Actions.Count} 個動作";
+        StatusMessage = _loc.GetString("Msg_Loaded", Actions.Count);
         Log.Debug("[AlertActionsViewModel] 載入 {Count} 個動作", Actions.Count);
     }
 
@@ -132,14 +132,14 @@ public partial class AlertActionsViewModel : ViewModelBase
             // 檢查 InstanceId 是否重複
             if (_settings.AlertActions.Any(a => a.InstanceId.Equals(newConfig.InstanceId, StringComparison.OrdinalIgnoreCase)))
             {
-                StatusMessage = $"Instance ID 已存在: {newConfig.InstanceId}";
+                StatusMessage = _loc.GetString("Msg_DuplicateId", newConfig.InstanceId);
                 return;
             }
 
             _settings.AlertActions.Add(newConfig);
             Actions.Add(new AlertActionConfigItem(newConfig));
             HasChanges = true;
-            StatusMessage = $"已新增動作: {newConfig.InstanceId}";
+            StatusMessage = _loc.GetString("Msg_Added", newConfig.InstanceId);
             Log.Information("[AlertActionsViewModel] 新增動作: {InstanceId} ({Type})", newConfig.InstanceId, newConfig.ActionType);
         }
     }
@@ -175,7 +175,7 @@ public partial class AlertActionsViewModel : ViewModelBase
             }
 
             HasChanges = true;
-            StatusMessage = $"已更新動作: {updatedConfig.InstanceId}";
+            StatusMessage = _loc.GetString("Msg_Updated", updatedConfig.InstanceId);
             Log.Information("[AlertActionsViewModel] 更新動作: {InstanceId}", updatedConfig.InstanceId);
         }
     }
@@ -198,7 +198,7 @@ public partial class AlertActionsViewModel : ViewModelBase
 
         if (referencingGroups.Count > 0)
         {
-            StatusMessage = $"無法刪除: 被群組 [{string.Join(", ", referencingGroups)}] 引用中";
+            StatusMessage = _loc.GetString("Msg_CannotDeleteReferenced", string.Join(", ", referencingGroups));
             return;
         }
 
@@ -209,7 +209,7 @@ public partial class AlertActionsViewModel : ViewModelBase
             _settings.AlertActions.Remove(configToRemove);
             Actions.Remove(SelectedAction);
             HasChanges = true;
-            StatusMessage = $"已刪除動作: {instanceId}";
+            StatusMessage = _loc.GetString("Msg_Deleted", instanceId);
             Log.Information("[AlertActionsViewModel] 刪除動作: {InstanceId}", instanceId);
         }
     }
@@ -226,12 +226,12 @@ public partial class AlertActionsViewModel : ViewModelBase
         var config = _settings.AlertActions.FirstOrDefault(a => a.InstanceId == SelectedAction.InstanceId);
         if (config == null)
         {
-            StatusMessage = $"找不到設定: {SelectedAction.InstanceId}";
+            StatusMessage = _loc.GetString("Msg_ConfigNotFound", SelectedAction.InstanceId);
             return;
         }
 
         IsTesting = true;
-        StatusMessage = $"測試中: {SelectedAction.InstanceId}...";
+        StatusMessage = _loc.GetString("Msg_Testing", SelectedAction.InstanceId);
 
         try
         {
@@ -239,20 +239,20 @@ public partial class AlertActionsViewModel : ViewModelBase
             var action = AlertActionFactory.Create(config);
             if (action == null)
             {
-                StatusMessage = $"無法建立動作: {SelectedAction.InstanceId}";
+                StatusMessage = _loc.GetString("Msg_CannotCreateAction", SelectedAction.InstanceId);
                 return;
             }
 
             Log.Information("[AlertActionsViewModel] 測試 Action: {InstanceId}", SelectedAction.InstanceId);
-            var result = await action.ExecuteAsync($"[TEST] 這是測試訊息 - {DateTime.Now:HH:mm:ss}");
+            var result = await action.ExecuteAsync($"{_loc["Msg_ActionTestMessage"]} - {DateTime.Now:HH:mm:ss}");
             StatusMessage = result.Success
-                ? $"已發送: {SelectedAction.InstanceId} - {result.Message}，請確認收信端"
-                : $"發送失敗: {SelectedAction.InstanceId} - {result.Message}";
+                ? _loc.GetString("Msg_ActionSent", SelectedAction.InstanceId, result.Message)
+                : _loc.GetString("Msg_ActionSendFailed", SelectedAction.InstanceId, result.Message);
         }
         catch (Exception ex)
         {
-            StatusMessage = $"測試錯誤: {ex.Message}";
-            Log.Error(ex, "[AlertActionsViewModel] 測試動作失敗: {InstanceId}", SelectedAction.InstanceId);
+            StatusMessage = _loc.GetString("Msg_TestError", ex.Message);
+            Log.Error(ex, "[AlertActionsViewModel] Test action failed: {InstanceId}", SelectedAction.InstanceId);
         }
         finally
         {
@@ -274,7 +274,7 @@ public partial class AlertActionsViewModel : ViewModelBase
             config.IsEnabled = !config.IsEnabled;
             SelectedAction.IsEnabled = config.IsEnabled;
             HasChanges = true;
-            StatusMessage = $"{SelectedAction.InstanceId}: {(config.IsEnabled ? "已啟用" : "已停用")}";
+            StatusMessage = _loc.GetString("Msg_Toggled", SelectedAction.InstanceId, config.IsEnabled ? _loc["Enabled"] : _loc["Disabled"]);
         }
     }
 
@@ -298,12 +298,12 @@ public partial class AlertActionsViewModel : ViewModelBase
             }
 
             HasChanges = false;
-            StatusMessage = "設定已儲存";
+            StatusMessage = _loc["Msg_SettingsSaved"];
             Log.Information("[AlertActionsViewModel] 設定已儲存");
         }
         catch (Exception ex)
         {
-            StatusMessage = $"儲存失敗: {ex.Message}";
+            StatusMessage = _loc.GetString("Msg_SaveFailed", ex.Message);
             Log.Error(ex, "[AlertActionsViewModel] 儲存設定失敗");
         }
     }

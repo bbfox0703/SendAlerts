@@ -390,7 +390,8 @@ public class AlertService
     /// </summary>
     public async Task<AlertExecutionResult> TestGroupAsync(string groupName)
     {
-        return await ExecuteGroupAsync(groupName, "[TEST] 群組測試訊息");
+        var testMessage = LocalizationService.Instance["Msg_GroupTestMessage"];
+        return await ExecuteGroupAsync(groupName, testMessage);
     }
 
     #endregion
