@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using SendAlerts.Core.Interfaces;
 using SendAlerts.Services;
 using Serilog;
@@ -52,6 +54,32 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private bool _isPipeServerRunning;
 
     // --- TC1-3: 顯示模式提示 (use Loc_DisplayModeHint) ---
+
+    // --- 圖表時間維度 ---
+    [ObservableProperty] private int _selectedHistoryDuration = 900;
+
+    public List<HistoryDurationOption> HistoryDurationOptions { get; } = new()
+    {
+        new(60, "1 min"),
+        new(300, "5 min"),
+        new(900, "15 min"),
+        new(1800, "30 min"),
+        new(3600, "60 min"),
+    };
+
+    partial void OnSelectedHistoryDurationChanged(int value)
+    {
+        TrimHistory(UtilizationHistory, value);
+        TrimHistory(TemperatureHistory, value);
+        TrimHistory(PowerHistory, value);
+        Log.Information("圖表時間維度已切換為 {Duration} 秒", value);
+    }
+
+    private static void TrimHistory(ObservableCollection<TimestampedValue> history, int maxCount)
+    {
+        while (history.Count > maxCount)
+            history.RemoveAt(0);
+    }
 
     // --- TB3-3: 警報歷史 ---
     public ObservableCollection<AlertHistoryItem> AlertHistoryItems { get; } = new();
@@ -187,7 +215,7 @@ public partial class MainViewModel : ViewModelBase
                 Values = UtilizationHistory,
                 Fill = null,
                 GeometrySize = 0,
-                Stroke = new SolidColorPaint(SKColors.LimeGreen, 2),
+                Stroke = new SolidColorPaint(SKColors.LimeGreen, 1),
                 Mapping = (tv, index) => new(index, tv.Value),
                 YToolTipLabelFormatter = p =>
                     $"{p.Model!.Value:F1} %  ({p.Model.Timestamp:HH:mm:ss})"
@@ -199,7 +227,7 @@ public partial class MainViewModel : ViewModelBase
                 Values = TemperatureHistory,
                 Fill = null,
                 GeometrySize = 0,
-                Stroke = new SolidColorPaint(SKColors.OrangeRed, 2),
+                Stroke = new SolidColorPaint(SKColors.OrangeRed, 1),
                 Mapping = (tv, index) => new(index, tv.Value),
                 YToolTipLabelFormatter = p =>
                     $"{p.Model!.Value:F1} °C  ({p.Model.Timestamp:HH:mm:ss})"
@@ -211,7 +239,7 @@ public partial class MainViewModel : ViewModelBase
                 Values = PowerHistory,
                 Fill = null,
                 GeometrySize = 0,
-                Stroke = new SolidColorPaint(SKColors.Cyan, 2),
+                Stroke = new SolidColorPaint(SKColors.Cyan, 1),
                 Mapping = (tv, index) => new(index, tv.Value),
                 YToolTipLabelFormatter = p => FormatPowerTooltip(p.Model!)
             }
@@ -314,7 +342,7 @@ public partial class MainViewModel : ViewModelBase
     private void UpdateHistory(ObservableCollection<TimestampedValue> history, TimestampedValue newValue)
     {
         history.Add(newValue);
-        if (history.Count > 900) history.RemoveAt(0);
+        if (history.Count > SelectedHistoryDuration) history.RemoveAt(0);
     }
 }
 
@@ -322,3 +350,11 @@ public partial class MainViewModel : ViewModelBase
 /// 帶時間戳的圖表資料點
 /// </summary>
 public record TimestampedValue(float Value, DateTime Timestamp);
+
+/// <summary>
+/// 圖表時間維度選項
+/// </summary>
+public record HistoryDurationOption(int Seconds, string Label)
+{
+    public override string ToString() => Label;
+}

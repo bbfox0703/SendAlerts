@@ -113,7 +113,7 @@ public sealed class NamedPipeServer : IDisposable
                 pipeServer = new NamedPipeServerStream(
                     pipeName: _pipeName,
                     direction: PipeDirection.In,
-                    maxNumberOfServerInstances: 1,
+                    maxNumberOfServerInstances: NamedPipeServerStream.MaxAllowedServerInstances,
                     transmissionMode: PipeTransmissionMode.Byte,
                     options: PipeOptions.Asynchronous);
 
@@ -130,14 +130,29 @@ public sealed class NamedPipeServer : IDisposable
 
                 Log.Debug("[NamedPipe] 客戶端已連線");
 
-                // 讀取訊息
-                string message = await ReadMessageAsync(pipeServer, cancellationToken);
-
-                if (!string.IsNullOrWhiteSpace(message))
+                // 交給背景處理，主迴圈立即回去等待下一個連線
+                var connectedPipe = pipeServer;
+                pipeServer = null; // 避免 finally 中 dispose
+                _ = Task.Run(async () =>
                 {
-                    Log.Information("[NamedPipe] 收到訊息: {Message}", message);
-                    OnMessageReceived(message);
-                }
+                    try
+                    {
+                        string message = await ReadMessageAsync(connectedPipe, cancellationToken);
+                        if (!string.IsNullOrWhiteSpace(message))
+                        {
+                            Log.Information("[NamedPipe] 收到訊息: {Message}", message);
+                            OnMessageReceived(message);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning(ex, "[NamedPipe] 處理連線時發生錯誤");
+                    }
+                    finally
+                    {
+                        connectedPipe.Dispose();
+                    }
+                }, cancellationToken);
             }
             catch (OperationCanceledException)
             {
