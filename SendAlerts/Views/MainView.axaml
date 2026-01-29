@@ -27,8 +27,14 @@
       <Button Content="{Binding Loc_Log}" Click="OnLogClick" />
       <TextBlock Text="{Binding GpuName}" VerticalAlignment="Center" Foreground="White" FontWeight="Bold" Margin="20,0,0,0"/>
       <TextBlock Text="{Binding PowerLimit, StringFormat='(TDP: {0:F0}W)'}" VerticalAlignment="Center" Foreground="#888" Margin="10,0,0,0"/>
+      <!-- 圖表時間維度選擇 -->
+      <ComboBox ItemsSource="{Binding HistoryDurationOptions}"
+                SelectedValue="{Binding SelectedHistoryDuration}"
+                SelectedValueBinding="{Binding Seconds}"
+                Margin="20,0,0,0" VerticalAlignment="Center"
+                MinWidth="80" FontSize="12"/>
       <!-- TC1-3: 顯示模式提示 -->
-      <Border Background="#3a3a00" CornerRadius="3" Padding="8,2" Margin="20,0,0,0" VerticalAlignment="Center">
+      <Border Background="#3a3a00" CornerRadius="3" Padding="8,2" Margin="10,0,0,0" VerticalAlignment="Center">
         <TextBlock Text="{Binding Loc_DisplayModeHint}" Foreground="#ffcc00" FontSize="11"/>
       </Border>
     </StackPanel>
