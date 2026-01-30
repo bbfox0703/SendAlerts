@@ -43,13 +43,12 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private float _powerLimit;
     [ObservableProperty] private string _powerLimitDisplay = "";
 
-    // --- 平均值 (累計追蹤，避免遍歷 ObservableCollection) ---
-    [ObservableProperty] private float _avgUtilization;
-    [ObservableProperty] private float _avgTemperature;
-    [ObservableProperty] private float _avgPower;
-    [ObservableProperty] private string _avgPowerDisplay = "";
+    // --- 平均值 (running sum，無 buffer 無迴圈) ---
+    [ObservableProperty] private string _avgSummary = "";
     private double _sumUtilization, _sumTemperature, _sumPower;
     private int _avgSampleCount;
+    private int _avgUpdateCounter;
+    private const int AvgUpdateIntervalSeconds = 10;
 
     // --- TDP 定時重測 ---
     private int _tdpRefreshCounter;
@@ -74,53 +73,9 @@ public partial class MainViewModel : ViewModelBase
 
     // --- TC1-3: 顯示模式提示 (use Loc_DisplayModeHint) ---
 
-    // --- 圖表時間維度 ---
-    [ObservableProperty] private int _selectedHistoryDuration = 900;
-
-    /// <summary>
-    /// 圖表最大顯示點數上限，避免 SkiaSharp native memory 過量消耗。
-    /// 當 SelectedHistoryDuration 超過此值時，自動降採樣 (每 N 個 tick 記錄一點)。
-    /// </summary>
-    private const int MaxDisplayPoints = 3600;
-
-    /// <summary>
-    /// 當前的降採樣比率 (每 N 個 tick 記錄一點)
-    /// </summary>
-    private int _downsampleRate = 1;
-
-    /// <summary>
-    /// 降採樣用的 tick 計數器
-    /// </summary>
-    private int _tickCounter;
-
-    public List<HistoryDurationOption> HistoryDurationOptions { get; } = new()
-    {
-        new(60, "1 min"),
-        new(300, "5 min"),
-        new(900, "15 min"),
-        new(1800, "30 min"),
-        new(3600, "60 min"),
-    };
-
-    partial void OnSelectedHistoryDurationChanged(int value)
-    {
-        // 計算降採樣比率: 確保最大點數不超過 MaxDisplayPoints
-        _downsampleRate = Math.Max(1, (int)Math.Ceiling((double)value / MaxDisplayPoints));
-        _tickCounter = 0;
-
-        var maxPoints = value / _downsampleRate;
-        TrimHistory(UtilizationHistory, maxPoints);
-        TrimHistory(TemperatureHistory, maxPoints);
-        TrimHistory(PowerHistory, maxPoints);
-        Log.Information("圖表時間維度已切換為 {Duration} 秒 (降採樣比率: 1/{Rate}, 最大點數: {Max})",
-            value, _downsampleRate, maxPoints);
-    }
-
-    private static void TrimHistory(ObservableCollection<TimestampedValue> history, int maxCount)
-    {
-        while (history.Count > maxCount)
-            history.RemoveAt(0);
-    }
+    // --- 圖表固定 30 分鐘 ---
+    private const int HistoryDurationSeconds = 1800;
+    private int _maxPoints;
 
     // --- TB3-3: 警報歷史 ---
     public ObservableCollection<AlertHistoryItem> AlertHistoryItems { get; } = new();
@@ -180,12 +135,12 @@ public partial class MainViewModel : ViewModelBase
         CurrentProviderName = GetProviderDisplayName(_gpuProvider);
         UpdateSwitchTooltip();
 
-        // 1. 初始化圖表外觀與降採樣比率
-        _downsampleRate = Math.Max(1, (int)Math.Ceiling((double)_selectedHistoryDuration / MaxDisplayPoints));
+        // 1. 初始化圖表外觀
         InitializeCharts();
 
         // 2. 設定定時器 (純讀取顯示，不觸發警報)
         var samplingInterval = ServiceLocator.SettingsService?.Load().SamplingIntervalSeconds ?? 1;
+        _maxPoints = HistoryDurationSeconds / Math.Max(samplingInterval, 1);
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(samplingInterval) };
         _timer.Tick += OnTimerTick;
         _timer.Start();
@@ -325,11 +280,15 @@ public partial class MainViewModel : ViewModelBase
         ApplyProviderLabels();
         UpdateSwitchTooltip();
 
-        // 清空圖表歷史與平均值
+        // 暫停 timer → 清空 → 重啟，避免 Clear 期間 LiveCharts 渲染衝突
+        _timer.Stop();
         UtilizationHistory.Clear();
         TemperatureHistory.Clear();
         PowerHistory.Clear();
-        ResetAverages();
+        _sumUtilization = _sumTemperature = _sumPower = 0;
+        _avgSampleCount = 0;
+        AvgSummary = "";
+        _timer.Start();
 
         // 重設 Y 軸
         ConfigureYAxesForMode();
@@ -469,36 +428,42 @@ public partial class MainViewModel : ViewModelBase
 
             var now = DateTime.Now;
 
-            // B. 降採樣：長時間範圍時不是每個 tick 都寫入圖表
-            _tickCounter++;
-            if (_tickCounter >= _downsampleRate)
-            {
-                _tickCounter = 0;
-                var maxPoints = SelectedHistoryDuration / _downsampleRate;
-                bool removed = UtilizationHistory.Count >= maxPoints;
-                float rU = 0, rT = 0, rP = 0;
-                if (removed)
-                {
-                    rU = UtilizationHistory[0].Value;
-                    rT = TemperatureHistory[0].Value;
-                    rP = PowerHistory[0].Value;
-                }
-                UpdateHistory(UtilizationHistory, new TimestampedValue(CurrentUtilization, now), maxPoints);
-                UpdateHistory(TemperatureHistory, new TimestampedValue(CurrentTemperature, now), maxPoints);
-                UpdateHistory(PowerHistory, new TimestampedValue(CurrentPower, now), maxPoints);
+            // B. 寫入圖表 (集合大小匹配顯示窗口，每 tick 最多 1 次 RemoveAt + 1 次 Add)
+            if (UtilizationHistory.Count >= _maxPoints)
+                UtilizationHistory.RemoveAt(0);
+            UtilizationHistory.Add(new TimestampedValue(CurrentUtilization, now));
 
-                // E. 更新平均值 (累計值，不遍歷集合)
-                UpdateAverages(CurrentUtilization, CurrentTemperature, CurrentPower, removed, rU, rT, rP);
+            if (TemperatureHistory.Count >= _maxPoints)
+                TemperatureHistory.RemoveAt(0);
+            TemperatureHistory.Add(new TimestampedValue(CurrentTemperature, now));
+
+            if (PowerHistory.Count >= _maxPoints)
+                PowerHistory.RemoveAt(0);
+            PowerHistory.Add(new TimestampedValue(CurrentPower, now));
+
+            // C. 累加平均值 (純算術，無 buffer 無迴圈)
+            _sumUtilization += CurrentUtilization;
+            _sumTemperature += CurrentTemperature;
+            _sumPower += CurrentPower;
+            _avgSampleCount++;
+
+            // D. 每 10 秒更新 status bar 顯示 (僅 1 個 PropertyChanged)
+            var samplingIntervalForAvg = _timer.Interval.TotalSeconds;
+            _avgUpdateCounter++;
+            if (_avgUpdateCounter >= AvgUpdateIntervalSeconds / samplingIntervalForAvg)
+            {
+                _avgUpdateCounter = 0;
+                UpdateAvgSummary();
             }
 
-            // C. 更新 X 軸時間範圍 (固定寬度，資料由右向左推進)
-            XAxes[0].MinLimit = now.AddSeconds(-SelectedHistoryDuration).Ticks;
+            // E. 更新 X 軸時間範圍 (只顯示選定的時間維度)
+            XAxes[0].MinLimit = now.AddSeconds(-HistoryDurationSeconds).Ticks;
             XAxes[0].MaxLimit = now.Ticks;
 
-            // D. 動態 Y 軸調整
+            // F. 動態 Y 軸調整
             AdjustYAxisDynamically();
 
-            // F. TDP 定時重測 (僅 GPU 模式)
+            // G. TDP 定時重測 (僅 GPU 模式)
             if (IsGpuMode)
             {
                 var samplingInterval = _timer.Interval.TotalSeconds;
@@ -522,45 +487,29 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    private void UpdateAverages(float utilization, float temperature, float power, bool removed, float removedUtil, float removedTemp, float removedPower)
+    /// <summary>
+    /// 從 running sum 計算全程平均值，設定單一字串屬性。
+    /// 純算術，無集合存取，無迴圈。
+    /// </summary>
+    private void UpdateAvgSummary()
     {
-        if (removed)
+        if (_avgSampleCount <= 0)
         {
-            _sumUtilization -= removedUtil;
-            _sumTemperature -= removedTemp;
-            _sumPower -= removedPower;
-        }
-        _sumUtilization += utilization;
-        _sumTemperature += temperature;
-        _sumPower += power;
-        _avgSampleCount = UtilizationHistory.Count;
-
-        if (_avgSampleCount > 0)
-        {
-            AvgUtilization = (float)(_sumUtilization / _avgSampleCount);
-            AvgTemperature = (float)(_sumTemperature / _avgSampleCount);
-            AvgPower = (float)(_sumPower / _avgSampleCount);
+            AvgSummary = "";
+            return;
         }
 
-        AvgPowerDisplay = IsGpuMode
-            ? $"(Avg: {AvgPower:F1} W)"
-            : AvgPower >= 1000
-                ? $"(Avg: {AvgPower / 1000:F1} MB/s)"
-                : $"(Avg: {AvgPower:F0} KB/s)";
-    }
+        var avgU = _sumUtilization / _avgSampleCount;
+        var avgT = _sumTemperature / _avgSampleCount;
+        var avgP = _sumPower / _avgSampleCount;
 
-    private void ResetAverages()
-    {
-        _sumUtilization = _sumTemperature = _sumPower = 0;
-        _avgSampleCount = 0;
-        AvgUtilization = AvgTemperature = AvgPower = 0;
-        AvgPowerDisplay = "";
-    }
+        var powerText = IsGpuMode
+            ? $"{avgP:F1} {SecondaryMetricUnit}"
+            : avgP >= 1000
+                ? $"{avgP / 1000:F1} MB/s"
+                : $"{avgP:F0} KB/s";
 
-    private static void UpdateHistory(ObservableCollection<TimestampedValue> history, TimestampedValue newValue, int maxPoints)
-    {
-        if (history.Count >= maxPoints) history.RemoveAt(0);
-        history.Add(newValue);
+        AvgSummary = $"Avg: {PrimaryMetricLabel} {avgU:F0}% | {TemperatureLabel} {avgT:F1}{TemperatureUnit} | {SecondaryMetricLabel} {powerText}";
     }
 }
 
@@ -569,10 +518,3 @@ public partial class MainViewModel : ViewModelBase
 /// </summary>
 public record TimestampedValue(float Value, DateTime Timestamp);
 
-/// <summary>
-/// 圖表時間維度選項
-/// </summary>
-public record HistoryDurationOption(int Seconds, string Label)
-{
-    public override string ToString() => Label;
-}
