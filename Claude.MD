@@ -103,6 +103,7 @@ External Tool (HWiNFO64)
 - **Named Pipe Security**: Validate JSON schema before processing
 - **Async everywhere**: All I/O, pipe operations, and alert actions must be async
 - **READ-ONLY operations only** - 本工具僅讀取硬體數據，嚴禁任何「寫入」操作
+- **Platform Abstraction**: Any system/OS-dependent call (P/Invoke, Registry, OS commands) MUST go through an interface in the Core project (`SendAlerts/Interfaces/`), with implementations in platform-specific projects. The Core project (`SendAlerts/`) must NEVER contain direct platform-specific code.
 
 ### Patterns
 - **MVVM**: Use `CommunityToolkit.Mvvm` with `[ObservableProperty]` and `partial` classes

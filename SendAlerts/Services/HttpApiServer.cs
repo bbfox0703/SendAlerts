@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using SendAlerts.Interfaces;
 using SendAlerts.Models;
 using Serilog;
 
@@ -19,6 +20,7 @@ public class HttpApiServer : IDisposable
     private readonly AlertService _alertService;
     private readonly int _port;
     private readonly string _apiKey;
+    private readonly IHttpUrlAclManager? _urlAclManager;
     private HttpListener? _listener;
     private CancellationTokenSource? _cts;
     private Task? _listenerTask;
@@ -36,11 +38,12 @@ public class HttpApiServer : IDisposable
     /// </summary>
     public event EventHandler<HttpApiRequestEventArgs>? RequestProcessed;
 
-    public HttpApiServer(AlertService alertService, int port, string apiKey)
+    public HttpApiServer(AlertService alertService, int port, string apiKey, IHttpUrlAclManager? urlAclManager = null)
     {
         _alertService = alertService ?? throw new ArgumentNullException(nameof(alertService));
         _port = port;
         _apiKey = apiKey;
+        _urlAclManager = urlAclManager;
     }
 
     /// <summary>
@@ -75,7 +78,7 @@ public class HttpApiServer : IDisposable
             {
                 // Access Denied — 嘗試自動註冊 URL ACL
                 Log.Warning("[HttpApiServer] Access denied on http://+:{Port}/, attempting to register URL ACL...", _port);
-                if (TryRegisterUrlAcl())
+                if (_urlAclManager != null && _urlAclManager.TryRegisterUrlAcl(_port))
                 {
                     _listener.Start();
                 }
@@ -100,39 +103,6 @@ public class HttpApiServer : IDisposable
         {
             Log.Error(ex, "[HttpApiServer] Failed to start");
             throw;
-        }
-    }
-
-    /// <summary>
-    /// 嘗試用 netsh 註冊 URL ACL (會彈出 UAC 提示)
-    /// </summary>
-    private bool TryRegisterUrlAcl()
-    {
-        try
-        {
-            var psi = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = "netsh",
-                Arguments = $"http add urlacl url=http://+:{_port}/ user=Everyone",
-                Verb = "runas",
-                UseShellExecute = true,
-                CreateNoWindow = true,
-                WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
-            };
-            var process = System.Diagnostics.Process.Start(psi);
-            if (process == null) return false;
-            process.WaitForExit(10000);
-            var success = process.ExitCode == 0;
-            if (success)
-                Log.Information("[HttpApiServer] URL ACL registered successfully for port {Port}", _port);
-            else
-                Log.Warning("[HttpApiServer] URL ACL registration returned exit code {Code}", process.ExitCode);
-            return success;
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex, "[HttpApiServer] URL ACL registration failed (user may have cancelled UAC)");
-            return false;
         }
     }
 

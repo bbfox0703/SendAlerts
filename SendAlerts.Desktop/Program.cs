@@ -288,6 +288,10 @@ sealed class Program
         // Settings service (cross-platform)
         ServiceLocator.SettingsService = new JsonSettingsService();
 
+        // Platform-specific managers
+        ServiceLocator.StartupManager = new StartupManager();
+        ServiceLocator.HttpUrlAclManager = new WindowsHttpUrlAclManager();
+
         // GPU Provider (platform-specific) - 建立所有可用 provider
         var providers = CreateAllProviders();
         ServiceLocator.AvailableProviders = providers;
@@ -329,7 +333,7 @@ sealed class Program
 
         try
         {
-            _httpApiServer = new HttpApiServer(alertService, settings.HttpApiPort, settings.HttpApiKey);
+            _httpApiServer = new HttpApiServer(alertService, settings.HttpApiPort, settings.HttpApiKey, ServiceLocator.HttpUrlAclManager);
             _httpApiServer.RequestProcessed += OnHttpApiRequestProcessed;
             _httpApiServer.Start();
             ServiceLocator.HttpApiServer = _httpApiServer;

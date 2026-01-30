@@ -2,8 +2,10 @@ using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.IO.Pipes;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using SendAlerts.Models;
 using SendAlerts.Services;
 
@@ -128,10 +130,7 @@ class Program
             CustomMessage = message
         };
 
-        var jsonMessage = JsonSerializer.Serialize(pipeMessage, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
+        var jsonMessage = JsonSerializer.Serialize(pipeMessage, CliJsonContext.Default.PipeMessage);
 
         // 嘗試連接，失敗時自動啟動 Desktop
         var connected = await TryConnectAndSendAsync(jsonMessage, timeout);
@@ -227,12 +226,15 @@ class Program
             return false;
         }
 
-        var desktopPath = Path.Combine(cliDir, "SendAlerts.Desktop.exe");
+        var desktopExeName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? "SendAlerts.Desktop.exe"
+            : "SendAlerts.Desktop";
+        var desktopPath = Path.Combine(cliDir, desktopExeName);
 
         if (!File.Exists(desktopPath))
         {
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"[SendAlerts-cli] ERROR: SendAlerts.Desktop.exe not found at: {desktopPath}");
+            Console.WriteLine($"[SendAlerts-cli] ERROR: SendAlerts.Desktop not found at: {desktopPath}");
             Console.ResetColor();
             return false;
         }
@@ -349,4 +351,10 @@ class Program
             Environment.Exit(1);
         }
     }
+}
+
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSerializable(typeof(PipeMessage))]
+internal partial class CliJsonContext : JsonSerializerContext
+{
 }

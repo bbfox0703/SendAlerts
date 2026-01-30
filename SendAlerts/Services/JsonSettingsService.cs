@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using SendAlerts.Core.Interfaces;
 using Serilog;
 
 namespace SendAlerts.Services;
@@ -31,7 +32,7 @@ public class JsonSettingsService : ISettingsService
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             // TA4-1: 列舉以字串形式序列化 (更易讀)
-            Converters = { new JsonStringEnumConverter() }
+            Converters = { new JsonStringEnumConverter<AlertActionType>() }
         };
     }
 
