@@ -3,11 +3,11 @@
         xmlns:vm="using:SendAlerts.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="480"
+        mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="560"
         x:Class="SendAlerts.Views.SettingsWindow"
         x:DataType="vm:SettingsViewModel"
         Title="{Binding Loc_Title}"
-        Width="500" Height="480"
+        Width="500" Height="560"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
         SystemDecorations="Full">
@@ -21,6 +21,25 @@
 
             <ScrollViewer Grid.Row="0">
                 <StackPanel Spacing="12">
+
+                    <!-- Startup -->
+                    <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                            CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="{Binding Loc_Startup}" FontWeight="SemiBold"/>
+                            <CheckBox Content="{Binding Loc_StartupEnable}"
+                                      IsChecked="{Binding StartupEnabled}"
+                                      IsEnabled="{Binding IsStartupSupported}"/>
+                            <TextBlock Text="{Binding Loc_StartupDesc}"
+                                       FontSize="11"
+                                       IsVisible="{Binding IsStartupSupported}"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                            <TextBlock Text="{Binding Loc_StartupNotSupported}"
+                                       FontSize="11"
+                                       IsVisible="{Binding !IsStartupSupported}"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                        </StackPanel>
+                    </Border>
 
                     <!-- Sampling Interval -->
                     <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
