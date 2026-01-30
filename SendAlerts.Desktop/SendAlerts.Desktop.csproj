@@ -24,6 +24,14 @@
     <Content Include="SendAlerts.ico" />
   </ItemGroup>
 
+  <!-- Silent VBS wrapper for HWiNFO integration -->
+  <ItemGroup>
+    <None Include="..\scripts\SendAlerts-cli-silent.vbs"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest"
+          Link="SendAlerts-cli-silent.vbs" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.Skia" />
