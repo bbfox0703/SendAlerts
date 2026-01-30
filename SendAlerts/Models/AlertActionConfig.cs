@@ -30,7 +30,7 @@ public class AlertActionConfig
     /// <summary>
     /// 冷卻時間（秒），避免重複執行
     /// </summary>
-    public int CooldownSeconds { get; set; } = 30;
+    public int CooldownSeconds { get; set; } = AppConstants.DefaultCooldownSeconds;
 
     /// <summary>
     /// Debug 模式：僅記錄不實際執行
@@ -258,7 +258,7 @@ public class AlertActionConfig
     /// <summary>
     /// 建立 CommandLine 類型的設定
     /// </summary>
-    public static AlertActionConfig CreateCommandLine(string instanceId, string command, int cooldownSeconds = 30)
+    public static AlertActionConfig CreateCommandLine(string instanceId, string command, int cooldownSeconds = AppConstants.DefaultCooldownSeconds)
     {
         return new AlertActionConfig
         {
@@ -272,7 +272,7 @@ public class AlertActionConfig
     /// <summary>
     /// 建立 Telegram 類型的設定
     /// </summary>
-    public static AlertActionConfig CreateTelegram(string instanceId, string botToken, string chatId, int cooldownSeconds = 30)
+    public static AlertActionConfig CreateTelegram(string instanceId, string botToken, string chatId, int cooldownSeconds = AppConstants.DefaultCooldownSeconds)
     {
         return new AlertActionConfig
         {
@@ -287,7 +287,7 @@ public class AlertActionConfig
     /// <summary>
     /// 建立 Discord 類型的設定
     /// </summary>
-    public static AlertActionConfig CreateDiscord(string instanceId, string webhookUrl, string? username = null, int cooldownSeconds = 30)
+    public static AlertActionConfig CreateDiscord(string instanceId, string webhookUrl, string? username = null, int cooldownSeconds = AppConstants.DefaultCooldownSeconds)
     {
         return new AlertActionConfig
         {
@@ -311,7 +311,7 @@ public class AlertActionConfig
         string? username = null,
         string? password = null,
         bool useSsl = true,
-        int cooldownSeconds = 30)
+        int cooldownSeconds = AppConstants.DefaultCooldownSeconds)
     {
         return new AlertActionConfig
         {
@@ -337,7 +337,7 @@ public class AlertActionConfig
         string httpMethod = "POST",
         string? bodyTemplate = null,
         string contentType = "application/json",
-        int cooldownSeconds = 30)
+        int cooldownSeconds = AppConstants.DefaultCooldownSeconds)
     {
         return new AlertActionConfig
         {

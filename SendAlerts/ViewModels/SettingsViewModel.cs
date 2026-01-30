@@ -210,9 +210,9 @@ print(response.json())";
     private void Save()
     {
         // Validate
-        if (SamplingIntervalSeconds < 1 || SamplingIntervalSeconds > 10)
+        if (SamplingIntervalSeconds < AppConstants.SamplingIntervalMin || SamplingIntervalSeconds > AppConstants.SamplingIntervalMax)
         {
-            SamplingIntervalSeconds = Math.Clamp(SamplingIntervalSeconds, 1, 10);
+            SamplingIntervalSeconds = Math.Clamp(SamplingIntervalSeconds, AppConstants.SamplingIntervalMin, AppConstants.SamplingIntervalMax);
         }
 
         if (HttpApiPort < 1024 || HttpApiPort > 65535)

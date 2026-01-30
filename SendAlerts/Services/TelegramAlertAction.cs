@@ -20,7 +20,7 @@ public class TelegramAlertAction : IAlertAction
     private readonly HttpClient _httpClient;
     private DateTime _lastExecutionTime = DateTime.MinValue;
 
-    private const int DefaultCooldownSeconds = 30;
+    private const int DefaultCooldownSeconds = AppConstants.DefaultCooldownSeconds;
     private const string TelegramApiBaseUrl = "https://api.telegram.org/bot";
 
     // TA2-1: 新增介面成員

@@ -29,7 +29,7 @@ public class CommandLineAlertAction : IAlertAction
     /// <summary>
     /// 命令執行冷卻時間（秒），避免重複執行
     /// </summary>
-    public int CooldownSeconds { get; set; } = 30;
+    public int CooldownSeconds { get; set; } = AppConstants.DefaultCooldownSeconds;
 
     /// <summary>
     /// Debug 模式：僅記錄不執行
@@ -48,7 +48,7 @@ public class CommandLineAlertAction : IAlertAction
     /// <summary>
     /// 建構子 - 直接指定參數 (多實例支援)
     /// </summary>
-    public CommandLineAlertAction(string instanceId, string command, int cooldownSeconds = 30, bool debugMode = false)
+    public CommandLineAlertAction(string instanceId, string command, int cooldownSeconds = AppConstants.DefaultCooldownSeconds, bool debugMode = false)
     {
         InstanceId = instanceId;
         Command = command;
@@ -119,8 +119,8 @@ public class CommandLineAlertAction : IAlertAction
             using var process = new Process { StartInfo = processStartInfo };
             process.Start();
 
-            // 非同步等待完成（最多 30 秒）
-            var completed = await Task.Run(() => process.WaitForExit(30000));
+            // 非同步等待完成
+            var completed = await Task.Run(() => process.WaitForExit(AppConstants.CommandExecuteTimeoutMs));
 
             if (completed)
             {
@@ -141,9 +141,10 @@ public class CommandLineAlertAction : IAlertAction
             }
             else
             {
-                Log.Warning("[CommandLineAlertAction] 命令執行逾時 (超過 30 秒)");
+                var timeoutSec = AppConstants.CommandExecuteTimeoutMs / 1000;
+                Log.Warning("[CommandLineAlertAction] 命令執行逾時 (超過 {Seconds} 秒)", timeoutSec);
                 process.Kill();
-                return AlertActionExecuteResult.Fail("命令執行逾時 (超過 30 秒)");
+                return AlertActionExecuteResult.Fail($"命令執行逾時 (超過 {timeoutSec} 秒)");
             }
         }
         catch (Exception ex)

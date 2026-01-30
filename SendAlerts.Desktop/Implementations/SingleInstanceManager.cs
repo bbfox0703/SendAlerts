@@ -11,7 +11,6 @@ namespace SendAlerts.Desktop.Implementations;
 public sealed class SingleInstanceManager : IDisposable
 {
     private const string MutexName = "Local\\SendAlerts-single-instance";
-    private const string PipeName = "sendalerts-pipe";
 
     private Mutex? _mutex;
     private bool _hasHandle;
@@ -21,7 +20,7 @@ public sealed class SingleInstanceManager : IDisposable
     /// Named Pipe 名稱，供外部工具連線使用
     /// Windows: \\.\pipe\sendalerts-pipe
     /// </summary>
-    public static string NamedPipeName => PipeName;
+    public static string NamedPipeName => AppConstants.PipeName;
 
     /// <summary>
     /// 是否為第一個實例 (擁有 Mutex)

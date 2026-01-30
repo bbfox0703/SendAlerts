@@ -190,7 +190,7 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     public void UpdateSamplingInterval(int seconds)
     {
-        seconds = Math.Clamp(seconds, 1, 10);
+        seconds = Math.Clamp(seconds, AppConstants.SamplingIntervalMin, AppConstants.SamplingIntervalMax);
         _timer.Interval = TimeSpan.FromSeconds(seconds);
         Log.Information("取樣間隔已更新: {Seconds} 秒", seconds);
     }
