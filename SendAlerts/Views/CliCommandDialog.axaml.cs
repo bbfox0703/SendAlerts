@@ -1,6 +1,8 @@
+using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using SendAlerts.Services;
+using Serilog;
 
 namespace SendAlerts.Views;
 
@@ -32,15 +34,22 @@ public partial class CliCommandDialog : Window
 
     private async void OnCopyClick(object sender, RoutedEventArgs e)
     {
-        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
-        if (clipboard != null && ContentTextBox.Text != null)
+        try
         {
-            await clipboard.SetTextAsync(ContentTextBox.Text);
-            CopyButton.Content = _loc["CliDialog_Copied"];
+            var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+            if (clipboard != null && ContentTextBox.Text != null)
+            {
+                await clipboard.SetTextAsync(ContentTextBox.Text);
+                CopyButton.Content = _loc["CliDialog_Copied"];
 
-            // 2 秒後恢復按鈕文字
-            await System.Threading.Tasks.Task.Delay(2000);
-            CopyButton.Content = _loc["CliDialog_CopyToClipboard"];
+                // 2 秒後恢復按鈕文字
+                await System.Threading.Tasks.Task.Delay(2000);
+                CopyButton.Content = _loc["CliDialog_CopyToClipboard"];
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "[CliCommandDialog] 複製到剪貼簿失敗");
         }
     }
 

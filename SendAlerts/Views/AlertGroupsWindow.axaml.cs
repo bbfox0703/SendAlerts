@@ -1,7 +1,9 @@
+using System;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using SendAlerts.Models;
 using SendAlerts.ViewModels;
+using Serilog;
 
 namespace SendAlerts.Views;
 
@@ -65,7 +67,14 @@ public partial class AlertGroupsWindow : Window
     /// </summary>
     private async void OnShowCliCommandRequested(string title, string content)
     {
-        var dialog = new CliCommandDialog(title, content);
-        await dialog.ShowDialog(this);
+        try
+        {
+            var dialog = new CliCommandDialog(title, content);
+            await dialog.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "[AlertGroupsWindow] 顯示 CLI 指令對話框失敗");
+        }
     }
 }

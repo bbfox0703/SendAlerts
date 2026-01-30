@@ -397,9 +397,9 @@ public class NvApiWindowsProvider : IGpuProvider
                 return powerMw / 1000.0f; // mW -> W
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // 忽略錯誤
+            Log.Debug(ex, "[NvAPI] NVML 功耗讀取失敗");
         }
 
         return 0;
@@ -414,7 +414,10 @@ public class NvApiWindowsProvider : IGpuProvider
             {
                 nvmlShutdown();
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Log.Debug(ex, "[NvAPI] NVML shutdown 失敗");
+            }
             _nvmlInitialized = false;
         }
 

@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using System.Threading.Tasks;
 using Serilog;
 using SendAlerts.Core.Interfaces;
 using SendAlerts.Desktop.Implementations;
@@ -35,6 +36,18 @@ sealed class Program
         // T0-3: Initialize Serilog with file sink and rotation
         InitializeLogging();
 
+        // 全域未處理例外攔截 — 確保 crash 前寫入 log
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            Log.Fatal(e.ExceptionObject as Exception, "未處理的例外 (IsTerminating={IsTerminating})", e.IsTerminating);
+            Log.CloseAndFlush();
+        };
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            Log.Error(e.Exception, "未觀察的 Task 例外");
+            e.SetObserved();
+        };
+
         try
         {
             Log.Information("=== SendAlerts 應用程式啟動 ===");
@@ -56,6 +69,7 @@ sealed class Program
                 // 已有實例運行，未來 TA1-2 會透過 Named Pipe 傳送參數
                 Log.Information("偵測到已有實例運行，即將退出");
                 HandleSecondInstance(args);
+                Log.CloseAndFlush();
                 return;
             }
 

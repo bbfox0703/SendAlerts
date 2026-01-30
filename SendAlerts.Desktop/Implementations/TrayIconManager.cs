@@ -286,8 +286,18 @@ public class TrayIconManager : IDisposable
             {
                 _trayIcon.IsVisible = false;
             }
-            _mainWindow?.Close();
-            Environment.Exit(0);
+
+            // 使用正常的應用程式生命週期關閉，確保 Program.cs finally 區塊能執行 Log.CloseAndFlush()
+            if (Avalonia.Application.Current?.ApplicationLifetime is
+                Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                desktop.Shutdown();
+            }
+            else
+            {
+                _mainWindow?.Close();
+                Environment.Exit(0);
+            }
         });
     }
 

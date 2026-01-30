@@ -149,9 +149,9 @@ public class CpuNetworkWindowsProvider : IGpuProvider
                 totalSent += stats.BytesSent;
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // 忽略錯誤，返回 0
+            Log.Debug(ex, "[CpuNetwork] 取得網路流量失敗");
         }
 
         return (totalReceived, totalSent);

@@ -254,9 +254,9 @@ public sealed class NamedPipeServer : IDisposable
         {
             ErrorOccurred?.Invoke(this, new PipeErrorEventArgs(exception));
         }
-        catch
+        catch (Exception ex)
         {
-            // 忽略事件處理器的錯誤
+            Log.Debug(ex, "[NamedPipe] 錯誤事件處理器本身發生錯誤");
         }
     }
 

@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Linq;
 using Avalonia.Controls;
 using SendAlerts.Services;
+using Serilog;
 
 namespace SendAlerts.Views;
 
@@ -39,9 +40,9 @@ public partial class MainWindow : Window
 
             method?.Invoke(null, new object[] { this });
         }
-        catch
+        catch (Exception ex)
         {
-            // 忽略錯誤 - 系統匣功能為選用
+            Log.Debug(ex, "[MainWindow] 系統匣初始化跳過（選用功能）");
         }
 
         // TD2-1: 如果以最小化模式啟動，隱藏視窗
