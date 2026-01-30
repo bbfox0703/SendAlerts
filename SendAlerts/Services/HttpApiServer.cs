@@ -137,7 +137,7 @@ public class HttpApiServer : IDisposable
             try
             {
                 var context = await _listener.GetContextAsync().WaitAsync(ct);
-                _ = Task.Run(() => ProcessRequestAsync(context), ct);
+                _ = Task.Run(() => ProcessRequestAsync(context), CancellationToken.None);
             }
             catch (OperationCanceledException)
             {

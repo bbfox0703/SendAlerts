@@ -50,6 +50,11 @@ public static class ServiceLocator
     #region TD2: 系統整合
 
     /// <summary>
+    /// TD2-2: 系統匣是否已初始化且可用
+    /// </summary>
+    public static bool IsTrayAvailable { get; set; }
+
+    /// <summary>
     /// TD2-2: 最小化到系統匣的委派
     /// </summary>
     public static Action? MinimizeToTray { get; set; }
