@@ -150,6 +150,21 @@ curl -X POST http://localhost:58080/api/send \
   <img src="./docs/ScreenShots/Telegram_Sample.png" style="width: 75%; height: auto;">
 </div>
 
+## 設定檔及 log 位置
+
+  ┌─────────┬─────────────────────────────────────────────────────┐
+  │  檔案   │                        路徑                         │
+  ├─────────┼─────────────────────────────────────────────────────┤
+  │ 設定檔  │ %AppData%\SendAlerts\settings.json                  │
+  ├─────────┼─────────────────────────────────────────────────────┤
+  │ Log     │ %AppData%\SendAlerts\logs\SendAlerts-YYYY-MM-DD.log │
+  ├─────────┼─────────────────────────────────────────────────────┤
+  │ 硬體 DB │ %AppData%\SendAlerts\gpu_mapping.json               │
+  └─────────┴─────────────────────────────────────────────────────┘
+  展開後通常是 C:\Users\<使用者>\AppData\Roaming\SendAlerts\。
+
+  Linux 上對應 ~/.config/SendAlerts/。 (未開發)
+
 ## 開發文件
 
 - 詳細規格請參閱 [`docs/Spec.md`](docs/Spec.md)
