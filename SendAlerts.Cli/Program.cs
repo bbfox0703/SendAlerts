@@ -2,6 +2,7 @@ using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.IO.Pipes;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using SendAlerts.Models;
@@ -227,12 +228,15 @@ class Program
             return false;
         }
 
-        var desktopPath = Path.Combine(cliDir, "SendAlerts.Desktop.exe");
+        var desktopExeName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? "SendAlerts.Desktop.exe"
+            : "SendAlerts.Desktop";
+        var desktopPath = Path.Combine(cliDir, desktopExeName);
 
         if (!File.Exists(desktopPath))
         {
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"[SendAlerts-cli] ERROR: SendAlerts.Desktop.exe not found at: {desktopPath}");
+            Console.WriteLine($"[SendAlerts-cli] ERROR: SendAlerts.Desktop not found at: {desktopPath}");
             Console.ResetColor();
             return false;
         }

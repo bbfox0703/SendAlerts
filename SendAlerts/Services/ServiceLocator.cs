@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using SendAlerts.Core.Interfaces;
+using SendAlerts.Interfaces;
 
 namespace SendAlerts.Services;
 
@@ -35,6 +36,16 @@ public static class ServiceLocator
     /// HTTP API 伺服器
     /// </summary>
     public static HttpApiServer? HttpApiServer { get; set; }
+
+    /// <summary>
+    /// 開機自動啟動管理器
+    /// </summary>
+    public static IStartupManager? StartupManager { get; set; }
+
+    /// <summary>
+    /// HTTP URL ACL 管理器
+    /// </summary>
+    public static IHttpUrlAclManager? HttpUrlAclManager { get; set; }
 
     #region TD2: 系統整合
 

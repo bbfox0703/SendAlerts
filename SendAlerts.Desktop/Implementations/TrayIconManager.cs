@@ -97,15 +97,19 @@ public class TrayIconManager : IDisposable
         menu.Items.Add(new NativeMenuItemSeparator());
 
         // TD2-1: 開機啟動選項
-        var startupItem = new NativeMenuItem(loc["Tray_StartWithWindows"]);
-        startupItem.ToggleType = NativeMenuItemToggleType.CheckBox;
-        startupItem.IsChecked = StartupManager.IsStartupEnabled();
-        startupItem.Click += (_, _) =>
+        var startupMgr = ServiceLocator.StartupManager;
+        if (startupMgr != null && startupMgr.IsSupported)
         {
-            StartupManager.ToggleStartup();
-            startupItem.IsChecked = StartupManager.IsStartupEnabled();
-        };
-        menu.Items.Add(startupItem);
+            var startupItem = new NativeMenuItem(loc["Tray_StartWithWindows"]);
+            startupItem.ToggleType = NativeMenuItemToggleType.CheckBox;
+            startupItem.IsChecked = startupMgr.IsStartupEnabled();
+            startupItem.Click += (_, _) =>
+            {
+                startupMgr.ToggleStartup();
+                startupItem.IsChecked = startupMgr.IsStartupEnabled();
+            };
+            menu.Items.Add(startupItem);
+        }
 
         menu.Items.Add(new NativeMenuItemSeparator());
 

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
+using SendAlerts.Interfaces;
 using Serilog;
 
 namespace SendAlerts.Desktop.Implementations;
@@ -10,17 +11,16 @@ namespace SendAlerts.Desktop.Implementations;
 /// TD2-1: Windows 開機自動啟動管理器
 /// 透過登錄檔設定開機啟動
 /// </summary>
-public static class StartupManager
+public class StartupManager : IStartupManager
 {
     private const string AppName = "SendAlerts";
     private const string RegistryRunKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
 
-    /// <summary>
-    /// 檢查是否已設定開機自動啟動
-    /// </summary>
-    public static bool IsStartupEnabled()
+    public bool IsSupported => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
+    public bool IsStartupEnabled()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (!IsSupported)
         {
             return false;
         }
@@ -38,12 +38,9 @@ public static class StartupManager
         }
     }
 
-    /// <summary>
-    /// 啟用開機自動啟動
-    /// </summary>
-    public static bool EnableStartup()
+    public bool EnableStartup()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (!IsSupported)
         {
             Log.Warning("[StartupManager] 僅支援 Windows 平台");
             return false;
@@ -77,12 +74,9 @@ public static class StartupManager
         }
     }
 
-    /// <summary>
-    /// 停用開機自動啟動
-    /// </summary>
-    public static bool DisableStartup()
+    public bool DisableStartup()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (!IsSupported)
         {
             return false;
         }
@@ -104,10 +98,7 @@ public static class StartupManager
         }
     }
 
-    /// <summary>
-    /// 切換開機自動啟動狀態
-    /// </summary>
-    public static bool ToggleStartup()
+    public bool ToggleStartup()
     {
         if (IsStartupEnabled())
         {
@@ -119,9 +110,6 @@ public static class StartupManager
         }
     }
 
-    /// <summary>
-    /// 取得目前執行檔路徑
-    /// </summary>
     private static string? GetExecutablePath()
     {
         var processPath = Environment.ProcessPath;
@@ -130,10 +118,11 @@ public static class StartupManager
             return processPath;
         }
 
-        // Fallback: 使用 AppContext
-        var appPath = Path.Combine(
-            AppContext.BaseDirectory,
-            "SendAlerts.Desktop.exe");
+        // Fallback: 使用 AppContext，根據平台決定副檔名
+        var exeName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? "SendAlerts.Desktop.exe"
+            : "SendAlerts.Desktop";
+        var appPath = Path.Combine(AppContext.BaseDirectory, exeName);
 
         return File.Exists(appPath) ? appPath : null;
     }
