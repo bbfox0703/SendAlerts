@@ -26,24 +26,20 @@
 
   <!-- Silent VBS wrapper for HWiNFO integration -->
   <ItemGroup>
-    <None Include="..\scripts\SendAlerts-cli-silent.vbs"
-          CopyToOutputDirectory="PreserveNewest"
-          CopyToPublishDirectory="PreserveNewest"
-          Link="SendAlerts-cli-silent.vbs" />
+    <None Include="..\scripts\SendAlerts-cli-silent.vbs" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Link="SendAlerts-cli-silent.vbs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia.Desktop" />
-    <PackageReference Include="Avalonia.Skia" />
-    <PackageReference Include="Serilog" />
-    <PackageReference Include="Serilog.Sinks.File" />
-    <PackageReference Include="Serilog.Sinks.Console" />
     <PackageReference Include="Avalonia.Diagnostics">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" />
+    <PackageReference Include="DiskInfoToolkit" />
     <PackageReference Include="LibreHardwareMonitorLib" />
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="Serilog.Sinks.File" />
+    <PackageReference Include="Serilog.Sinks.Console" />
   </ItemGroup>
 
   <ItemGroup>

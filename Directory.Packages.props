@@ -4,25 +4,32 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Avalonia packages -->
-    <!-- Important: keep version in sync! -->
+    <!-- Avalonia packages (keep version in sync!) -->
     <PackageVersion Include="Avalonia" Version="11.3.11" />
     <PackageVersion Include="Avalonia.Skia" Version="11.3.11" />
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="11.3.11" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.11" />
     <PackageVersion Include="Avalonia.Diagnostics" Version="11.3.11" />
     <PackageVersion Include="Avalonia.Desktop" Version="11.3.11" />
-    <PackageVersion Include="Avalonia.iOS" Version="11.3.11" />
-    <PackageVersion Include="Avalonia.Browser" Version="11.3.11" />
-    <PackageVersion Include="Avalonia.Android" Version="11.3.11" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageVersion Include="DiskInfoToolkit" Version="1.1.2" />
+    <!-- SkiaSharp / HarfBuzz: must match Avalonia.Skia 11.3.11 requirements (2.88.9 / 8.3.1.1) -->
+    <PackageVersion Include="HarfBuzzSharp" Version="8.3.1.1" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="8.3.1.1" />
+    <PackageVersion Include="MicroCom.Runtime" Version="0.11.3" />
     <PackageVersion Include="Serilog" Version="4.3.0" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageVersion Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc6.1" />
     <PackageVersion Include="LibreHardwareMonitorLib" Version="0.9.5" />
+    <PackageVersion Include="SkiaSharp" Version="2.88.9" />
+    <PackageVersion Include="SkiaSharp.HarfBuzz" Version="2.88.9" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="2.88.9" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Win32" Version="2.88.9" />
     <PackageVersion Include="System.CommandLine" Version="2.0.2" />
-    <PackageVersion Include="Xamarin.AndroidX.Core.SplashScreen" Version="1.0.1.15" />
+    <PackageVersion Include="System.IO.Ports" Version="10.0.2" />
+    <PackageVersion Include="System.Management" Version="10.0.2" />
+    <PackageVersion Include="Tmds.DBus.Protocol" Version="0.23.0" />
     <!-- Test packages -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageVersion Include="xunit.v3" Version="3.2.2" />
