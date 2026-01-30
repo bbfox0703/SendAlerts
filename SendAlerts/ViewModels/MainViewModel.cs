@@ -43,6 +43,18 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private float _powerLimit;
     [ObservableProperty] private string _powerLimitDisplay = "";
 
+    // --- 平均值 (累計追蹤，避免遍歷 ObservableCollection) ---
+    [ObservableProperty] private float _avgUtilization;
+    [ObservableProperty] private float _avgTemperature;
+    [ObservableProperty] private float _avgPower;
+    [ObservableProperty] private string _avgPowerDisplay = "";
+    private double _sumUtilization, _sumTemperature, _sumPower;
+    private int _avgSampleCount;
+
+    // --- TDP 定時重測 ---
+    private int _tdpRefreshCounter;
+    private const int TdpRefreshIntervalSeconds = 600; // 10 分鐘
+
     // --- 動態標籤 (支援 GPU/CPU 模式切換) ---
     [ObservableProperty] private string _primaryMetricLabel = "GPU Utilization";
     [ObservableProperty] private string _temperatureLabel = "GPU Temperature";
@@ -313,10 +325,11 @@ public partial class MainViewModel : ViewModelBase
         ApplyProviderLabels();
         UpdateSwitchTooltip();
 
-        // 清空圖表歷史
+        // 清空圖表歷史與平均值
         UtilizationHistory.Clear();
         TemperatureHistory.Clear();
         PowerHistory.Clear();
+        ResetAverages();
 
         // 重設 Y 軸
         ConfigureYAxesForMode();
@@ -462,9 +475,20 @@ public partial class MainViewModel : ViewModelBase
             {
                 _tickCounter = 0;
                 var maxPoints = SelectedHistoryDuration / _downsampleRate;
+                bool removed = UtilizationHistory.Count >= maxPoints;
+                float rU = 0, rT = 0, rP = 0;
+                if (removed)
+                {
+                    rU = UtilizationHistory[0].Value;
+                    rT = TemperatureHistory[0].Value;
+                    rP = PowerHistory[0].Value;
+                }
                 UpdateHistory(UtilizationHistory, new TimestampedValue(CurrentUtilization, now), maxPoints);
                 UpdateHistory(TemperatureHistory, new TimestampedValue(CurrentTemperature, now), maxPoints);
                 UpdateHistory(PowerHistory, new TimestampedValue(CurrentPower, now), maxPoints);
+
+                // E. 更新平均值 (累計值，不遍歷集合)
+                UpdateAverages(CurrentUtilization, CurrentTemperature, CurrentPower, removed, rU, rT, rP);
             }
 
             // C. 更新 X 軸時間範圍 (固定寬度，資料由右向左推進)
@@ -473,11 +497,64 @@ public partial class MainViewModel : ViewModelBase
 
             // D. 動態 Y 軸調整
             AdjustYAxisDynamically();
+
+            // F. TDP 定時重測 (僅 GPU 模式)
+            if (IsGpuMode)
+            {
+                var samplingInterval = _timer.Interval.TotalSeconds;
+                _tdpRefreshCounter++;
+                if (_tdpRefreshCounter >= TdpRefreshIntervalSeconds / samplingInterval)
+                {
+                    _tdpRefreshCounter = 0;
+                    _gpuProvider.RefreshPowerLimit();
+                    var newLimit = _gpuProvider.PowerLimit;
+                    if (Math.Abs(newLimit - PowerLimit) > 0.1f)
+                    {
+                        PowerLimit = newLimit;
+                        PowerLimitDisplay = $"(TDP: {PowerLimit:F0}W)";
+                    }
+                }
+            }
         }
         catch (Exception ex)
         {
             Log.Error(ex, "數據讀取過程中發生錯誤");
         }
+    }
+
+    private void UpdateAverages(float utilization, float temperature, float power, bool removed, float removedUtil, float removedTemp, float removedPower)
+    {
+        if (removed)
+        {
+            _sumUtilization -= removedUtil;
+            _sumTemperature -= removedTemp;
+            _sumPower -= removedPower;
+        }
+        _sumUtilization += utilization;
+        _sumTemperature += temperature;
+        _sumPower += power;
+        _avgSampleCount = UtilizationHistory.Count;
+
+        if (_avgSampleCount > 0)
+        {
+            AvgUtilization = (float)(_sumUtilization / _avgSampleCount);
+            AvgTemperature = (float)(_sumTemperature / _avgSampleCount);
+            AvgPower = (float)(_sumPower / _avgSampleCount);
+        }
+
+        AvgPowerDisplay = IsGpuMode
+            ? $"(Avg: {AvgPower:F1} W)"
+            : AvgPower >= 1000
+                ? $"(Avg: {AvgPower / 1000:F1} MB/s)"
+                : $"(Avg: {AvgPower:F0} KB/s)";
+    }
+
+    private void ResetAverages()
+    {
+        _sumUtilization = _sumTemperature = _sumPower = 0;
+        _avgSampleCount = 0;
+        AvgUtilization = AvgTemperature = AvgPower = 0;
+        AvgPowerDisplay = "";
     }
 
     private static void UpdateHistory(ObservableCollection<TimestampedValue> history, TimestampedValue newValue, int maxPoints)

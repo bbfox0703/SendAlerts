@@ -286,6 +286,21 @@ public class NvApiWindowsProvider : IGpuProvider
         }
     }
 
+    public void RefreshPowerLimit()
+    {
+        if (!_nvmlInitialized) return;
+
+        if (nvmlDeviceGetPowerManagementLimit(_nvmlDeviceHandle, out uint limitMw) == 0)
+        {
+            var newLimit = limitMw / 1000.0f;
+            if (Math.Abs(newLimit - _powerLimit) > 0.1f)
+            {
+                Log.Information("[NvAPI] TDP 變更: {Old:F1}W → {New:F1}W", _powerLimit, newLimit);
+                _powerLimit = newLimit;
+            }
+        }
+    }
+
     public string GetGpuName() => _isInitialized ? _gpuName : "N/A";
 
     public GpuReading GetCurrentReading()

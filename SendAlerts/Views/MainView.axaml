@@ -75,6 +75,11 @@
                        Foreground="LimeGreen"
                        FontSize="14"
                        Margin="5,0"/>
+            <TextBlock Text="{Binding AvgUtilization, StringFormat='(Avg: {0:F0} %)'}"
+                       Foreground="#888"
+                       FontSize="12"
+                       VerticalAlignment="Center"
+                       Margin="8,0,0,0"/>
           </StackPanel>
           <lvc:CartesianChart Series="{Binding UtilizationSeries}"
                               XAxes="{Binding XAxes}"
@@ -92,6 +97,14 @@
               <TextBlock.Text>
                 <MultiBinding StringFormat=": {0:F1} {1}">
                   <Binding Path="CurrentTemperature"/>
+                  <Binding Path="TemperatureUnit"/>
+                </MultiBinding>
+              </TextBlock.Text>
+            </TextBlock>
+            <TextBlock Foreground="#888" FontSize="12" VerticalAlignment="Center" Margin="8,0,0,0">
+              <TextBlock.Text>
+                <MultiBinding StringFormat="(Avg: {0:F1} {1})">
+                  <Binding Path="AvgTemperature"/>
                   <Binding Path="TemperatureUnit"/>
                 </MultiBinding>
               </TextBlock.Text>
@@ -117,6 +130,11 @@
                 </MultiBinding>
               </TextBlock.Text>
             </TextBlock>
+            <TextBlock Text="{Binding AvgPowerDisplay}"
+                       Foreground="#888"
+                       FontSize="12"
+                       VerticalAlignment="Center"
+                       Margin="8,0,0,0"/>
           </StackPanel>
           <lvc:CartesianChart Series="{Binding PowerSeries}"
                               XAxes="{Binding XAxes}"

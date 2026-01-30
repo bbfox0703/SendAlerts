@@ -38,4 +38,10 @@ public interface IGpuProvider : IDisposable
     string TemperatureUnit { get; }       // "°C" 或 "%"
     string SecondaryMetricLabel { get; }  // "Power Usage" 或 "Network I/O"
     string SecondaryMetricUnit { get; }   // "W" 或 "KB/s"
+
+    /// <summary>
+    /// 重新查詢 GPU 功耗限制 (TDP)，供定時重測使用。
+    /// 預設為空實作，不影響非 GPU provider。
+    /// </summary>
+    void RefreshPowerLimit() { }
 }
