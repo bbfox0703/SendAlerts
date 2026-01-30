@@ -65,6 +65,22 @@ public partial class MainViewModel : ViewModelBase
     // --- 圖表時間維度 ---
     [ObservableProperty] private int _selectedHistoryDuration = 900;
 
+    /// <summary>
+    /// 圖表最大顯示點數上限，避免 SkiaSharp native memory 過量消耗。
+    /// 當 SelectedHistoryDuration 超過此值時，自動降採樣 (每 N 個 tick 記錄一點)。
+    /// </summary>
+    private const int MaxDisplayPoints = 3600;
+
+    /// <summary>
+    /// 當前的降採樣比率 (每 N 個 tick 記錄一點)
+    /// </summary>
+    private int _downsampleRate = 1;
+
+    /// <summary>
+    /// 降採樣用的 tick 計數器
+    /// </summary>
+    private int _tickCounter;
+
     public List<HistoryDurationOption> HistoryDurationOptions { get; } = new()
     {
         new(60, "1 min"),
@@ -76,10 +92,16 @@ public partial class MainViewModel : ViewModelBase
 
     partial void OnSelectedHistoryDurationChanged(int value)
     {
-        TrimHistory(UtilizationHistory, value);
-        TrimHistory(TemperatureHistory, value);
-        TrimHistory(PowerHistory, value);
-        Log.Information("圖表時間維度已切換為 {Duration} 秒", value);
+        // 計算降採樣比率: 確保最大點數不超過 MaxDisplayPoints
+        _downsampleRate = Math.Max(1, (int)Math.Ceiling((double)value / MaxDisplayPoints));
+        _tickCounter = 0;
+
+        var maxPoints = value / _downsampleRate;
+        TrimHistory(UtilizationHistory, maxPoints);
+        TrimHistory(TemperatureHistory, maxPoints);
+        TrimHistory(PowerHistory, maxPoints);
+        Log.Information("圖表時間維度已切換為 {Duration} 秒 (降採樣比率: 1/{Rate}, 最大點數: {Max})",
+            value, _downsampleRate, maxPoints);
     }
 
     private static void TrimHistory(ObservableCollection<TimestampedValue> history, int maxCount)
@@ -146,7 +168,8 @@ public partial class MainViewModel : ViewModelBase
         CurrentProviderName = GetProviderDisplayName(_gpuProvider);
         UpdateSwitchTooltip();
 
-        // 1. 初始化圖表外觀
+        // 1. 初始化圖表外觀與降採樣比率
+        _downsampleRate = Math.Max(1, (int)Math.Ceiling((double)_selectedHistoryDuration / MaxDisplayPoints));
         InitializeCharts();
 
         // 2. 設定定時器 (純讀取顯示，不觸發警報)
@@ -425,17 +448,24 @@ public partial class MainViewModel : ViewModelBase
     {
         try
         {
-            // A. 讀取數據
+            // A. 讀取數據 (每個 tick 都更新數值顯示)
             var reading = _gpuProvider.GetCurrentReading();
             CurrentUtilization = reading.GpuUtilization;
             CurrentTemperature = reading.Temperature;
             CurrentPower = reading.PowerUsage;
 
-            // B. 更新圖表數據 (保留最近 900 秒)
             var now = DateTime.Now;
-            UpdateHistory(UtilizationHistory, new TimestampedValue(CurrentUtilization, now));
-            UpdateHistory(TemperatureHistory, new TimestampedValue(CurrentTemperature, now));
-            UpdateHistory(PowerHistory, new TimestampedValue(CurrentPower, now));
+
+            // B. 降採樣：長時間範圍時不是每個 tick 都寫入圖表
+            _tickCounter++;
+            if (_tickCounter >= _downsampleRate)
+            {
+                _tickCounter = 0;
+                var maxPoints = SelectedHistoryDuration / _downsampleRate;
+                UpdateHistory(UtilizationHistory, new TimestampedValue(CurrentUtilization, now), maxPoints);
+                UpdateHistory(TemperatureHistory, new TimestampedValue(CurrentTemperature, now), maxPoints);
+                UpdateHistory(PowerHistory, new TimestampedValue(CurrentPower, now), maxPoints);
+            }
 
             // C. 更新 X 軸時間範圍 (固定寬度，資料由右向左推進)
             XAxes[0].MinLimit = now.AddSeconds(-SelectedHistoryDuration).Ticks;
@@ -443,9 +473,6 @@ public partial class MainViewModel : ViewModelBase
 
             // D. 動態 Y 軸調整
             AdjustYAxisDynamically();
-
-            // TC1-1: 不再執行警報判定與觸發
-            // 警報功能已移至 Alert Center (透過 Named Pipe 由外部工具觸發)
         }
         catch (Exception ex)
         {
@@ -453,10 +480,10 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    private void UpdateHistory(ObservableCollection<TimestampedValue> history, TimestampedValue newValue)
+    private static void UpdateHistory(ObservableCollection<TimestampedValue> history, TimestampedValue newValue, int maxPoints)
     {
+        if (history.Count >= maxPoints) history.RemoveAt(0);
         history.Add(newValue);
-        if (history.Count > SelectedHistoryDuration) history.RemoveAt(0);
     }
 }
 
