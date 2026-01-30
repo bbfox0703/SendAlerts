@@ -108,18 +108,14 @@ public partial class MainViewModel : ViewModelBase
         _downsampleRate = Math.Max(1, (int)Math.Ceiling((double)value / MaxDisplayPoints));
         _tickCounter = 0;
 
-        var maxPoints = value / _downsampleRate;
-        TrimHistory(UtilizationHistory, maxPoints);
-        TrimHistory(TemperatureHistory, maxPoints);
-        TrimHistory(PowerHistory, maxPoints);
-        Log.Information("圖表時間維度已切換為 {Duration} 秒 (降採樣比率: 1/{Rate}, 最大點數: {Max})",
-            value, _downsampleRate, maxPoints);
-    }
+        // 清空歷史與平均值，避免新舊資料點重疊與累計值不一致
+        UtilizationHistory.Clear();
+        TemperatureHistory.Clear();
+        PowerHistory.Clear();
+        ResetAverages();
 
-    private static void TrimHistory(ObservableCollection<TimestampedValue> history, int maxCount)
-    {
-        while (history.Count > maxCount)
-            history.RemoveAt(0);
+        Log.Information("圖表時間維度已切換為 {Duration} 秒 (降採樣比率: 1/{Rate}, 最大點數: {Max})",
+            value, _downsampleRate, value / _downsampleRate);
     }
 
     // --- TB3-3: 警報歷史 ---
