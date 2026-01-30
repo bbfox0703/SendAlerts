@@ -5,6 +5,7 @@ using System.IO.Pipes;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using SendAlerts.Models;
 using SendAlerts.Services;
 
@@ -129,10 +130,7 @@ class Program
             CustomMessage = message
         };
 
-        var jsonMessage = JsonSerializer.Serialize(pipeMessage, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
+        var jsonMessage = JsonSerializer.Serialize(pipeMessage, CliJsonContext.Default.PipeMessage);
 
         // 嘗試連接，失敗時自動啟動 Desktop
         var connected = await TryConnectAndSendAsync(jsonMessage, timeout);
@@ -353,4 +351,10 @@ class Program
             Environment.Exit(1);
         }
     }
+}
+
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSerializable(typeof(PipeMessage))]
+internal partial class CliJsonContext : JsonSerializerContext
+{
 }
