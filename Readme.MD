@@ -152,18 +152,15 @@ curl -X POST http://localhost:58080/api/send \
 
 ## 設定檔及 log 位置
 
-  ┌─────────┬─────────────────────────────────────────────────────┐
-  │  檔案   │                        路徑                         │
-  ├─────────┼─────────────────────────────────────────────────────┤
-  │ 設定檔  │ %AppData%\SendAlerts\settings.json                  │
-  ├─────────┼─────────────────────────────────────────────────────┤
-  │ Log     │ %AppData%\SendAlerts\logs\SendAlerts-YYYY-MM-DD.log │
-  ├─────────┼─────────────────────────────────────────────────────┤
-  │ 硬體 DB │ %AppData%\SendAlerts\gpu_mapping.json               │
-  └─────────┴─────────────────────────────────────────────────────┘
-  展開後通常是 C:\Users\<使用者>\AppData\Roaming\SendAlerts\。
+| 檔案 | 路徑 |
+|------|------|
+| 設定檔 | %AppData%\SendAlerts\settings.json |
+| Log | %AppData%\SendAlerts\logs\SendAlerts-YYYY-MM-DD.log |
+| 硬體 DB | %AppData%\SendAlerts\gpu_mapping.json |
 
-  Linux 上對應 ~/.config/SendAlerts/。 (未開發)
+展開後通常是 C:\Users\<使用者>\AppData\Roaming\SendAlerts\。
+
+Linux 上對應 ~/.config/SendAlerts/。 (未開發)
 
 ## 開發文件
 
