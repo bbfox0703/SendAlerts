@@ -18,7 +18,7 @@ namespace SendAlerts.Cli;
 /// </summary>
 class Program
 {
-    private const string PipeName = "sendalerts-pipe";
+    private const string PipeName = AppConstants.PipeName;
     private const int DefaultTimeout = 3000;
 
     static async Task<int> Main(string[] args)

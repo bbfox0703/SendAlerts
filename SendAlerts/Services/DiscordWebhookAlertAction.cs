@@ -20,7 +20,7 @@ public class DiscordWebhookAlertAction : IAlertAction
     private readonly HttpClient _httpClient;
     private DateTime _lastExecutionTime = DateTime.MinValue;
 
-    private const int DefaultCooldownSeconds = 30;
+    private const int DefaultCooldownSeconds = AppConstants.DefaultCooldownSeconds;
 
     public string InstanceId { get; set; } = "Discord_Default";
     public AlertActionType ActionType => AlertActionType.Discord;

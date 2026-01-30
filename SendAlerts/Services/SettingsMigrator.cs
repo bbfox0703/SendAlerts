@@ -94,7 +94,7 @@ public static class SettingsMigrator
                 IsEnabled = true,
                 TelegramBotToken = settings.TelegramBotToken,
                 TelegramChatId = settings.TelegramChatId,
-                CooldownSeconds = 30,
+                CooldownSeconds = AppConstants.DefaultCooldownSeconds,
                 DebugMode = settings.AlertActionsDebugMode
             };
             migratedActions.Add(config);

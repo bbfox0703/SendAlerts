@@ -107,7 +107,7 @@ public class AppSettings
     /// <summary>
     /// T4-1: 命令執行冷卻時間（秒）
     /// </summary>
-    public int CommandLineAlertCooldownSeconds { get; set; } = 30;
+    public int CommandLineAlertCooldownSeconds { get; set; } = AppConstants.DefaultCooldownSeconds;
 
     /// <summary>
     /// T4-2: 是否啟用 Telegram 警報
