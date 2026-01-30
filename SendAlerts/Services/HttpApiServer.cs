@@ -176,6 +176,10 @@ public class HttpApiServer : IDisposable
             {
                 await HandleSendAsync(context, remoteIp);
             }
+            else if (path == "/api/send" && request.HttpMethod == "GET")
+            {
+                await HandleSendGetAsync(context, remoteIp);
+            }
             else if (path == "/api/health" && request.HttpMethod == "GET")
             {
                 await HandleHealthAsync(context);
@@ -209,11 +213,15 @@ public class HttpApiServer : IDisposable
     }
 
     /// <summary>
-    /// 驗證 API Key
+    /// 驗證 API Key (Header 優先，fallback 至 query parameter "key")
     /// </summary>
     private bool ValidateApiKey(HttpListenerRequest request, out string? providedKey)
     {
         providedKey = request.Headers[ApiKeyHeader];
+        if (string.IsNullOrEmpty(providedKey))
+        {
+            providedKey = request.QueryString["key"];
+        }
         return !string.IsNullOrEmpty(providedKey) &&
                string.Equals(providedKey, _apiKey, StringComparison.Ordinal);
     }
@@ -304,6 +312,71 @@ public class HttpApiServer : IDisposable
                 missingActions = result.MissingActions
             });
             RaiseRequestProcessed(remoteIp, "send", false, result.ErrorMessage ?? "Failed");
+        }
+    }
+
+    /// <summary>
+    /// 處理 GET /api/send?key=...&group=...&message=...
+    /// 適用於 Synology DSM Webhook 等僅支援 URL 欄位的整合場景
+    /// </summary>
+    private async Task HandleSendGetAsync(HttpListenerContext context, string remoteIp)
+    {
+        var request = context.Request;
+        var response = context.Response;
+
+        // 驗證 API Key (從 query parameter "key")
+        if (!ValidateApiKey(request, out _))
+        {
+            Log.Warning("[HttpApiServer] Unauthorized GET request from {IP}", remoteIp);
+            await SendJsonResponseAsync(response, HttpStatusCode.Unauthorized, new
+            {
+                error = "Unauthorized",
+                message = "Invalid or missing API Key"
+            });
+            RaiseRequestProcessed(remoteIp, "send-get", false, "Unauthorized");
+            return;
+        }
+
+        var groupName = request.QueryString["group"];
+        var message = request.QueryString["message"];
+
+        if (string.IsNullOrWhiteSpace(groupName))
+        {
+            await SendJsonResponseAsync(response, HttpStatusCode.BadRequest, new
+            {
+                error = "Bad Request",
+                message = "Query parameter 'group' is required"
+            });
+            RaiseRequestProcessed(remoteIp, "send-get", false, "Missing group");
+            return;
+        }
+
+        Log.Information("[HttpApiServer] GET send alert: Group={Group}, Message={Message}, From={IP}",
+            groupName, message ?? "(none)", remoteIp);
+
+        var result = await _alertService.ExecuteGroupAsync(groupName, message);
+
+        if (result.Success)
+        {
+            await SendJsonResponseAsync(response, HttpStatusCode.OK, new
+            {
+                success = true,
+                groupName,
+                executedActions = result.ExecutedActions.Count,
+                message = "Alert sent successfully"
+            });
+            RaiseRequestProcessed(remoteIp, "send-get", true, groupName);
+        }
+        else
+        {
+            await SendJsonResponseAsync(response, HttpStatusCode.BadRequest, new
+            {
+                success = false,
+                error = result.ErrorMessage ?? "Failed to send alert",
+                failedActions = result.FailedActions,
+                missingActions = result.MissingActions
+            });
+            RaiseRequestProcessed(remoteIp, "send-get", false, result.ErrorMessage ?? "Failed");
         }
     }
 
