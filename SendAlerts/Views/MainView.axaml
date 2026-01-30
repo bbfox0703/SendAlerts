@@ -78,7 +78,8 @@
           </StackPanel>
           <lvc:CartesianChart Series="{Binding UtilizationSeries}"
                               XAxes="{Binding XAxes}"
-                              YAxes="{Binding UtilizationYAxes}" />
+                              YAxes="{Binding UtilizationYAxes}"
+                              AnimationsSpeed="0:0:0" />
         </DockPanel>
       </Border>
 
@@ -98,7 +99,8 @@
           </StackPanel>
           <lvc:CartesianChart Series="{Binding TempSeries}"
                               XAxes="{Binding XAxes}"
-                              YAxes="{Binding TempYAxes}" />
+                              YAxes="{Binding TempYAxes}"
+                              AnimationsSpeed="0:0:0" />
         </DockPanel>
       </Border>
 
@@ -118,7 +120,8 @@
           </StackPanel>
           <lvc:CartesianChart Series="{Binding PowerSeries}"
                               XAxes="{Binding XAxes}"
-                              YAxes="{Binding PowerYAxes}" />
+                              YAxes="{Binding PowerYAxes}"
+                              AnimationsSpeed="0:0:0" />
         </DockPanel>
       </Border>
 
