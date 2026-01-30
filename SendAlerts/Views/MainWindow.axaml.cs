@@ -54,14 +54,14 @@ public partial class MainWindow : Window
 
     private void OnWindowClosing(object? sender, CancelEventArgs e)
     {
-        // 如果是強制關閉，則不攔截
+        // 如果是強制關閉或正在關閉應用程式，則不攔截
         if (_forceClose)
         {
             return;
         }
 
-        // TD2-2: 嘗試最小化到系統匣而非關閉
-        if (ServiceLocator.MinimizeToTray != null)
+        // TD2-2: 嘗試最小化到系統匣而非關閉（僅在系統匣可用時）
+        if (ServiceLocator.MinimizeToTray != null && ServiceLocator.IsTrayAvailable)
         {
             e.Cancel = true;
             ServiceLocator.MinimizeToTray();
@@ -69,11 +69,10 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 強制關閉視窗（從系統匣選單呼叫）
+    /// 標記為強制關閉模式（系統匣退出或 desktop.Shutdown 呼叫時使用）
     /// </summary>
-    public void ForceClose()
+    public void MarkForceClose()
     {
         _forceClose = true;
-        Close();
     }
 }

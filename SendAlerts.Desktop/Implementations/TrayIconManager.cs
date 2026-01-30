@@ -61,6 +61,7 @@ public class TrayIconManager : IDisposable
             // 雙擊/點擊顯示視窗
             _trayIcon.Clicked += OnTrayIconClicked;
 
+            ServiceLocator.IsTrayAvailable = true;
             Log.Information("[TrayIcon] 系統匣圖示已初始化 (Avalonia Native)");
         }
         catch (Exception ex)
@@ -287,6 +288,16 @@ public class TrayIconManager : IDisposable
                 _trayIcon.IsVisible = false;
             }
 
+            // 清除系統匣狀態，讓 MainWindow.OnWindowClosing 不再攔截關閉
+            ServiceLocator.IsTrayAvailable = false;
+            ServiceLocator.MinimizeToTray = null;
+
+            // 標記主視窗為強制關閉，避免攔截
+            if (_mainWindow is SendAlerts.Views.MainWindow mainWindow)
+            {
+                mainWindow.MarkForceClose();
+            }
+
             // 使用正常的應用程式生命週期關閉，確保 Program.cs finally 區塊能執行 Log.CloseAndFlush()
             if (Avalonia.Application.Current?.ApplicationLifetime is
                 Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
@@ -295,7 +306,6 @@ public class TrayIconManager : IDisposable
             }
             else
             {
-                _mainWindow?.Close();
                 Environment.Exit(0);
             }
         });
@@ -306,6 +316,7 @@ public class TrayIconManager : IDisposable
         if (_disposed) return;
         _disposed = true;
 
+        ServiceLocator.IsTrayAvailable = false;
         _trayIcon?.Dispose();
         _trayIcon = null;
     }

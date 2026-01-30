@@ -39,11 +39,24 @@ sealed class Program
         // 全域未處理例外攔截 — 確保 crash 前寫入 log
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         {
-            Log.Fatal(e.ExceptionObject as Exception, "未處理的例外 (IsTerminating={IsTerminating})", e.IsTerminating);
+            if (e.ExceptionObject is OperationCanceledException)
+            {
+                Log.Debug("應用程式關閉期間的取消例外");
+            }
+            else
+            {
+                Log.Fatal(e.ExceptionObject as Exception, "未處理的例外 (IsTerminating={IsTerminating})", e.IsTerminating);
+            }
             Log.CloseAndFlush();
         };
         TaskScheduler.UnobservedTaskException += (_, e) =>
         {
+            // 關閉期間的取消例外不需記錄為錯誤
+            if (e.Exception.InnerExceptions.All(ex => ex is OperationCanceledException or TaskCanceledException))
+            {
+                e.SetObserved();
+                return;
+            }
             Log.Error(e.Exception, "未觀察的 Task 例外");
             e.SetObserved();
         };
@@ -97,15 +110,19 @@ sealed class Program
         }
         finally
         {
-            // Cleanup
-            ShutdownHttpApiServer();
-            ShutdownTrayIcon();
-            ShutdownNamedPipeServer();
-            foreach (var provider in ServiceLocator.AvailableProviders)
+            // Cleanup — 每個步驟獨立 try-catch，確保不因清理失敗而中斷後續清理
+            try { ShutdownHttpApiServer(); } catch (Exception ex) { Log.Warning(ex, "清理 HttpApiServer 失敗"); }
+            try { ShutdownTrayIcon(); } catch (Exception ex) { Log.Warning(ex, "清理 TrayIcon 失敗"); }
+            try { ShutdownNamedPipeServer(); } catch (Exception ex) { Log.Warning(ex, "清理 NamedPipeServer 失敗"); }
+            try
             {
-                provider.Dispose();
+                foreach (var provider in ServiceLocator.AvailableProviders)
+                {
+                    provider.Dispose();
+                }
+                ServiceLocator.AvailableProviders.Clear();
             }
-            ServiceLocator.AvailableProviders.Clear();
+            catch (Exception ex) { Log.Warning(ex, "清理 GpuProviders 失敗"); }
             _singleInstanceManager?.Dispose();
             Log.Information("=== SendAlerts 應用程式結束 ===");
             Log.CloseAndFlush();

@@ -79,11 +79,11 @@ public sealed class NamedPipeServer : IDisposable
             _cts.Cancel();
 
             // 建立一個假連線來解除 WaitForConnectionAsync 的阻塞
-            await UnblockWaitingConnectionAsync();
+            await UnblockWaitingConnectionAsync().ConfigureAwait(false);
 
             if (_listenerTask != null)
             {
-                await _listenerTask.WaitAsync(TimeSpan.FromSeconds(5));
+                await _listenerTask.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
             }
         }
         catch (TimeoutException)
@@ -152,7 +152,7 @@ public sealed class NamedPipeServer : IDisposable
                     {
                         connectedPipe.Dispose();
                     }
-                }, cancellationToken);
+                }, CancellationToken.None);
             }
             catch (OperationCanceledException)
             {
@@ -228,7 +228,7 @@ public sealed class NamedPipeServer : IDisposable
         try
         {
             using var client = new NamedPipeClientStream(".", _pipeName, PipeDirection.Out);
-            await client.ConnectAsync(100);
+            await client.ConnectAsync(100).ConfigureAwait(false);
         }
         catch
         {
