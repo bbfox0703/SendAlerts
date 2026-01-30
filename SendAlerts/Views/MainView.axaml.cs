@@ -23,6 +23,13 @@ public partial class MainView : UserControl
         if (parentWindow != null)
         {
             await settingsWindow.ShowDialog(parentWindow);
+
+            // 設定儲存後，套用新的取樣間隔
+            if (DataContext is MainViewModel mainVm)
+            {
+                var settings = settingsService.Load();
+                mainVm.UpdateSamplingInterval(settings.SamplingIntervalSeconds);
+            }
         }
     }
 

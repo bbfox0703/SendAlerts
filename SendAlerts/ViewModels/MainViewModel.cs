@@ -150,7 +150,8 @@ public partial class MainViewModel : ViewModelBase
         InitializeCharts();
 
         // 2. 設定定時器 (純讀取顯示，不觸發警報)
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        var samplingInterval = ServiceLocator.SettingsService?.Load().SamplingIntervalSeconds ?? 1;
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(samplingInterval) };
         _timer.Tick += OnTimerTick;
         _timer.Start();
 
@@ -159,6 +160,16 @@ public partial class MainViewModel : ViewModelBase
 
         Log.Information("SendAlerts 監控啟動 (Display-Only Mode): {GpuName} | Mode: {Mode} | PowerLimit: {PowerLimit:F1}{Unit}",
             GpuName, _gpuProvider.Mode, PowerLimit, SecondaryMetricUnit);
+    }
+
+    /// <summary>
+    /// 更新取樣間隔 (設定變更後呼叫)
+    /// </summary>
+    public void UpdateSamplingInterval(int seconds)
+    {
+        seconds = Math.Clamp(seconds, 1, 10);
+        _timer.Interval = TimeSpan.FromSeconds(seconds);
+        Log.Information("取樣間隔已更新: {Seconds} 秒", seconds);
     }
 
     /// <summary>
