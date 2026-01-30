@@ -375,4 +375,16 @@
   <data name="SwitchProvider_NoOther" xml:space="preserve">
     <value>無其他可用的監控模式</value>
   </data>
+  <data name="Settings_Startup" xml:space="preserve">
+    <value>開機啟動</value>
+  </data>
+  <data name="Settings_Startup_Enable" xml:space="preserve">
+    <value>隨系統啟動</value>
+  </data>
+  <data name="Settings_Startup_Desc" xml:space="preserve">
+    <value>系統開機時自動啟動 SendAlerts（最小化至系統匣）。</value>
+  </data>
+  <data name="Settings_Startup_NotSupported" xml:space="preserve">
+    <value>此平台不支援自動啟動功能。</value>
+  </data>
 </root>

@@ -375,4 +375,16 @@
   <data name="SwitchProvider_NoOther" xml:space="preserve">
     <value>他に利用可能なプロバイダーはありません</value>
   </data>
+  <data name="Settings_Startup" xml:space="preserve">
+    <value>スタートアップ</value>
+  </data>
+  <data name="Settings_Startup_Enable" xml:space="preserve">
+    <value>OS起動時に自動起動</value>
+  </data>
+  <data name="Settings_Startup_Desc" xml:space="preserve">
+    <value>システム起動時にSendAlertsを自動的に起動します（トレイに最小化）。</value>
+  </data>
+  <data name="Settings_Startup_NotSupported" xml:space="preserve">
+    <value>このプラットフォームでは自動起動はサポートされていません。</value>
+  </data>
 </root>

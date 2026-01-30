@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SendAlerts.Interfaces;
 using SendAlerts.Services;
 using Serilog;
 using System;
@@ -39,6 +40,10 @@ public partial class SettingsViewModel : ViewModelBase
     public string Loc_Copy => _loc["Copy"];
     public string Loc_AlertActions => _loc["Main_AlertActions"];
     public string Loc_AlertGroups => _loc["Main_AlertGroups"];
+    public string Loc_Startup => _loc["Settings_Startup"];
+    public string Loc_StartupEnable => _loc["Settings_Startup_Enable"];
+    public string Loc_StartupDesc => _loc["Settings_Startup_Desc"];
+    public string Loc_StartupNotSupported => _loc["Settings_Startup_NotSupported"];
     #endregion
 
     // --- Sampling ---
@@ -48,6 +53,14 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private bool _httpApiEnabled;
     [ObservableProperty] private int _httpApiPort;
     [ObservableProperty] private string _httpApiKey = string.Empty;
+
+    // --- Startup ---
+    [ObservableProperty] private bool _startupEnabled;
+
+    /// <summary>
+    /// 平台是否支援自動啟動
+    /// </summary>
+    public bool IsStartupSupported => ServiceLocator.StartupManager?.IsSupported ?? false;
 
     // --- Language ---
     [ObservableProperty] private LanguageOption? _selectedLanguage;
@@ -95,6 +108,9 @@ public partial class SettingsViewModel : ViewModelBase
         HttpApiPort = _settings.HttpApiPort;
         HttpApiKey = _settings.HttpApiKey;
 
+        // 載入啟動設定 (透過抽象層)
+        StartupEnabled = ServiceLocator.StartupManager?.IsStartupEnabled() ?? false;
+
         // 載入語系設定
         var langCode = _settings.Language ?? "auto";
         SelectedLanguage = AvailableLanguages.FirstOrDefault(l => l.Code == langCode)
@@ -103,6 +119,7 @@ public partial class SettingsViewModel : ViewModelBase
         HasChanges = false;
     }
 
+    partial void OnStartupEnabledChanged(bool value) => HasChanges = true;
     partial void OnSamplingIntervalSecondsChanged(int value) => HasChanges = true;
     partial void OnHttpApiEnabledChanged(bool value) => HasChanges = true;
     partial void OnHttpApiPortChanged(int value) => HasChanges = true;
@@ -211,6 +228,17 @@ print(response.json())";
         // 檢查語系設定是否變更
         var newLangCode = SelectedLanguage?.Code == "auto" ? null : SelectedLanguage?.Code;
         var languageChanged = _settings.Language != newLangCode;
+
+        // 儲存啟動設定 (透過抽象層，不存入 AppSettings)
+        var startupMgr = ServiceLocator.StartupManager;
+        if (startupMgr != null && startupMgr.IsSupported)
+        {
+            var currentEnabled = startupMgr.IsStartupEnabled();
+            if (StartupEnabled && !currentEnabled)
+                startupMgr.EnableStartup();
+            else if (!StartupEnabled && currentEnabled)
+                startupMgr.DisableStartup();
+        }
 
         // Save to settings
         _settings.SamplingIntervalSeconds = SamplingIntervalSeconds;

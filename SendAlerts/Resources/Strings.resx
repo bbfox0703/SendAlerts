@@ -375,4 +375,16 @@
   <data name="SwitchProvider_NoOther" xml:space="preserve">
     <value>No other provider available</value>
   </data>
+  <data name="Settings_Startup" xml:space="preserve">
+    <value>Startup</value>
+  </data>
+  <data name="Settings_Startup_Enable" xml:space="preserve">
+    <value>Start with OS</value>
+  </data>
+  <data name="Settings_Startup_Desc" xml:space="preserve">
+    <value>Automatically launch SendAlerts when the system starts (minimized to tray).</value>
+  </data>
+  <data name="Settings_Startup_NotSupported" xml:space="preserve">
+    <value>Auto-start is not supported on this platform.</value>
+  </data>
 </root>
