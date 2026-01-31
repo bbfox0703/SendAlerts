@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <Content Include="SendAlerts.Watchdog.ico" CopyToOutputDirectory="PreserveNewest" />
+    <EmbeddedResource Include="SendAlerts.Watchdog.ico" LogicalName="SendAlerts.Watchdog.ico" />
   </ItemGroup>
 
   <ItemGroup>
