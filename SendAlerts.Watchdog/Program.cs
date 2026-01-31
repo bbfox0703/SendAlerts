@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Reflection;
 using System.Threading;
 using Avalonia;
 using Avalonia.Controls;
@@ -96,10 +97,19 @@ sealed class Program
             Menu = new NativeMenu()
         };
 
-        var iconPath = Path.Combine(AppContext.BaseDirectory, "SendAlerts.Watchdog.ico");
-        if (File.Exists(iconPath))
+        // Load icon from embedded resource (PublishSingleFile safe)
+        var stream = Assembly.GetExecutingAssembly()
+            .GetManifestResourceStream("SendAlerts.Watchdog.ico");
+        if (stream is not null)
         {
-            _trayIcon.Icon = new WindowIcon(iconPath);
+            _trayIcon.Icon = new WindowIcon(stream);
+        }
+        else
+        {
+            // Fallback: try file on disk
+            var iconPath = Path.Combine(AppContext.BaseDirectory, "SendAlerts.Watchdog.ico");
+            if (File.Exists(iconPath))
+                _trayIcon.Icon = new WindowIcon(iconPath);
         }
 
         var exitItem = new NativeMenuItem("Exit Watchdog");
