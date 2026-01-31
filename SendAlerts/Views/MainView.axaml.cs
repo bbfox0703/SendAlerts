@@ -397,5 +397,20 @@ public partial class MainView : UserControl
         logWindow.Show();
     }
 
+    private async void OnDiagnosticsClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var diagWindow = new DiagnosticsWindow();
+            var parentWindow = TopLevel.GetTopLevel(this) as Window;
+            if (parentWindow != null)
+                await diagWindow.ShowDialog(parentWindow);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "[MainView] 開啟診斷視窗失敗");
+        }
+    }
+
     private sealed record ChartInfo(AvaPlot Chart, double[] Data, Scatter Scatter, Crosshair Crosshair, Annotation Tooltip);
 }

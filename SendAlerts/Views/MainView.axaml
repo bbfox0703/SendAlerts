@@ -25,6 +25,7 @@
       <Button Content="{Binding Loc_AlertActions}" Click="OnAlertActionsClick" />
       <Button Content="{Binding Loc_AlertGroups}" Click="OnAlertGroupsClick" />
       <Button Content="{Binding Loc_Log}" Click="OnLogClick" />
+      <Button Content="Diag" Click="OnDiagnosticsClick" />
       <Button Content="{Binding CurrentProviderName}" Command="{Binding SwitchProviderCommand}"
               IsEnabled="{Binding CanSwitchProvider}" Margin="10,0,0,0"
               ToolTip.Tip="{Binding SwitchProviderTooltip}"

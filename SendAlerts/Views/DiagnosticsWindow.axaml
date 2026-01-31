@@ -1,0 +1,27 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SendAlerts.Views.DiagnosticsWindow"
+        Title="Diagnostics"
+        Width="600" Height="500"
+        MinWidth="400" MinHeight="300"
+        WindowStartupLocation="CenterOwner"
+        SystemDecorations="Full">
+
+    <Border Padding="16">
+        <Grid RowDefinitions="*,Auto">
+            <TextBox x:Name="ReportTextBox"
+                     Grid.Row="0"
+                     IsReadOnly="True"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     FontFamily="Consolas, Courier New, monospace"
+                     FontSize="13"
+                     Margin="0,0,0,12"/>
+
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button Content="Copy All" Click="OnCopyAllClick" MinWidth="80"/>
+                <Button Content="Close" Click="OnCloseClick" MinWidth="80"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>
