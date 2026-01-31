@@ -12,6 +12,11 @@
     <TrimMode>partial</TrimMode>
     <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <!-- IL2104: 第三方套件 (Avalonia, ScottPlot) 的 trim 警告，TrimMode=partial 不會 trim 這些 assembly，安全 suppress -->
+    <!-- TrimMode=partial + JsonSerializerIsReflectionEnabledByDefault=true 下，以下 trim 警告安全 suppress:
+         IL2026/IL2075: 自身程式碼的 reflection/JSON 序列化 (partial trim 不會 trim 自身 assembly)
+         IL2104: 第三方套件 (Avalonia, ScottPlot) 的 trim 警告 -->
+    <NoWarn>$(NoWarn);IL2026;IL2075;IL2104</NoWarn>
     <!-- Output to same folder as Desktop -->
     <OutDir>..\SendAlerts.Desktop\bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)</OutDir>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
