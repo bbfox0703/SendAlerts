@@ -8,6 +8,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>SendAlerts-cli</AssemblyName>
     <PublishSingleFile>true</PublishSingleFile>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>partial</TrimMode>

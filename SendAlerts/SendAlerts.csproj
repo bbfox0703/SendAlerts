@@ -5,11 +5,13 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <ApplicationIcon>SendAlerts.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
-    <AvaloniaResource Include="Assets\**" />
+    <AvaloniaResource Include="Assets\**" Exclude="Assets\gpu_tdp.json" />
+    <EmbeddedResource Include="Assets\gpu_tdp.json" />
   </ItemGroup>
 
   <ItemGroup>
@@ -38,7 +40,7 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" />
-    <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" />
+    <PackageReference Include="ScottPlot.Avalonia" />
     <PackageReference Include="Serilog" />
     <PackageReference Include="Serilog.Sinks.File" />
     <PackageReference Include="Serilog.Sinks.Console" />

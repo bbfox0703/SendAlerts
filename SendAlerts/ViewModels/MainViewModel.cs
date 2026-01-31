@@ -7,11 +7,6 @@ using CommunityToolkit.Mvvm.Input;
 using SendAlerts.Core.Interfaces;
 using SendAlerts.Services;
 using Serilog;
-using LiveChartsCore;
-using LiveChartsCore.Kernel.Sketches;
-using LiveChartsCore.SkiaSharpView;
-using LiveChartsCore.SkiaSharpView.Painting;
-using SkiaSharp;
 
 namespace SendAlerts.ViewModels;
 
@@ -64,55 +59,37 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private string _statusText = "System Ready";
     [ObservableProperty] private bool _isPipeServerRunning;
 
-    // --- TC1-3: 顯示模式提示 (use Loc_DisplayModeHint) ---
+    // --- 平均值摘要 ---
+    [ObservableProperty] private string _avgSummary = "";
+
+    // --- Power 圖表 Y 軸上限 (供 View 使用) ---
+    [ObservableProperty] private double _powerChartYMax = 600;
+    private double _cachedGpuPowerYMax;
 
     // --- 圖表固定 30 分鐘 ---
     private const int HistoryDurationSeconds = 1800;
     private int _maxPoints;
 
+    // --- 環形 buffer (ScottPlot 資料) ---
+    private double[] _utilizationBuffer = Array.Empty<double>();
+    private double[] _temperatureBuffer = Array.Empty<double>();
+    private double[] _powerBuffer = Array.Empty<double>();
+    private int _bufferIndex;
+    private int _bufferCount;
+
+    // --- Running sum for averages (避免 LINQ) ---
+    private double _utilizationSum;
+    private double _temperatureSum;
+    private double _powerSum;
+
+    /// <summary>
+    /// 通知 View 刷新圖表
+    /// </summary>
+    public event Action? ChartDataUpdated;
+    public event Action? ChartDataCleared;
+
     // --- TB3-3: 警報歷史 ---
     public ObservableCollection<AlertHistoryItem> AlertHistoryItems { get; } = new();
-
-    // --- LiveCharts2 數據結構 ---
-    public ObservableCollection<TimestampedValue> UtilizationHistory { get; } = new();
-    public ObservableCollection<TimestampedValue> TemperatureHistory { get; } = new();
-    public ObservableCollection<TimestampedValue> PowerHistory { get; } = new();
-
-    public ISeries[] UtilizationSeries { get; set; } = [];
-    public ISeries[] TempSeries { get; set; } = [];
-    public ISeries[] PowerSeries { get; set; } = [];
-
-    public Axis[] UtilizationYAxes { get; set; } = {
-        new Axis {
-            MinLimit = 0, MaxLimit = 100,
-            Labeler = v => v.ToString("F0") + " %",
-            SeparatorsPaint = new SolidColorPaint(SKColors.Gray.WithAlpha(50))
-        }
-    };
-
-    public Axis[] TempYAxes { get; set; } = {
-        new Axis {
-            MinLimit = 0, MaxLimit = 100,
-            Labeler = v => v.ToString("F0") + " °C",
-            SeparatorsPaint = new SolidColorPaint(SKColors.Gray.WithAlpha(50))
-        }
-    };
-
-    public Axis[] PowerYAxes { get; set; } = {
-        new Axis {
-            MinLimit = 0, MaxLimit = 600,
-            Labeler = v => v.ToString("F0") + " W",
-            SeparatorsPaint = new SolidColorPaint(SKColors.Gray.WithAlpha(50))
-        }
-    };
-
-    public Axis[] XAxes { get; set; } = {
-        new Axis {
-            Labeler = v => new DateTime((long)v).ToString("HH:mm:ss"),
-            ShowSeparatorLines = false,
-            TextSize = 10
-        }
-    };
 
     public MainViewModel(IGpuProvider gpuProvider)
     {
@@ -123,27 +100,74 @@ public partial class MainViewModel : ViewModelBase
         // 初始化動態標籤 (支援 GPU/CPU 模式)
         ApplyProviderLabels();
 
+        // 根據 GPU TDP 設定 Power 圖表 Y 軸上限
+        UpdatePowerChartYMax();
+
         // Provider 切換
         CanSwitchProvider = ServiceLocator.AvailableProviders.Count > 1;
         CurrentProviderName = GetProviderDisplayName(_gpuProvider);
         UpdateSwitchTooltip();
 
-        // 1. 初始化圖表外觀
-        InitializeCharts();
-
-        // 2. 設定定時器 (純讀取顯示，不觸發警報)
+        // 初始化 buffer
         var samplingInterval = ServiceLocator.SettingsService?.Load().SamplingIntervalSeconds ?? 1;
         _maxPoints = HistoryDurationSeconds / Math.Max(samplingInterval, 1);
+        InitializeBuffers();
+
+        // 設定定時器 (純讀取顯示，不觸發警報)
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(samplingInterval) };
         _timer.Tick += OnTimerTick;
         _timer.Start();
 
-        // 3. TB3-2/TB3-3: 訂閱狀態更新事件
+        // TB3-2/TB3-3: 訂閱狀態更新事件
         InitializeStatusSubscriptions();
 
         Log.Information("SendAlerts 監控啟動 (Display-Only Mode): {GpuName} | Mode: {Mode} | PowerLimit: {PowerLimit:F1}{Unit}",
             GpuName, _gpuProvider.Mode, PowerLimit, SecondaryMetricUnit);
     }
+
+    private void InitializeBuffers()
+    {
+        _utilizationBuffer = new double[_maxPoints];
+        _temperatureBuffer = new double[_maxPoints];
+        _powerBuffer = new double[_maxPoints];
+        _bufferIndex = 0;
+        _bufferCount = 0;
+        _utilizationSum = 0;
+        _temperatureSum = 0;
+        _powerSum = 0;
+    }
+
+    /// <summary>
+    /// 取得 buffer 中有效資料的 Span (供 View code-behind 使用)
+    /// 回傳順序為時間順序 (最舊→最新)
+    /// </summary>
+    public double[] GetBufferSnapshot(int chartIndex)
+    {
+        var source = chartIndex switch
+        {
+            0 => _utilizationBuffer,
+            1 => _temperatureBuffer,
+            2 => _powerBuffer,
+            _ => _utilizationBuffer
+        };
+
+        var result = new double[_bufferCount];
+        if (_bufferCount < _maxPoints)
+        {
+            // buffer 尚未滿，資料從 0 開始
+            Array.Copy(source, 0, result, 0, _bufferCount);
+        }
+        else
+        {
+            // buffer 已滿，需環繞拷貝
+            var tailLen = _maxPoints - _bufferIndex;
+            Array.Copy(source, _bufferIndex, result, 0, tailLen);
+            Array.Copy(source, 0, result, tailLen, _bufferIndex);
+        }
+        return result;
+    }
+
+    public int BufferCount => _bufferCount;
 
     /// <summary>
     /// 更新取樣間隔 (設定變更後呼叫)
@@ -211,6 +235,21 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
+    private void UpdatePowerChartYMax()
+    {
+        if (IsGpuMode)
+        {
+            if (_cachedGpuPowerYMax <= 0)
+                _cachedGpuPowerYMax = GpuTdpLookup.GetChartYMax(GpuName, PowerLimit);
+            PowerChartYMax = _cachedGpuPowerYMax;
+        }
+        else
+        {
+            // CPU/Network 模式: 初始 100 KB/s，之後動態調整
+            PowerChartYMax = 100;
+        }
+    }
+
     private void ApplyProviderLabels()
     {
         PrimaryMetricLabel = _gpuProvider.PrimaryMetricLabel;
@@ -273,134 +312,16 @@ public partial class MainViewModel : ViewModelBase
         ApplyProviderLabels();
         UpdateSwitchTooltip();
 
-        // 暫停 timer → 清空 → 重啟，避免 Clear 期間 LiveCharts 渲染衝突
+        // 重算 Power Y 軸上限
+        UpdatePowerChartYMax();
+
+        // 清空 buffer
         _timer.Stop();
-        UtilizationHistory.Clear();
-        TemperatureHistory.Clear();
-        PowerHistory.Clear();
+        InitializeBuffers();
+        ChartDataCleared?.Invoke();
         _timer.Start();
 
-        // 重設 Y 軸
-        ConfigureYAxesForMode();
-
         Log.Information("已切換 Provider: {Name} ({Type})", CurrentProviderName, _gpuProvider.GetType().Name);
-    }
-
-    private void InitializeCharts()
-    {
-        UtilizationSeries = new ISeries[] {
-            new LineSeries<TimestampedValue> {
-                Values = UtilizationHistory,
-                Fill = new SolidColorPaint(SKColors.LimeGreen.WithAlpha(40)),
-                GeometrySize = 0,
-                GeometryFill = null,
-                GeometryStroke = null,
-                LineSmoothness = 0,
-                Stroke = new SolidColorPaint(SKColors.LimeGreen, 1),
-                Mapping = (tv, _) => new(tv.Timestamp.Ticks, tv.Value),
-                YToolTipLabelFormatter = p =>
-                    $"{p.Model!.Value:F1} %  ({p.Model.Timestamp:HH:mm:ss})"
-            }
-        };
-
-        TempSeries = new ISeries[] {
-            new LineSeries<TimestampedValue> {
-                Values = TemperatureHistory,
-                Fill = new SolidColorPaint(SKColors.OrangeRed.WithAlpha(40)),
-                GeometrySize = 0,
-                GeometryFill = null,
-                GeometryStroke = null,
-                LineSmoothness = 0,
-                Stroke = new SolidColorPaint(SKColors.OrangeRed, 1),
-                Mapping = (tv, _) => new(tv.Timestamp.Ticks, tv.Value),
-                YToolTipLabelFormatter = p =>
-                    $"{p.Model!.Value:F1} {TemperatureUnit}  ({p.Model.Timestamp:HH:mm:ss})"
-            }
-        };
-
-        PowerSeries = new ISeries[] {
-            new LineSeries<TimestampedValue> {
-                Values = PowerHistory,
-                Fill = new SolidColorPaint(SKColors.Cyan.WithAlpha(40)),
-                GeometrySize = 0,
-                GeometryFill = null,
-                GeometryStroke = null,
-                LineSmoothness = 0,
-                Stroke = new SolidColorPaint(SKColors.Cyan, 1),
-                Mapping = (tv, _) => new(tv.Timestamp.Ticks, tv.Value),
-                YToolTipLabelFormatter = p => FormatPowerTooltip(p.Model!)
-            }
-        };
-
-        // 根據硬體模式設定 Y 軸
-        ConfigureYAxesForMode();
-    }
-
-    private string FormatPowerTooltip(TimestampedValue tv)
-    {
-        var valueText = IsGpuMode
-            ? $"{tv.Value:F1} W"
-            : tv.Value >= 1000
-                ? $"{tv.Value / 1000:F1} MB/s"
-                : $"{tv.Value:F0} KB/s";
-        return $"{valueText}  ({tv.Timestamp:HH:mm:ss})";
-    }
-
-    /// <summary>
-    /// 根據硬體模式設定 Y 軸標籤和範圍
-    /// </summary>
-    private void ConfigureYAxesForMode()
-    {
-        if (IsGpuMode)
-        {
-            // GPU 模式: 溫度 0-100 °C, 功耗 0-600 W
-            TempYAxes[0].MinLimit = 0;
-            TempYAxes[0].MaxLimit = 100;
-            TempYAxes[0].Labeler = v => v.ToString("F0") + " °C";
-
-            PowerYAxes[0].MinLimit = 0;
-            PowerYAxes[0].MaxLimit = 600;
-            PowerYAxes[0].Labeler = v => v.ToString("F0") + " W";
-        }
-        else
-        {
-            // CPU/Network 模式: 記憶體 0-100 %, 網路自動縮放
-            TempYAxes[0].MinLimit = 0;
-            TempYAxes[0].MaxLimit = 100;
-            TempYAxes[0].Labeler = v => v.ToString("F0") + " %";
-
-            PowerYAxes[0].MinLimit = 0;
-            PowerYAxes[0].MaxLimit = 10000; // 初始 10 MB/s
-            PowerYAxes[0].Labeler = v =>
-            {
-                if (v >= 1000)
-                    return (v / 1000).ToString("F1") + " MB/s";
-                return v.ToString("F0") + " KB/s";
-            };
-        }
-    }
-
-    /// <summary>
-    /// 動態調整 Y 軸範圍
-    /// </summary>
-    private void AdjustYAxisDynamically()
-    {
-        var currentMax = PowerYAxes[0].MaxLimit ?? 600;
-
-        if (IsGpuMode)
-        {
-            if (CurrentPower > currentMax)
-            {
-                PowerYAxes[0].MaxLimit = CurrentPower + 50;
-            }
-        }
-        else
-        {
-            if (CurrentPower > currentMax)
-            {
-                PowerYAxes[0].MaxLimit = Math.Max(CurrentPower * 1.5, currentMax + 1000);
-            }
-        }
     }
 
     /// <summary>
@@ -410,35 +331,45 @@ public partial class MainViewModel : ViewModelBase
     {
         try
         {
-            // A. 讀取數據 (每個 tick 都更新數值顯示)
+            // A. 讀取數據
             var reading = _gpuProvider.GetCurrentReading();
             CurrentUtilization = reading.GpuUtilization;
             CurrentTemperature = reading.Temperature;
             CurrentPower = reading.PowerUsage;
 
-            var now = DateTime.Now;
+            // B. 寫入環形 buffer
+            // 若 buffer 已滿，先減去即將被覆蓋的舊值
+            if (_bufferCount >= _maxPoints)
+            {
+                _utilizationSum -= _utilizationBuffer[_bufferIndex];
+                _temperatureSum -= _temperatureBuffer[_bufferIndex];
+                _powerSum -= _powerBuffer[_bufferIndex];
+            }
 
-            // B. 寫入圖表 (集合大小匹配顯示窗口，每 tick 最多 1 次 RemoveAt + 1 次 Add)
-            if (UtilizationHistory.Count >= _maxPoints)
-                UtilizationHistory.RemoveAt(0);
-            UtilizationHistory.Add(new TimestampedValue(CurrentUtilization, now));
+            _utilizationBuffer[_bufferIndex] = CurrentUtilization;
+            _temperatureBuffer[_bufferIndex] = CurrentTemperature;
+            _powerBuffer[_bufferIndex] = CurrentPower;
 
-            if (TemperatureHistory.Count >= _maxPoints)
-                TemperatureHistory.RemoveAt(0);
-            TemperatureHistory.Add(new TimestampedValue(CurrentTemperature, now));
+            _utilizationSum += CurrentUtilization;
+            _temperatureSum += CurrentTemperature;
+            _powerSum += CurrentPower;
 
-            if (PowerHistory.Count >= _maxPoints)
-                PowerHistory.RemoveAt(0);
-            PowerHistory.Add(new TimestampedValue(CurrentPower, now));
+            _bufferIndex = (_bufferIndex + 1) % _maxPoints;
+            if (_bufferCount < _maxPoints) _bufferCount++;
 
-            // C. 更新 X 軸時間範圍 (只顯示選定的時間維度)
-            XAxes[0].MinLimit = now.AddSeconds(-HistoryDurationSeconds).Ticks;
-            XAxes[0].MaxLimit = now.Ticks;
+            // C. 更新平均值摘要
+            if (_bufferCount > 0)
+            {
+                var avgUtil = _utilizationSum / _bufferCount;
+                var avgTemp = _temperatureSum / _bufferCount;
+                var avgPower = _powerSum / _bufferCount;
+                AvgSummary = $"Avg: {avgUtil:F0}% | {avgTemp:F1}{TemperatureUnit} | {avgPower:F1}{SecondaryMetricUnit}";
+            }
 
-            // F. 動態 Y 軸調整
-            AdjustYAxisDynamically();
+            // D. 通知 View 刷新圖表
+            ChartDataUpdated?.Invoke();
 
-            // G. TDP 定時重測 (僅 GPU 模式)
+            // E. TDP 定時重測 (僅 GPU 模式)
             if (IsGpuMode)
             {
                 var samplingInterval = _timer.Interval.TotalSeconds;
@@ -463,9 +394,3 @@ public partial class MainViewModel : ViewModelBase
     }
 
 }
-
-/// <summary>
-/// 帶時間戳的圖表資料點
-/// </summary>
-public record TimestampedValue(float Value, DateTime Timestamp);
-

@@ -20,7 +20,7 @@
     <PackageVersion Include="Serilog" Version="4.3.0" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
-    <PackageVersion Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc6.1" />
+    <PackageVersion Include="ScottPlot.Avalonia" Version="5.1.57" />
     <PackageVersion Include="LibreHardwareMonitorLib" Version="0.9.5" />
     <PackageVersion Include="SkiaSharp" Version="2.88.9" />
     <PackageVersion Include="SkiaSharp.HarfBuzz" Version="2.88.9" />
