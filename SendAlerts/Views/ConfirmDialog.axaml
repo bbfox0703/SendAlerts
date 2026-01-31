@@ -1,0 +1,50 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SendAlerts.Views.ConfirmDialog"
+        Title="Confirm"
+        Width="420" Height="200"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        SystemDecorations="Full">
+
+    <Border Padding="20">
+        <Grid RowDefinitions="Auto,*,Auto">
+
+            <!-- Warning Icon + Title -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,12">
+                <TextBlock Text="⚠" FontSize="22" VerticalAlignment="Center"/>
+                <TextBlock x:Name="TitleText"
+                           FontSize="15" FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <!-- Message -->
+            <TextBlock Grid.Row="1"
+                       x:Name="MessageText"
+                       TextWrapping="Wrap"
+                       FontSize="13"
+                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                       Margin="0,0,0,16"/>
+
+            <!-- Buttons -->
+            <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto">
+                <Button Grid.Column="1"
+                        x:Name="CancelButton"
+                        Content="Cancel"
+                        Width="90"
+                        HorizontalContentAlignment="Center"
+                        Margin="0,0,8,0"
+                        Click="OnCancelClick"/>
+                <Button Grid.Column="2"
+                        x:Name="ConfirmButton"
+                        Content="OK"
+                        Width="90"
+                        HorizontalContentAlignment="Center"
+                        Classes="accent"
+                        Click="OnConfirmClick"/>
+            </Grid>
+
+        </Grid>
+    </Border>
+</Window>

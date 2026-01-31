@@ -399,4 +399,12 @@
   <data name="Settings_Watchdog_Desc" xml:space="preserve">
     <value>ウォッチドッグはSendAlerts Desktopを監視し、異常終了時に自動的に再起動します。再起動後に有効になります。</value>
   </data>
+
+  <!-- Confirm Dialog -->
+  <data name="Confirm_IntervalChange_Title" xml:space="preserve">
+    <value>サンプリング間隔が変更されました</value>
+  </data>
+  <data name="Confirm_IntervalChange_Message" xml:space="preserve">
+    <value>サンプリング間隔が {0} 秒から {1} 秒に変更されました。すべてのチャートデータがクリアされ、時間ウィンドウがリセットされます。続行しますか？</value>
+  </data>
 </root>

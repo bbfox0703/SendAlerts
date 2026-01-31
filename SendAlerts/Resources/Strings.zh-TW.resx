@@ -399,4 +399,12 @@
   <data name="Settings_Watchdog_Desc" xml:space="preserve">
     <value>看門狗會監控 SendAlerts Desktop，若偵測到異常關閉將自動重啟。需重啟程式才生效。</value>
   </data>
+
+  <!-- Confirm Dialog -->
+  <data name="Confirm_IntervalChange_Title" xml:space="preserve">
+    <value>取樣間隔已變更</value>
+  </data>
+  <data name="Confirm_IntervalChange_Message" xml:space="preserve">
+    <value>取樣間隔從 {0} 秒變更為 {1} 秒，這將清空所有圖表資料並重設時間窗。是否繼續？</value>
+  </data>
 </root>
