@@ -20,6 +20,9 @@ public partial class MainView : UserControl
     private DataStreamer? _temperatureStreamer;
     private DataStreamer? _powerStreamer;
 
+    // Fixed Y-axis ranges per chart
+    private double _powerYMax = 600;
+
     private MainViewModel? _vm;
 
     public MainView()
@@ -77,7 +80,7 @@ public partial class MainView : UserControl
         streamer.Color = lineColor;
         streamer.LineWidth = 1;
         streamer.ViewScrollLeft();
-        streamer.ManageAxisLimits = false; // we manage Y limits ourselves
+        streamer.ManageAxisLimits = true;
 
         chart.Refresh();
         return streamer;
@@ -88,29 +91,27 @@ public partial class MainView : UserControl
         if (_vm is null || _utilizationStreamer is null || _temperatureStreamer is null || _powerStreamer is null)
             return;
 
-        // Get latest values from ViewModel's ring buffer
-        // We add the most recent value (current reading) to each streamer
         _utilizationStreamer.Add(_vm.CurrentUtilization);
         _temperatureStreamer.Add(_vm.CurrentTemperature);
         _powerStreamer.Add(_vm.CurrentPower);
 
-        // Dynamic Y-axis for power chart
-        if (_powerChart is not null)
+        // Dynamic Y max for power chart
+        if (_vm.CurrentPower > _powerYMax * 0.9)
         {
-            var currentMax = _powerChart.Plot.Axes.Left.Max;
-            if (_vm.CurrentPower > currentMax * 0.9)
-            {
-                var newMax = _vm.IsGpuMode
-                    ? _vm.CurrentPower + 50
-                    : Math.Max(_vm.CurrentPower * 1.5, currentMax + 1000);
-                _powerChart.Plot.Axes.SetLimitsY(0, newMax);
-            }
+            _powerYMax = _vm.IsGpuMode
+                ? _vm.CurrentPower + 50
+                : Math.Max(_vm.CurrentPower * 1.5, _powerYMax + 1000);
         }
 
-        // Refresh all charts
+        // Refresh then enforce fixed Y ranges (ManageAxisLimits handles X scroll)
         _utilizationChart?.Refresh();
+        _utilizationChart?.Plot.Axes.SetLimitsY(0, 100);
+
         _temperatureChart?.Refresh();
+        _temperatureChart?.Plot.Axes.SetLimitsY(0, 100);
+
         _powerChart?.Refresh();
+        _powerChart?.Plot.Axes.SetLimitsY(0, _powerYMax);
     }
 
     protected override void OnDataContextChanged(EventArgs e)
