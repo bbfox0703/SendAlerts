@@ -387,4 +387,16 @@
   <data name="Settings_Startup_NotSupported" xml:space="preserve">
     <value>此平台不支援自動啟動功能。</value>
   </data>
+  <data name="Settings_Watchdog" xml:space="preserve">
+    <value>看門狗 (Watchdog)</value>
+  </data>
+  <data name="Settings_Watchdog_Enable" xml:space="preserve">
+    <value>啟用看門狗（自動重啟 Desktop）</value>
+  </data>
+  <data name="Settings_Watchdog_ShutdownOnExit" xml:space="preserve">
+    <value>正常關閉時連帶關閉看門狗</value>
+  </data>
+  <data name="Settings_Watchdog_Desc" xml:space="preserve">
+    <value>看門狗會監控 SendAlerts Desktop，若偵測到異常關閉將自動重啟。需重啟程式才生效。</value>
+  </data>
 </root>

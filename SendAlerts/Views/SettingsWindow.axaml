@@ -146,6 +146,23 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Watchdog -->
+                    <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                            CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="{Binding Loc_Watchdog}" FontWeight="SemiBold"/>
+                            <CheckBox Content="{Binding Loc_WatchdogEnable}"
+                                      IsChecked="{Binding WatchdogEnabled}"/>
+                            <CheckBox Content="{Binding Loc_WatchdogShutdownOnExit}"
+                                      IsChecked="{Binding ShutdownWatchdogOnExit}"
+                                      Margin="20,0,0,0"/>
+                            <TextBlock Text="{Binding Loc_WatchdogDesc}"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Language Settings -->
                     <Border Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
                             CornerRadius="8" Padding="16">

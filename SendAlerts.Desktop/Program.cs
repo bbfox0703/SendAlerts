@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Pipes;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -101,6 +104,9 @@ sealed class Program
             // 初始化 HTTP API 伺服器
             InitializeHttpApiServer();
 
+            // Watchdog: 若啟用則連帶啟動
+            LaunchWatchdogIfEnabled();
+
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
         catch (Exception ex)
@@ -111,6 +117,7 @@ sealed class Program
         finally
         {
             // Cleanup — 每個步驟獨立 try-catch，確保不因清理失敗而中斷後續清理
+            try { ShutdownWatchdogIfEnabled(); } catch (Exception ex) { Log.Warning(ex, "通知 Watchdog 關閉失敗"); }
             try { ShutdownHttpApiServer(); } catch (Exception ex) { Log.Warning(ex, "清理 HttpApiServer 失敗"); }
             try { ShutdownTrayIcon(); } catch (Exception ex) { Log.Warning(ex, "清理 TrayIcon 失敗"); }
             try { ShutdownNamedPipeServer(); } catch (Exception ex) { Log.Warning(ex, "清理 NamedPipeServer 失敗"); }
@@ -557,6 +564,76 @@ sealed class Program
                 shared: true)
             .WriteTo.Sink(SendAlerts.Services.InMemoryLogSink.Instance)
             .CreateLogger();
+    }
+
+    /// <summary>
+    /// Watchdog: 若啟用且未運行，啟動 Watchdog
+    /// </summary>
+    private static void LaunchWatchdogIfEnabled()
+    {
+        var settings = ServiceLocator.SettingsService?.Load();
+        if (settings == null || !settings.WatchdogEnabled) return;
+
+        const string watchdogMutexName = "Local\\SendAlerts-watchdog-instance";
+        try
+        {
+            if (Mutex.TryOpenExisting(watchdogMutexName, out var existing))
+            {
+                existing.Dispose();
+                Log.Information("[Watchdog] Watchdog 已在運行中");
+                return;
+            }
+
+            var watchdogPath = Path.Combine(AppContext.BaseDirectory, "SendAlerts.Watchdog.exe");
+            if (!File.Exists(watchdogPath))
+            {
+                Log.Warning("[Watchdog] 找不到 Watchdog 執行檔: {Path}", watchdogPath);
+                return;
+            }
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = watchdogPath,
+                UseShellExecute = false
+            });
+            Log.Information("[Watchdog] 已啟動 Watchdog");
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "[Watchdog] 啟動 Watchdog 失敗");
+        }
+    }
+
+    /// <summary>
+    /// Watchdog: 若設定需要，通知 Watchdog 關閉
+    /// </summary>
+    private static void ShutdownWatchdogIfEnabled()
+    {
+        var settings = ServiceLocator.SettingsService?.Load();
+        if (settings == null || !settings.ShutdownWatchdogOnExit) return;
+
+        const string watchdogMutexName = "Local\\SendAlerts-watchdog-instance";
+        try
+        {
+            if (!Mutex.TryOpenExisting(watchdogMutexName, out var existing))
+                return;
+            existing.Dispose();
+
+            using var client = new NamedPipeClientStream(".", "sendalerts-watchdog-pipe", PipeDirection.Out);
+            client.Connect(2000);
+            using var writer = new StreamWriter(client);
+            writer.Write("{\"Command\":\"Shutdown\"}");
+            writer.Flush();
+            Log.Information("[Watchdog] 已發送 Shutdown 指令給 Watchdog");
+        }
+        catch (TimeoutException)
+        {
+            Log.Debug("[Watchdog] 連線 Watchdog Pipe 逾時，可能已關閉");
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "[Watchdog] 通知 Watchdog 關閉失敗");
+        }
     }
 
     public static AppBuilder BuildAvaloniaApp()

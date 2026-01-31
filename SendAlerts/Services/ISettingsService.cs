@@ -180,4 +180,18 @@ public class AppSettings
     /// HTTP API Key (用於驗證請求)
     /// </summary>
     public string HttpApiKey { get; set; } = string.Empty;
+
+    // ==========================================================================
+    // Watchdog 設定
+    // ==========================================================================
+
+    /// <summary>
+    /// 是否啟用 Watchdog（Desktop 啟動時連帶啟動 Watchdog）
+    /// </summary>
+    public bool WatchdogEnabled { get; set; } = false;
+
+    /// <summary>
+    /// 正常關閉 Desktop 時是否連帶關閉 Watchdog
+    /// </summary>
+    public bool ShutdownWatchdogOnExit { get; set; } = true;
 }
