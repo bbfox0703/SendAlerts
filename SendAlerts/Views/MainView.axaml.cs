@@ -12,21 +12,29 @@ namespace SendAlerts.Views;
 
 public partial class MainView : UserControl
 {
+    private const int Capacity = 1800; // 30 min at 1s interval
+
     private AvaPlot? _utilizationChart;
     private AvaPlot? _temperatureChart;
     private AvaPlot? _powerChart;
 
-    private DataStreamer? _utilizationStreamer;
-    private DataStreamer? _temperatureStreamer;
-    private DataStreamer? _powerStreamer;
+    // Fixed-length arrays for plots (shared by reference with ScottPlot)
+    private readonly double[] _xs;
+    private readonly double[] _utilizationData = new double[Capacity];
+    private readonly double[] _temperatureData = new double[Capacity];
+    private readonly double[] _powerData = new double[Capacity];
 
-    // Fixed Y-axis ranges per chart
-    private double _powerYMax = 600;
+    private Scatter? _utilizationPlot;
+    private Scatter? _temperaturePlot;
+    private Scatter? _powerPlot;
 
     private MainViewModel? _vm;
 
     public MainView()
     {
+        _xs = new double[Capacity];
+        for (int i = 0; i < Capacity; i++) _xs[i] = i;
+
         InitializeComponent();
         Loaded += OnLoaded;
     }
@@ -43,18 +51,14 @@ public partial class MainView : UserControl
         _vm = DataContext as MainViewModel;
         if (_vm is null) return;
 
-        var capacity = _vm.BufferCount > 0 ? 1800 : 1800; // use max 30 min capacity
+        _utilizationPlot = SetupChart(_utilizationChart, _utilizationData, Colors.LimeGreen, 0, 100);
+        _temperaturePlot = SetupChart(_temperatureChart, _temperatureData, Colors.OrangeRed, 0, 100);
+        _powerPlot = SetupChart(_powerChart, _powerData, Colors.Cyan, 0, _vm.PowerChartYMax);
 
-        // Initialize streamers
-        _utilizationStreamer = SetupChart(_utilizationChart, Colors.LimeGreen, 0, 100);
-        _temperatureStreamer = SetupChart(_temperatureChart, Colors.OrangeRed, 0, 100);
-        _powerStreamer = SetupChart(_powerChart, Colors.Cyan, 0, 600);
-
-        // Subscribe to data updates
         _vm.ChartDataUpdated += OnChartDataUpdated;
     }
 
-    private DataStreamer SetupChart(AvaPlot chart, Color lineColor, double yMin, double yMax)
+    private Scatter SetupChart(AvaPlot chart, double[] data, Color lineColor, double yMin, double yMax)
     {
         var plot = chart.Plot;
 
@@ -62,70 +66,99 @@ public partial class MainView : UserControl
         plot.FigureBackground.Color = Color.FromHex("#1a1a1a");
         plot.DataBackground.Color = Color.FromHex("#1a1a1a");
         plot.Axes.Color(Color.FromHex("#888888"));
+
+        // Grid lines — dotted
         plot.Grid.MajorLineColor = Color.FromHex("#333333");
-        plot.HideGrid();
+        plot.Grid.MajorLineWidth = 1;
+        plot.Grid.MajorLinePattern = LinePattern.Dotted;
 
         // Hide top/right axes
         plot.Axes.Top.IsVisible = false;
         plot.Axes.Right.IsVisible = false;
 
-        // Y axis limits
+        // Y axis
         plot.Axes.SetLimitsY(yMin, yMax);
 
-        // Hide X axis labels (time shown in header)
-        plot.Axes.Bottom.IsVisible = false;
+        // X axis — hide tick labels but keep grid lines
+        plot.Axes.Bottom.TickLabelStyle.IsVisible = false;
+        plot.Axes.Bottom.MajorTickStyle.Length = 0;
+        plot.Axes.Bottom.MinorTickStyle.Length = 0;
 
-        // Create DataStreamer with 30-min capacity (at 1s interval = 1800 points)
-        var streamer = plot.Add.DataStreamer(1800);
-        streamer.Color = lineColor;
-        streamer.LineWidth = 1;
-        streamer.ViewScrollLeft();
-        streamer.ManageAxisLimits = true;
+        // X axis range fixed
+        plot.Axes.SetLimitsX(0, Capacity);
+
+        // Padding to avoid Y label clipping
+        plot.Layout.Fixed(new PixelPadding(45, 8, 5, 5));
+
+        // Scatter plot with fill
+        var scatter = plot.Add.Scatter(_xs, data);
+        scatter.Color = lineColor;
+        scatter.LineWidth = 1;
+        scatter.MarkerSize = 0;
+
+        // Fill under the curve
+        scatter.FillY = true;
+        scatter.FillYValue = 0;
+        scatter.FillYColor = lineColor.WithAlpha(40);
 
         chart.Refresh();
-        return streamer;
+        return scatter;
     }
 
     private void OnChartDataUpdated()
     {
-        if (_vm is null || _utilizationStreamer is null || _temperatureStreamer is null || _powerStreamer is null)
-            return;
+        if (_vm is null) return;
 
-        _utilizationStreamer.Add(_vm.CurrentUtilization);
-        _temperatureStreamer.Add(_vm.CurrentTemperature);
-        _powerStreamer.Add(_vm.CurrentPower);
+        // Shift left and append new value
+        ShiftAndAppend(_utilizationData, _vm.CurrentUtilization);
+        ShiftAndAppend(_temperatureData, _vm.CurrentTemperature);
+        ShiftAndAppend(_powerData, _vm.CurrentPower);
 
-        // Dynamic Y max for power chart
-        if (_vm.CurrentPower > _powerYMax * 0.9)
+        // Dynamic Y max for power chart (CPU/Network mode)
+        if (!_vm.IsGpuMode && _powerChart is not null)
         {
-            _powerYMax = _vm.IsGpuMode
-                ? _vm.CurrentPower + 50
-                : Math.Max(_vm.CurrentPower * 1.5, _powerYMax + 1000);
+            if (_vm.CurrentPower > _vm.PowerChartYMax * 0.85)
+            {
+                _vm.PowerChartYMax = Math.Ceiling(_vm.CurrentPower * 1.5 / 100) * 100;
+            }
         }
 
-        // Refresh then enforce fixed Y ranges (ManageAxisLimits handles X scroll)
-        _utilizationChart?.Refresh();
-        _utilizationChart?.Plot.Axes.SetLimitsY(0, 100);
+        // Refresh and enforce Y limits
+        if (_utilizationChart is not null)
+        {
+            _utilizationChart.Plot.Axes.SetLimitsY(0, 100);
+            _utilizationChart.Refresh();
+        }
 
-        _temperatureChart?.Refresh();
-        _temperatureChart?.Plot.Axes.SetLimitsY(0, 100);
+        if (_temperatureChart is not null)
+        {
+            _temperatureChart.Plot.Axes.SetLimitsY(0, 100);
+            _temperatureChart.Refresh();
+        }
 
-        _powerChart?.Refresh();
-        _powerChart?.Plot.Axes.SetLimitsY(0, _powerYMax);
+        if (_powerChart is not null)
+        {
+            _powerChart.Plot.Axes.SetLimitsY(0, _vm.PowerChartYMax);
+            _powerChart.Refresh();
+        }
+    }
+
+    private static void ShiftAndAppend(double[] data, double newValue)
+    {
+        Array.Copy(data, 1, data, 0, data.Length - 1);
+        data[^1] = newValue;
     }
 
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);
 
-        // Unsubscribe from old VM
         if (_vm is not null)
             _vm.ChartDataUpdated -= OnChartDataUpdated;
 
         _vm = DataContext as MainViewModel;
 
-        // Re-subscribe if charts are already initialized
-        if (_vm is not null && _utilizationStreamer is not null)
+        if (_vm is not null && _utilizationPlot is not null)
             _vm.ChartDataUpdated += OnChartDataUpdated;
     }
 
@@ -137,13 +170,11 @@ public partial class MainView : UserControl
             var viewModel = new SettingsViewModel(settingsService);
             var settingsWindow = new SettingsWindow(viewModel);
 
-            // Get the parent window
             var parentWindow = TopLevel.GetTopLevel(this) as Window;
             if (parentWindow != null)
             {
                 await settingsWindow.ShowDialog(parentWindow);
 
-                // 設定儲存後，套用新的取樣間隔
                 if (DataContext is MainViewModel mainVm)
                 {
                     var settings = settingsService.Load();
@@ -162,13 +193,9 @@ public partial class MainView : UserControl
         try
         {
             var alertActionsWindow = new AlertActionsWindow();
-
-            // Get the parent window
             var parentWindow = TopLevel.GetTopLevel(this) as Window;
             if (parentWindow != null)
-            {
                 await alertActionsWindow.ShowDialog(parentWindow);
-            }
         }
         catch (Exception ex)
         {
@@ -181,13 +208,9 @@ public partial class MainView : UserControl
         try
         {
             var alertGroupsWindow = new AlertGroupsWindow();
-
-            // Get the parent window
             var parentWindow = TopLevel.GetTopLevel(this) as Window;
             if (parentWindow != null)
-            {
                 await alertGroupsWindow.ShowDialog(parentWindow);
-            }
         }
         catch (Exception ex)
         {

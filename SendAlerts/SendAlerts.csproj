@@ -10,7 +10,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <AvaloniaResource Include="Assets\**" />
+    <AvaloniaResource Include="Assets\**" Exclude="Assets\gpu_tdp.json" />
+    <EmbeddedResource Include="Assets\gpu_tdp.json" />
   </ItemGroup>
 
   <ItemGroup>

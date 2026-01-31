@@ -62,6 +62,9 @@ public partial class MainViewModel : ViewModelBase
     // --- 平均值摘要 ---
     [ObservableProperty] private string _avgSummary = "";
 
+    // --- Power 圖表 Y 軸上限 (供 View 使用) ---
+    [ObservableProperty] private double _powerChartYMax = 600;
+
     // --- 圖表固定 30 分鐘 ---
     private const int HistoryDurationSeconds = 1800;
     private int _maxPoints;
@@ -94,6 +97,9 @@ public partial class MainViewModel : ViewModelBase
 
         // 初始化動態標籤 (支援 GPU/CPU 模式)
         ApplyProviderLabels();
+
+        // 根據 GPU TDP 設定 Power 圖表 Y 軸上限
+        UpdatePowerChartYMax();
 
         // Provider 切換
         CanSwitchProvider = ServiceLocator.AvailableProviders.Count > 1;
@@ -227,6 +233,19 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
+    private void UpdatePowerChartYMax()
+    {
+        if (IsGpuMode)
+        {
+            PowerChartYMax = GpuTdpLookup.GetChartYMax(GpuName, PowerLimit);
+        }
+        else
+        {
+            // CPU/Network 模式: 初始 100 KB/s，之後動態調整
+            PowerChartYMax = 100;
+        }
+    }
+
     private void ApplyProviderLabels()
     {
         PrimaryMetricLabel = _gpuProvider.PrimaryMetricLabel;
@@ -288,6 +307,9 @@ public partial class MainViewModel : ViewModelBase
         CurrentProviderName = GetProviderDisplayName(_gpuProvider);
         ApplyProviderLabels();
         UpdateSwitchTooltip();
+
+        // 重算 Power Y 軸上限
+        UpdatePowerChartYMax();
 
         // 清空 buffer
         _timer.Stop();
