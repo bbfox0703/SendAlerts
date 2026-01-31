@@ -171,9 +171,19 @@ public partial class MainView : UserControl
                 : $"{secondsAgo / 60}m {secondsAgo % 60}s ago";
             tooltip.IsVisible = true;
             tooltip.Text = $"{value:F1}  ({timeLabel})";
-            // Position tooltip near top-right of plot
-            tooltip.OffsetX = (float)pos.X + 15;
-            tooltip.OffsetY = (float)pos.Y - 10;
+            // Flip tooltip side: right-half → show left, left-half → show right
+            if (index > Capacity / 2)
+            {
+                tooltip.Alignment = Alignment.UpperRight;
+                tooltip.OffsetX = (float)(chart.Bounds.Width - pos.X) + 15;
+                tooltip.OffsetY = (float)pos.Y - 10;
+            }
+            else
+            {
+                tooltip.Alignment = Alignment.UpperLeft;
+                tooltip.OffsetX = (float)pos.X + 15;
+                tooltip.OffsetY = (float)pos.Y - 10;
+            }
 
             chart.Refresh();
         }
