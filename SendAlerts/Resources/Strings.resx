@@ -387,4 +387,16 @@
   <data name="Settings_Startup_NotSupported" xml:space="preserve">
     <value>Auto-start is not supported on this platform.</value>
   </data>
+  <data name="Settings_Watchdog" xml:space="preserve">
+    <value>Watchdog</value>
+  </data>
+  <data name="Settings_Watchdog_Enable" xml:space="preserve">
+    <value>Enable Watchdog (auto-restart Desktop)</value>
+  </data>
+  <data name="Settings_Watchdog_ShutdownOnExit" xml:space="preserve">
+    <value>Shutdown Watchdog on normal exit</value>
+  </data>
+  <data name="Settings_Watchdog_Desc" xml:space="preserve">
+    <value>Watchdog monitors SendAlerts Desktop and automatically restarts it if it crashes. Requires restart to take effect.</value>
+  </data>
 </root>

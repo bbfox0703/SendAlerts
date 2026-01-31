@@ -387,4 +387,16 @@
   <data name="Settings_Startup_NotSupported" xml:space="preserve">
     <value>このプラットフォームでは自動起動はサポートされていません。</value>
   </data>
+  <data name="Settings_Watchdog" xml:space="preserve">
+    <value>ウォッチドッグ</value>
+  </data>
+  <data name="Settings_Watchdog_Enable" xml:space="preserve">
+    <value>ウォッチドッグを有効にする（Desktop自動再起動）</value>
+  </data>
+  <data name="Settings_Watchdog_ShutdownOnExit" xml:space="preserve">
+    <value>正常終了時にウォッチドッグも終了する</value>
+  </data>
+  <data name="Settings_Watchdog_Desc" xml:space="preserve">
+    <value>ウォッチドッグはSendAlerts Desktopを監視し、異常終了時に自動的に再起動します。再起動後に有効になります。</value>
+  </data>
 </root>

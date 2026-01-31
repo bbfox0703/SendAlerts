@@ -17,6 +17,7 @@
     <PackageVersion Include="HarfBuzzSharp" Version="8.3.1.1" />
     <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="8.3.1.1" />
     <PackageVersion Include="MicroCom.Runtime" Version="0.11.3" />
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageVersion Include="Serilog" Version="4.3.0" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />

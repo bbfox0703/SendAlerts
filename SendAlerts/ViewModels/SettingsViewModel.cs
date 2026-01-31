@@ -44,6 +44,10 @@ public partial class SettingsViewModel : ViewModelBase
     public string Loc_StartupEnable => _loc["Settings_Startup_Enable"];
     public string Loc_StartupDesc => _loc["Settings_Startup_Desc"];
     public string Loc_StartupNotSupported => _loc["Settings_Startup_NotSupported"];
+    public string Loc_Watchdog => _loc["Settings_Watchdog"];
+    public string Loc_WatchdogEnable => _loc["Settings_Watchdog_Enable"];
+    public string Loc_WatchdogShutdownOnExit => _loc["Settings_Watchdog_ShutdownOnExit"];
+    public string Loc_WatchdogDesc => _loc["Settings_Watchdog_Desc"];
     #endregion
 
     // --- Sampling ---
@@ -56,6 +60,10 @@ public partial class SettingsViewModel : ViewModelBase
 
     // --- Startup ---
     [ObservableProperty] private bool _startupEnabled;
+
+    // --- Watchdog ---
+    [ObservableProperty] private bool _watchdogEnabled;
+    [ObservableProperty] private bool _shutdownWatchdogOnExit;
 
     /// <summary>
     /// 平台是否支援自動啟動
@@ -111,6 +119,10 @@ public partial class SettingsViewModel : ViewModelBase
         // 載入啟動設定 (透過抽象層)
         StartupEnabled = ServiceLocator.StartupManager?.IsStartupEnabled() ?? false;
 
+        // 載入 Watchdog 設定
+        WatchdogEnabled = _settings.WatchdogEnabled;
+        ShutdownWatchdogOnExit = _settings.ShutdownWatchdogOnExit;
+
         // 載入語系設定
         var langCode = _settings.Language ?? "auto";
         SelectedLanguage = AvailableLanguages.FirstOrDefault(l => l.Code == langCode)
@@ -129,6 +141,8 @@ public partial class SettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasApiKey));
     }
     partial void OnSelectedLanguageChanged(LanguageOption? value) => HasChanges = true;
+    partial void OnWatchdogEnabledChanged(bool value) => HasChanges = true;
+    partial void OnShutdownWatchdogOnExitChanged(bool value) => HasChanges = true;
 
     /// <summary>
     /// 產生新的 API Key
@@ -245,6 +259,8 @@ print(response.json())";
         _settings.HttpApiEnabled = HttpApiEnabled;
         _settings.HttpApiPort = HttpApiPort;
         _settings.HttpApiKey = HttpApiKey;
+        _settings.WatchdogEnabled = WatchdogEnabled;
+        _settings.ShutdownWatchdogOnExit = ShutdownWatchdogOnExit;
         _settings.Language = newLangCode;
 
         _settingsService.Save(_settings);
