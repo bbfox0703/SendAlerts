@@ -58,6 +58,7 @@ public partial class MainView : UserControl
         _powerInfo = SetupChart(powerChart, _powerData, Colors.Cyan, 0, _vm.PowerChartYMax);
 
         _vm.ChartDataUpdated += OnChartDataUpdated;
+        _vm.ChartDataCleared += OnChartDataCleared;
     }
 
     private ChartInfo SetupChart(AvaPlot chart, double[] data, Color lineColor, double yMin, double yMax)
@@ -201,6 +202,33 @@ public partial class MainView : UserControl
         chart.Refresh();
     }
 
+    private void OnChartDataCleared()
+    {
+        Array.Clear(_utilizationData);
+        Array.Clear(_temperatureData);
+        Array.Clear(_powerData);
+
+        // Hide crosshairs/tooltips
+        HideCrosshair(_utilInfo);
+        HideCrosshair(_tempInfo);
+        HideCrosshair(_powerInfo);
+
+        // Refresh with updated Y limits
+        if (_vm is not null)
+        {
+            RefreshChart(_utilInfo, 0, 100);
+            RefreshChart(_tempInfo, 0, 100);
+            RefreshChart(_powerInfo, 0, _vm.PowerChartYMax);
+        }
+    }
+
+    private static void HideCrosshair(ChartInfo? info)
+    {
+        if (info is null) return;
+        info.Crosshair.IsVisible = false;
+        info.Tooltip.IsVisible = false;
+    }
+
     private void OnChartDataUpdated()
     {
         if (_vm is null) return;
@@ -263,12 +291,18 @@ public partial class MainView : UserControl
         base.OnDataContextChanged(e);
 
         if (_vm is not null)
+        {
             _vm.ChartDataUpdated -= OnChartDataUpdated;
+            _vm.ChartDataCleared -= OnChartDataCleared;
+        }
 
         _vm = DataContext as MainViewModel;
 
         if (_vm is not null && _utilInfo is not null)
+        {
             _vm.ChartDataUpdated += OnChartDataUpdated;
+            _vm.ChartDataCleared += OnChartDataCleared;
+        }
     }
 
     private async void OnSettingsClick(object? sender, RoutedEventArgs e)

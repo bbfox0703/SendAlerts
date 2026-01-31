@@ -64,6 +64,7 @@ public partial class MainViewModel : ViewModelBase
 
     // --- Power 圖表 Y 軸上限 (供 View 使用) ---
     [ObservableProperty] private double _powerChartYMax = 600;
+    private double _cachedGpuPowerYMax;
 
     // --- 圖表固定 30 分鐘 ---
     private const int HistoryDurationSeconds = 1800;
@@ -85,6 +86,7 @@ public partial class MainViewModel : ViewModelBase
     /// 通知 View 刷新圖表
     /// </summary>
     public event Action? ChartDataUpdated;
+    public event Action? ChartDataCleared;
 
     // --- TB3-3: 警報歷史 ---
     public ObservableCollection<AlertHistoryItem> AlertHistoryItems { get; } = new();
@@ -237,7 +239,9 @@ public partial class MainViewModel : ViewModelBase
     {
         if (IsGpuMode)
         {
-            PowerChartYMax = GpuTdpLookup.GetChartYMax(GpuName, PowerLimit);
+            if (_cachedGpuPowerYMax <= 0)
+                _cachedGpuPowerYMax = GpuTdpLookup.GetChartYMax(GpuName, PowerLimit);
+            PowerChartYMax = _cachedGpuPowerYMax;
         }
         else
         {
@@ -314,7 +318,7 @@ public partial class MainViewModel : ViewModelBase
         // 清空 buffer
         _timer.Stop();
         InitializeBuffers();
-        ChartDataUpdated?.Invoke();
+        ChartDataCleared?.Invoke();
         _timer.Start();
 
         Log.Information("已切換 Provider: {Name} ({Type})", CurrentProviderName, _gpuProvider.GetType().Name);
