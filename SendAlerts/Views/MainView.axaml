@@ -3,7 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:SendAlerts.ViewModels"
-             xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
+             xmlns:sp="clr-namespace:ScottPlot.Avalonia;assembly=ScottPlot.Avalonia"
              xmlns:conv="clr-namespace:SendAlerts.Converters"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="700"
              x:Class="SendAlerts.Views.MainView"
@@ -39,14 +39,16 @@
 
     <!-- TB3-2: 狀態列 -->
     <Border DockPanel.Dock="Bottom" Height="30" Background="#1e1e1e" BorderBrush="#333" BorderThickness="0,1,0,0">
-      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
         <!-- Pipe 狀態指示燈 -->
         <Ellipse Grid.Column="0" Width="8" Height="8" Margin="10,0,5,0"
                  Fill="{Binding IsPipeServerRunning, Converter={StaticResource StatusColorConverter}}"/>
         <!-- 狀態文字 -->
         <TextBlock Grid.Column="1" Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="#aaa" FontSize="12"/>
+        <!-- 平均值摘要 -->
+        <TextBlock Grid.Column="2" Text="{Binding AvgSummary}" VerticalAlignment="Center" Foreground="#888" FontSize="11" Margin="10,0"/>
         <!-- 警報計數 -->
-        <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="#666" FontSize="12" Margin="10,0">
+        <TextBlock Grid.Column="3" VerticalAlignment="Center" Foreground="#666" FontSize="12" Margin="10,0">
           <TextBlock.Text>
             <MultiBinding StringFormat="Alerts: {0}">
               <Binding Path="AlertHistoryItems.Count"/>
@@ -54,7 +56,7 @@
           </TextBlock.Text>
         </TextBlock>
         <!-- 版本 -->
-        <TextBlock Grid.Column="3" Text="v1.1.0" Margin="10,0" VerticalAlignment="Center" Foreground="#555" FontSize="12"/>
+        <TextBlock Grid.Column="4" Text="v1.1.0" Margin="10,0" VerticalAlignment="Center" Foreground="#555" FontSize="12"/>
       </Grid>
     </Border>
 
@@ -70,14 +72,11 @@
                        FontSize="14"
                        Margin="5,0"/>
           </StackPanel>
-          <lvc:CartesianChart Series="{Binding UtilizationSeries}"
-                              XAxes="{Binding XAxes}"
-                              YAxes="{Binding UtilizationYAxes}"
-                              AnimationsSpeed="0:0:0" />
+          <sp:AvaPlot x:Name="UtilizationChart" />
         </DockPanel>
       </Border>
 
-      <!-- TC1-2: Temperature Chart (純顯示模式，不再有警報顏色變化) -->
+      <!-- TC1-2: Temperature Chart -->
       <Border Grid.Row="1" Margin="5" Background="#1a1a1a" CornerRadius="5">
         <DockPanel>
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,5">
@@ -91,10 +90,7 @@
               </TextBlock.Text>
             </TextBlock>
           </StackPanel>
-          <lvc:CartesianChart Series="{Binding TempSeries}"
-                              XAxes="{Binding XAxes}"
-                              YAxes="{Binding TempYAxes}"
-                              AnimationsSpeed="0:0:0" />
+          <sp:AvaPlot x:Name="TemperatureChart" />
         </DockPanel>
       </Border>
 
@@ -112,10 +108,7 @@
               </TextBlock.Text>
             </TextBlock>
           </StackPanel>
-          <lvc:CartesianChart Series="{Binding PowerSeries}"
-                              XAxes="{Binding XAxes}"
-                              YAxes="{Binding PowerYAxes}"
-                              AnimationsSpeed="0:0:0" />
+          <sp:AvaPlot x:Name="PowerChart" />
         </DockPanel>
       </Border>
 
