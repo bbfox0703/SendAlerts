@@ -34,7 +34,9 @@ SendAlerts 是一款「硬體警報中繼站」，接收來自外部工具（如
 - **HTTP API** - 支援遠端機器透過 HTTP 發送警報，開啟此功能會要求一次管理員權限
 - **CLI 工具** - 提供命令列工具發送警報工具，除HTTP API傳送外，警報功能皆大多是透過 CLI 使用
 - **系統匣** - 最小化至系統匣背景執行
+- **Watchdog** - 獨立監控程式，偵測主程式異常退出時自動重啟，OS 關機時安全停止
 - **多語系** - 支援英文、繁體中文、日文介面
+- **版本號自動化** - 編譯時自動產生 `vYYYYMMDD` 格式版本號
 
 ### 架構概念
 
@@ -76,9 +78,10 @@ dotnet run --project SendAlerts.Desktop
 
 建置後，執行檔位於：
 ```
-SendAlerts.Desktop/bin/Debug/net10.0-windows/
-├── SendAlerts.Desktop.exe   # 主程式
-└── SendAlerts-cli.exe       # CLI 工具
+SendAlerts.Desktop/bin/Debug/net10.0/win-x64/
+├── SendAlerts.Desktop.exe    # 主程式
+├── SendAlerts-cli.exe        # CLI 工具
+└── SendAlerts.Watchdog.exe   # Watchdog 監控程式
 ```
 
 ## 使用說明
@@ -97,6 +100,15 @@ SendAlerts.Desktop/bin/Debug/net10.0-windows/
 </div>
 
 4. 關閉視窗後程式會縮小至系統匣背景執行
+
+### Watchdog 監控程式
+
+`SendAlerts.Watchdog.exe` 是獨立的監控程式，用於偵測主程式 (`SendAlerts.Desktop`) 是否在運行：
+
+- 每 10 秒檢查主程式狀態，若主程式異常退出會自動重啟
+- 主程式正常關閉時會通知 Watchdog 一併退出
+- OS 關機/登出時 Watchdog 會安全停止，不會在關機過程中嘗試重啟主程式
+- 透過系統匣圖示運行，右鍵可手動退出
 
 ### 觸發警報
 
@@ -137,7 +149,7 @@ curl -X POST http://localhost:58080/api/send \
 - **Framework**: .NET 10 / C#
 - **UI**: Avalonia UI (MVVM + CommunityToolkit.Mvvm)
 - **Hardware API**: NVIDIA NVML / NvAPI
-- **Charts**: LiveCharts2 (SkiaSharp)
+- **Charts**: ScottPlot (SkiaSharp)
 - **Logging**: Serilog
 - **HTTP Server**: System.Net.HttpListener
 
