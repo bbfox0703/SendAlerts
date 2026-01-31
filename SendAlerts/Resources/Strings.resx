@@ -399,4 +399,12 @@
   <data name="Settings_Watchdog_Desc" xml:space="preserve">
     <value>Watchdog monitors SendAlerts Desktop and automatically restarts it if it crashes. Requires restart to take effect.</value>
   </data>
+
+  <!-- Confirm Dialog -->
+  <data name="Confirm_IntervalChange_Title" xml:space="preserve">
+    <value>Sampling Interval Changed</value>
+  </data>
+  <data name="Confirm_IntervalChange_Message" xml:space="preserve">
+    <value>Sampling interval changed from {0}s to {1}s. This will clear all chart data and reset the time window. Continue?</value>
+  </data>
 </root>

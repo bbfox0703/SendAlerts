@@ -26,9 +26,8 @@ public partial class MainView : UserControl
     private ChartInfo? _tempInfo;
     private ChartInfo? _powerInfo;
 
-    // X-axis tick positions and labels (fixed: 0, -5min, -10min, ... -25min)
-    private static readonly double[] XTickPositions = { 1800, 1500, 1200, 900, 600, 300, 0 };
-    private static readonly string[] XTickLabels = { "0", "-5m", "-10m", "-15m", "-20m", "-25m", "-30m" };
+    // Current sampling interval (for tooltip time calculation)
+    private int _currentInterval = 1;
 
     private MainViewModel? _vm;
 
@@ -53,12 +52,15 @@ public partial class MainView : UserControl
         _vm = DataContext as MainViewModel;
         if (_vm is null) return;
 
+        _currentInterval = ServiceLocator.SettingsService?.Load().SamplingIntervalSeconds ?? 1;
+
         _utilInfo = SetupChart(utilizationChart, _utilizationData, Colors.LimeGreen, 0, 100);
         _tempInfo = SetupChart(temperatureChart, _temperatureData, Colors.OrangeRed, 0, 100);
         _powerInfo = SetupChart(powerChart, _powerData, Colors.Cyan, 0, _vm.PowerChartYMax);
 
         _vm.ChartDataUpdated += OnChartDataUpdated;
         _vm.ChartDataCleared += OnChartDataCleared;
+        _vm.SamplingIntervalChanged += OnSamplingIntervalChanged;
     }
 
     private ChartInfo SetupChart(AvaPlot chart, double[] data, Color lineColor, double yMin, double yMax)
@@ -88,8 +90,9 @@ public partial class MainView : UserControl
         // Y axis
         plot.Axes.SetLimitsY(yMin, yMax);
 
-        // X axis — fixed time labels
-        plot.Axes.Bottom.SetTicks(XTickPositions, XTickLabels);
+        // X axis — dynamic time labels based on interval
+        var (tickPositions, tickLabels) = CalculateXTicks(_currentInterval);
+        plot.Axes.Bottom.SetTicks(tickPositions, tickLabels);
         plot.Axes.Bottom.TickLabelStyle.ForeColor = Color.FromHex("#666666");
         plot.Axes.Bottom.TickLabelStyle.FontSize = 10;
         plot.Axes.Bottom.MajorTickStyle.Length = 4;
@@ -144,6 +147,40 @@ public partial class MainView : UserControl
         return new ChartInfo(chart, data, scatter, crosshair, tooltip);
     }
 
+    private static (double[] positions, string[] labels) CalculateXTicks(int intervalSeconds)
+    {
+        var totalSeconds = Capacity * intervalSeconds;
+        var positions = new double[7];
+        var labels = new string[7];
+        for (int i = 0; i < 7; i++)
+        {
+            positions[i] = Capacity * (6 - i) / 6.0;
+            var secsFromEnd = totalSeconds * i / 6;
+            labels[i] = secsFromEnd == 0 ? "0"
+                      : secsFromEnd < 60 ? $"-{secsFromEnd}s"
+                      : secsFromEnd % 3600 == 0 ? $"-{secsFromEnd / 3600}h"
+                      : secsFromEnd % 60 == 0 ? $"-{secsFromEnd / 60}m"
+                      : $"-{secsFromEnd / 60}m{secsFromEnd % 60}s";
+        }
+        return (positions, labels);
+    }
+
+    private void OnSamplingIntervalChanged(int seconds)
+    {
+        _currentInterval = seconds;
+        var (positions, labels) = CalculateXTicks(seconds);
+        UpdateChartXTicks(_utilInfo, positions, labels);
+        UpdateChartXTicks(_tempInfo, positions, labels);
+        UpdateChartXTicks(_powerInfo, positions, labels);
+    }
+
+    private static void UpdateChartXTicks(ChartInfo? info, double[] positions, string[] labels)
+    {
+        if (info is null) return;
+        info.Chart.Plot.Axes.Bottom.SetTicks(positions, labels);
+        info.Chart.Refresh();
+    }
+
     private void OnChartPointerMoved(AvaPlot chart, double[] data, Crosshair crosshair, Annotation tooltip, PointerEventArgs args)
     {
         try
@@ -166,7 +203,7 @@ public partial class MainView : UserControl
             crosshair.Position = new Coordinates(index, value);
 
             // Format tooltip: show value and time offset
-            var secondsAgo = Capacity - index;
+            var secondsAgo = (Capacity - index) * _currentInterval;
             var timeLabel = secondsAgo < 60
                 ? $"{secondsAgo}s ago"
                 : $"{secondsAgo / 60}m {secondsAgo % 60}s ago";
@@ -283,7 +320,7 @@ public partial class MainView : UserControl
         RefreshChart(_powerInfo, 0, _vm.PowerChartYMax);
     }
 
-    private static void RefreshChart(ChartInfo? info, double yMin, double yMax)
+    private void RefreshChart(ChartInfo? info, double yMin, double yMax)
     {
         if (info is null) return;
 
@@ -299,7 +336,7 @@ public partial class MainView : UserControl
                 info.Crosshair.Position = new Coordinates(index, value);
 
                 // Update tooltip text
-                var secondsAgo = Capacity - index;
+                var secondsAgo = (Capacity - index) * _currentInterval;
                 var timeLabel = secondsAgo < 60
                     ? $"{secondsAgo}s ago"
                     : $"{secondsAgo / 60}m {secondsAgo % 60}s ago";
@@ -324,6 +361,7 @@ public partial class MainView : UserControl
         {
             _vm.ChartDataUpdated -= OnChartDataUpdated;
             _vm.ChartDataCleared -= OnChartDataCleared;
+            _vm.SamplingIntervalChanged -= OnSamplingIntervalChanged;
         }
 
         _vm = DataContext as MainViewModel;
@@ -332,6 +370,7 @@ public partial class MainView : UserControl
         {
             _vm.ChartDataUpdated += OnChartDataUpdated;
             _vm.ChartDataCleared += OnChartDataCleared;
+            _vm.SamplingIntervalChanged += OnSamplingIntervalChanged;
         }
     }
 
@@ -340,6 +379,8 @@ public partial class MainView : UserControl
         try
         {
             var settingsService = ServiceLocator.SettingsService ?? new JsonSettingsService();
+            var oldInterval = settingsService.Load().SamplingIntervalSeconds;
+
             var viewModel = new SettingsViewModel(settingsService);
             var settingsWindow = new SettingsWindow(viewModel);
 
@@ -351,7 +392,30 @@ public partial class MainView : UserControl
                 if (DataContext is MainViewModel mainVm)
                 {
                     var settings = settingsService.Load();
-                    mainVm.UpdateSamplingInterval(settings.SamplingIntervalSeconds);
+                    var newInterval = settings.SamplingIntervalSeconds;
+
+                    if (newInterval != oldInterval)
+                    {
+                        // Interval changed — show confirm dialog before clearing chart
+                        var loc = LocalizationService.Instance;
+                        var dialog = new ConfirmDialog(
+                            loc["Confirm_IntervalChange_Title"],
+                            string.Format(loc["Confirm_IntervalChange_Message"], oldInterval, newInterval),
+                            loc["OK"],
+                            loc["Cancel"]);
+                        await dialog.ShowDialog(parentWindow);
+
+                        if (dialog.IsConfirmed)
+                        {
+                            mainVm.UpdateSamplingInterval(newInterval);
+                        }
+                        else
+                        {
+                            // Revert setting
+                            settings.SamplingIntervalSeconds = oldInterval;
+                            settingsService.Save(settings);
+                        }
+                    }
                 }
             }
         }

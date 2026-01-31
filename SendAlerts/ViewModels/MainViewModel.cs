@@ -93,6 +93,7 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     public event Action? ChartDataUpdated;
     public event Action? ChartDataCleared;
+    public event Action<int>? SamplingIntervalChanged;
 
     // --- TB3-3: 警報歷史 ---
     public ObservableCollection<AlertHistoryItem> AlertHistoryItems { get; } = new();
@@ -116,9 +117,9 @@ public partial class MainViewModel : ViewModelBase
         CurrentProviderName = GetProviderDisplayName(_gpuProvider);
         UpdateSwitchTooltip();
 
-        // 初始化 buffer
+        // 初始化 buffer (固定 1800 點，interval 僅影響時間窗)
         var samplingInterval = ServiceLocator.SettingsService?.Load().SamplingIntervalSeconds ?? 1;
-        _maxPoints = HistoryDurationSeconds / Math.Max(samplingInterval, 1);
+        _maxPoints = HistoryDurationSeconds;
         InitializeBuffers();
 
         // 設定定時器 (純讀取顯示，不觸發警報)
@@ -179,12 +180,23 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>
     /// 更新取樣間隔 (設定變更後呼叫)
+    /// interval 變更時清空 buffer 並通知 View 重算 X 軸
     /// </summary>
     public void UpdateSamplingInterval(int seconds)
     {
         seconds = Math.Clamp(seconds, AppConstants.SamplingIntervalMin, AppConstants.SamplingIntervalMax);
+        var oldInterval = (int)_timer.Interval.TotalSeconds;
         _timer.Interval = TimeSpan.FromSeconds(seconds);
-        Log.Information("取樣間隔已更新: {Seconds} 秒", seconds);
+
+        if (seconds != oldInterval)
+        {
+            _timer.Stop();
+            InitializeBuffers();
+            ChartDataCleared?.Invoke();
+            SamplingIntervalChanged?.Invoke(seconds);
+            _timer.Start();
+            Log.Information("取樣間隔已更新: {Old}s → {New}s，圖表已清空", oldInterval, seconds);
+        }
     }
 
     /// <summary>
