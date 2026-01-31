@@ -43,13 +43,6 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private float _powerLimit;
     [ObservableProperty] private string _powerLimitDisplay = "";
 
-    // --- 平均值 (running sum，無 buffer 無迴圈) ---
-    [ObservableProperty] private string _avgSummary = "";
-    private double _sumUtilization, _sumTemperature, _sumPower;
-    private int _avgSampleCount;
-    private int _avgUpdateCounter;
-    private const int AvgUpdateIntervalSeconds = 10;
-
     // --- TDP 定時重測 ---
     private int _tdpRefreshCounter;
     private const int TdpRefreshIntervalSeconds = 600; // 10 分鐘
@@ -285,9 +278,6 @@ public partial class MainViewModel : ViewModelBase
         UtilizationHistory.Clear();
         TemperatureHistory.Clear();
         PowerHistory.Clear();
-        _sumUtilization = _sumTemperature = _sumPower = 0;
-        _avgSampleCount = 0;
-        AvgSummary = "";
         _timer.Start();
 
         // 重設 Y 軸
@@ -441,22 +431,7 @@ public partial class MainViewModel : ViewModelBase
                 PowerHistory.RemoveAt(0);
             PowerHistory.Add(new TimestampedValue(CurrentPower, now));
 
-            // C. 累加平均值 (純算術，無 buffer 無迴圈)
-            _sumUtilization += CurrentUtilization;
-            _sumTemperature += CurrentTemperature;
-            _sumPower += CurrentPower;
-            _avgSampleCount++;
-
-            // D. 每 10 秒更新 status bar 顯示 (僅 1 個 PropertyChanged)
-            var samplingIntervalForAvg = _timer.Interval.TotalSeconds;
-            _avgUpdateCounter++;
-            if (_avgUpdateCounter >= AvgUpdateIntervalSeconds / samplingIntervalForAvg)
-            {
-                _avgUpdateCounter = 0;
-                UpdateAvgSummary();
-            }
-
-            // E. 更新 X 軸時間範圍 (只顯示選定的時間維度)
+            // C. 更新 X 軸時間範圍 (只顯示選定的時間維度)
             XAxes[0].MinLimit = now.AddSeconds(-HistoryDurationSeconds).Ticks;
             XAxes[0].MaxLimit = now.Ticks;
 
@@ -487,30 +462,6 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    /// <summary>
-    /// 從 running sum 計算全程平均值，設定單一字串屬性。
-    /// 純算術，無集合存取，無迴圈。
-    /// </summary>
-    private void UpdateAvgSummary()
-    {
-        if (_avgSampleCount <= 0)
-        {
-            AvgSummary = "";
-            return;
-        }
-
-        var avgU = _sumUtilization / _avgSampleCount;
-        var avgT = _sumTemperature / _avgSampleCount;
-        var avgP = _sumPower / _avgSampleCount;
-
-        var powerText = IsGpuMode
-            ? $"{avgP:F1} {SecondaryMetricUnit}"
-            : avgP >= 1000
-                ? $"{avgP / 1000:F1} MB/s"
-                : $"{avgP:F0} KB/s";
-
-        AvgSummary = $"Avg: {PrimaryMetricLabel} {avgU:F0}% | {TemperatureLabel} {avgT:F1}{TemperatureUnit} | {SecondaryMetricLabel} {powerText}";
-    }
 }
 
 /// <summary>
