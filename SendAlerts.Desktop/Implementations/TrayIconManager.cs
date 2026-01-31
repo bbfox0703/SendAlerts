@@ -50,7 +50,7 @@ public class TrayIconManager : IDisposable
         {
             _trayIcon = new TrayIcon
             {
-                ToolTipText = "SendAlerts - Hardware Alert Relay Station",
+                ToolTipText = "SendAlerts - Alert Relay Station",
                 IsVisible = false,
                 Menu = CreateContextMenu()
             };

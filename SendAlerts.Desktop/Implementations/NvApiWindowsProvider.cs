@@ -146,7 +146,7 @@ public class NvApiWindowsProvider : IGpuProvider
 
     // 硬體模式與動態標籤 (GPU 模式)
     public HardwareMode Mode => HardwareMode.Gpu;
-    public string PrimaryMetricLabel => "GPU Utilization";
+    public string PrimaryMetricLabel => "GPU Core Utilization";
     public string TemperatureLabel => "GPU Temperature";
     public string TemperatureUnit => "°C";
     public string SecondaryMetricLabel => "Power Usage";

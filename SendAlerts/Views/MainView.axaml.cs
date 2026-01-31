@@ -238,12 +238,42 @@ public partial class MainView : UserControl
         ShiftAndAppend(_temperatureData, _vm.CurrentTemperature);
         ShiftAndAppend(_powerData, _vm.CurrentPower);
 
-        // Dynamic Y max for power chart (CPU/Network mode)
-        if (!_vm.IsGpuMode && _powerInfo is not null)
+        // Dynamic Y max for power chart (GPU and Network modes, only-grow)
+        if (_powerInfo is not null)
         {
-            if (_vm.CurrentPower > _vm.PowerChartYMax * 0.85)
+            var current = (double)_vm.CurrentPower;
+
+            // Network mode: KB/s → MB/s 切換 (只向上不縮回)
+            if (!_vm.IsGpuMode && !_vm._networkScaleMB && _vm.PowerChartYMax >= 1024)
             {
-                _vm.PowerChartYMax = Math.Ceiling(_vm.CurrentPower * 1.5 / 100) * 100;
+                _vm._networkScaleMB = true;
+                _vm.SecondaryMetricUnit = "MB/s";
+                // Reset Y max for MB/s scale
+                _vm.PowerChartYMax = Math.Ceiling(current / 1024.0 * 1.5);
+                if (_vm.PowerChartYMax < 1) _vm.PowerChartYMax = 1;
+            }
+
+            if (!_vm.IsGpuMode && _vm._networkScaleMB)
+            {
+                // 顯示值已在 KB/s，轉換為 MB/s 用於 Y 軸判斷
+                var currentMB = current / 1024.0;
+                if (currentMB > _vm.PowerChartYMax * 0.85)
+                {
+                    var newMax = Math.Ceiling(currentMB * 1.5);
+                    if (newMax > _vm.PowerChartYMax)
+                        _vm.PowerChartYMax = newMax;
+                }
+            }
+            else
+            {
+                // GPU mode: 50W 單位; Network (KB/s): 100 單位
+                var step = _vm.IsGpuMode ? 50.0 : 100.0;
+                if (current > _vm.PowerChartYMax * 0.85)
+                {
+                    var newMax = Math.Ceiling(current * 1.5 / step) * step;
+                    if (newMax > _vm.PowerChartYMax)
+                        _vm.PowerChartYMax = newMax;
+                }
             }
         }
 

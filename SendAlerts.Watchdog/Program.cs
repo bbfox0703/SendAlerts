@@ -44,6 +44,23 @@ sealed class Program
 
             _shutdownCts = new CancellationTokenSource();
 
+            // Handle OS shutdown / session end: stop timer to avoid restarting Desktop during shutdown
+            AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+            {
+                Log.Information("[Watchdog] ProcessExit received, stopping timer");
+                _checkTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+            };
+
+            if (OperatingSystem.IsWindows())
+            {
+                Microsoft.Win32.SystemEvents.SessionEnding += (_, args) =>
+                {
+                    Log.Information("[Watchdog] SessionEnding received (Reason: {Reason}), stopping timer", args.Reason);
+                    _checkTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+                    ShutdownApp();
+                };
+            }
+
             // Build Avalonia app with TrayIcon (no main window)
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, ShutdownMode.OnExplicitShutdown);
         }
@@ -79,7 +96,7 @@ sealed class Program
             Menu = new NativeMenu()
         };
 
-        var iconPath = Path.Combine(AppContext.BaseDirectory, "SendAlerts.ico");
+        var iconPath = Path.Combine(AppContext.BaseDirectory, "SendAlerts.Watchdog.ico");
         if (File.Exists(iconPath))
         {
             _trayIcon.Icon = new WindowIcon(iconPath);

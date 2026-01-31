@@ -56,7 +56,7 @@
           </TextBlock.Text>
         </TextBlock>
         <!-- 版本 -->
-        <TextBlock Grid.Column="4" Text="v1.1.0" Margin="10,0" VerticalAlignment="Center" Foreground="#555" FontSize="12"/>
+        <TextBlock Grid.Column="4" Text="{Binding VersionDisplay}" Margin="10,0" VerticalAlignment="Center" Foreground="#555" FontSize="12"/>
       </Grid>
     </Border>
 
