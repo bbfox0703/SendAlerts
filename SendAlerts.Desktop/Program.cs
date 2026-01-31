@@ -9,7 +9,9 @@ using System.Threading;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using System.Text;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using Serilog;
 using SendAlerts.Core.Interfaces;
 using SendAlerts.Desktop.Implementations;
@@ -182,11 +184,22 @@ sealed class Program
     /// </summary>
     private static void HandleSecondInstance(string[] args)
     {
-        // TODO: TA1-2 實作 - 透過 Named Pipe 傳送參數給主實例
-        // 目前僅顯示訊息並退出
         Log.Information("第二實例參數: {Args}", string.Join(" ", args));
-        Console.WriteLine("SendAlerts 已在運行中。請使用 Named Pipe 發送指令。");
-        Console.WriteLine($"Pipe 名稱: \\\\.\\pipe\\{SingleInstanceManager.NamedPipeName}");
+
+        // TA1-2: 透過 Named Pipe 通知主實例還原視窗
+        try
+        {
+            using var pipe = new NamedPipeClientStream(".", SingleInstanceManager.NamedPipeName, PipeDirection.Out);
+            pipe.Connect(3000);
+            var bytes = Encoding.UTF8.GetBytes("__restore");
+            pipe.Write(bytes, 0, bytes.Length);
+            Log.Information("已通知主實例還原視窗");
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "無法連接主實例 Named Pipe");
+            Console.WriteLine("SendAlerts 已在運行中，但無法通知主實例。");
+        }
     }
 
     /// <summary>
@@ -243,6 +256,27 @@ sealed class Program
     /// </summary>
     private static void OnPipeMessageReceived(object? sender, PipeMessageReceivedEventArgs e)
     {
+        // TA1-2: 第二實例要求還原視窗
+        if (e.RawMessage?.Trim() == "__restore")
+        {
+            Log.Information("[NamedPipe] 收到 __restore 指令，還原主視窗");
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (ServiceLocator.RestoreFromTray is { } restore)
+                {
+                    restore();
+                }
+                else if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                         && desktop.MainWindow is { } window)
+                {
+                    window.Show();
+                    window.WindowState = WindowState.Normal;
+                    window.Activate();
+                }
+            });
+            return;
+        }
+
         // TA1-4: 解析 JSON 訊息
         var parseResult = PipeMessageParser.Parse(e.RawMessage);
 
