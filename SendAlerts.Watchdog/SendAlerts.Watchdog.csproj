@@ -23,11 +23,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="SendAlerts.Watchdog.ico" />
+    <Content Include="SendAlerts.Watchdog.ico" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Microsoft.Win32.SystemEvents" />
     <PackageReference Include="Serilog" />
     <PackageReference Include="Serilog.Sinks.File" />
     <PackageReference Include="Serilog.Sinks.Console" />

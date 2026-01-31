@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Reflection;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -43,7 +44,7 @@ public partial class MainViewModel : ViewModelBase
     private const int TdpRefreshIntervalSeconds = 600; // 10 分鐘
 
     // --- 動態標籤 (支援 GPU/CPU 模式切換) ---
-    [ObservableProperty] private string _primaryMetricLabel = "GPU Utilization";
+    [ObservableProperty] private string _primaryMetricLabel = "GPU Core Utilization";
     [ObservableProperty] private string _temperatureLabel = "GPU Temperature";
     [ObservableProperty] private string _temperatureUnit = "°C";
     [ObservableProperty] private string _secondaryMetricLabel = "Power Usage";
@@ -62,9 +63,14 @@ public partial class MainViewModel : ViewModelBase
     // --- 平均值摘要 ---
     [ObservableProperty] private string _avgSummary = "";
 
+    // --- 版本顯示 ---
+    public string VersionDisplay { get; } = GetVersionString();
+
     // --- Power 圖表 Y 軸上限 (供 View 使用) ---
-    [ObservableProperty] private double _powerChartYMax = 600;
-    private double _cachedGpuPowerYMax;
+    [ObservableProperty] private double _powerChartYMax = 50;
+
+    // --- Network MB/s 切換 (只向上不縮回) ---
+    internal bool _networkScaleMB;
 
     // --- 圖表固定 30 分鐘 ---
     private const int HistoryDurationSeconds = 1800;
@@ -95,6 +101,8 @@ public partial class MainViewModel : ViewModelBase
     {
         _gpuProvider = gpuProvider;
         GpuName = _gpuProvider.GetGpuName();
+        if (GpuName is "Unknown" or "N/A")
+            GpuName = "GPU Detect Error";
         PowerLimit = _gpuProvider.PowerLimit;
 
         // 初始化動態標籤 (支援 GPU/CPU 模式)
@@ -237,17 +245,9 @@ public partial class MainViewModel : ViewModelBase
 
     private void UpdatePowerChartYMax()
     {
-        if (IsGpuMode)
-        {
-            if (_cachedGpuPowerYMax <= 0)
-                _cachedGpuPowerYMax = GpuTdpLookup.GetChartYMax(GpuName, PowerLimit);
-            PowerChartYMax = _cachedGpuPowerYMax;
-        }
-        else
-        {
-            // CPU/Network 模式: 初始 100 KB/s，之後動態調整
-            PowerChartYMax = 100;
-        }
+        // 統一初始 Y 軸 = 50（GPU 和 Network 都從 50 開始，動態成長）
+        PowerChartYMax = 50;
+        _networkScaleMB = false;
     }
 
     private void ApplyProviderLabels()
@@ -259,9 +259,25 @@ public partial class MainViewModel : ViewModelBase
         SecondaryMetricUnit = _gpuProvider.SecondaryMetricUnit;
         IsGpuMode = _gpuProvider.Mode == HardwareMode.Gpu;
 
-        PowerLimitDisplay = IsGpuMode
-            ? $"(TDP: {PowerLimit:F0}W)"
-            : $"(Mem: {PowerLimit:F0}G)";
+        if (IsGpuMode)
+        {
+            if (PowerLimit <= 0)
+            {
+                // Laptop 或舊 GPU: nvmlDeviceGetPowerManagementLimit 回傳 NOT_SUPPORTED
+                var tdp = GpuTdpLookup.FindTdp(GpuName);
+                PowerLimitDisplay = tdp.HasValue
+                    ? $"(TDP: ~{tdp.Value}W est.)"
+                    : "(TDP: N/A)";
+            }
+            else
+            {
+                PowerLimitDisplay = $"(TDP: {PowerLimit:F0}W)";
+            }
+        }
+        else
+        {
+            PowerLimitDisplay = $"(Mem: {PowerLimit:F0}G)";
+        }
     }
 
     private static string GetProviderDisplayName(IGpuProvider provider)
@@ -307,6 +323,8 @@ public partial class MainViewModel : ViewModelBase
 
         // 更新顯示資訊
         GpuName = _gpuProvider.GetGpuName();
+        if (GpuName is "Unknown" or "N/A")
+            GpuName = "GPU Detect Error";
         PowerLimit = _gpuProvider.PowerLimit;
         CurrentProviderName = GetProviderDisplayName(_gpuProvider);
         ApplyProviderLabels();
@@ -322,6 +340,13 @@ public partial class MainViewModel : ViewModelBase
         _timer.Start();
 
         Log.Information("已切換 Provider: {Name} ({Type})", CurrentProviderName, _gpuProvider.GetType().Name);
+    }
+
+    private static string GetVersionString()
+    {
+        var info = Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+        return info?.InformationalVersion is { } v ? $"v{v}" : "v?";
     }
 
     /// <summary>

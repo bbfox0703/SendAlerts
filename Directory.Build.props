@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <VersionPrefix>1.0.0</VersionPrefix>
+    <InformationalVersion>$([System.DateTime]::Now.ToString('yyyyMMdd'))</InformationalVersion>
+  </PropertyGroup>
+</Project>
