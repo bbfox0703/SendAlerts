@@ -235,7 +235,7 @@ public partial class MainView : UserControl
                 ? $"{secondsAgo}s ago"
                 : $"{secondsAgo / 60}m {secondsAgo % 60}s ago";
             tooltip.IsVisible = true;
-            tooltip.Text = $"{value:F1}  ({timeLabel})";
+            tooltip.Text = $"{value:F3}  ({timeLabel})";
             // Flip tooltip side: right-half → show left, left-half → show right
             if (index > Capacity / 2)
             {
@@ -377,7 +377,7 @@ public partial class MainView : UserControl
                 var timeLabel = secondsAgo < 60
                     ? $"{secondsAgo}s ago"
                     : $"{secondsAgo / 60}m {secondsAgo % 60}s ago";
-                info.Tooltip.Text = $"{value:F1}  ({timeLabel})";
+                info.Tooltip.Text = $"{value:F3}  ({timeLabel})";
             }
         }
 

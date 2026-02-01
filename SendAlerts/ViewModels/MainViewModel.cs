@@ -105,9 +105,22 @@ public partial class MainViewModel : ViewModelBase
     // --- HWiNFO Chart ---
     [ObservableProperty] private bool _isHwinfoChartVisible;
     [ObservableProperty] private double _currentHwinfoValue;
+    public string HwinfoValueDisplay => FormatHwinfoValue(CurrentHwinfoValue);
+
+    partial void OnCurrentHwinfoValueChanged(double value) => OnPropertyChanged(nameof(HwinfoValueDisplay));
+
+    /// <summary>Adaptive formatting: integer if whole number, up to 3 decimal places otherwise.</summary>
+    internal static string FormatHwinfoValue(double value)
+    {
+        if (double.IsNaN(value)) return "--";
+        if (value == Math.Floor(value)) return value.ToString("F0");
+        if (Math.Abs(value * 10 - Math.Round(value * 10)) < 0.001) return value.ToString("F1");
+        if (Math.Abs(value * 100 - Math.Round(value * 100)) < 0.01) return value.ToString("F2");
+        return value.ToString("F3");
+    }
     [ObservableProperty] private string _hwinfoChartLabel = "";
     [ObservableProperty] private string _hwinfoChartUnit = "";
-    [ObservableProperty] private double _hwinfoChartYMax = 50;
+    [ObservableProperty] private double _hwinfoChartYMax = 0.1;
     [ObservableProperty] private HwinfoSensorItem? _selectedHwinfoSensor; // ComboBox 選擇 (尚未套用)
     [ObservableProperty] private HwinfoSensorItem? _appliedHwinfoSensor;  // 實際繪圖的感測器
     [ObservableProperty] private string _appliedHwinfoDisplay = "";       // 目前套用的顯示名稱
@@ -132,6 +145,7 @@ public partial class MainViewModel : ViewModelBase
     private int _hwinfoRetryCounter; // 啟動時等待 HWiNFO 可用的計數器
     internal double _lastHwinfoTickValue; // View 用：最新一筆寫入值 (可能是 NaN)
     private bool _hwinfoInitializing; // 初始化期間不儲存設定
+    private double _hwinfoPeak; // 記錄中的最大值 (忽略 NaN)
 
     // --- TB3-3: 警報歷史 ---
     public ObservableCollection<AlertHistoryItem> AlertHistoryItems { get; } = new();
@@ -191,6 +205,7 @@ public partial class MainViewModel : ViewModelBase
         _hwinfoBufferIndex = 0;
         _hwinfoBufferCount = 0;
         _hwinfoSum = 0;
+        _hwinfoPeak = 0;
     }
 
     /// <summary>
@@ -489,13 +504,10 @@ public partial class MainViewModel : ViewModelBase
                     // Write to ring buffer
                     WriteHwinfoBuffer(entry.Value);
 
-                    // Dynamic Y axis
-                    if (entry.Value > HwinfoChartYMax * 0.85)
-                    {
-                        var newMax = Math.Ceiling(entry.Value * 1.5);
-                        if (newMax > HwinfoChartYMax)
-                            HwinfoChartYMax = newMax;
-                    }
+                    // Dynamic Y axis: peak * 1.1, min 0.1
+                    if (entry.Value > _hwinfoPeak)
+                        _hwinfoPeak = entry.Value;
+                    HwinfoChartYMax = _hwinfoPeak > 0 ? _hwinfoPeak * 1.1 : 0.1;
 
                     HwinfoChartDataUpdated?.Invoke();
                 }
@@ -688,7 +700,8 @@ public partial class MainViewModel : ViewModelBase
         {
             // 清空 buffer + 重設 Y 軸
             ClearHwinfoBuffer();
-            HwinfoChartYMax = 50;
+            _hwinfoPeak = 0;
+            HwinfoChartYMax = 0.1;
             CurrentHwinfoValue = 0;
             _hwinfoUnavailableLogged = false;
             Log.Information("[HWiNFO] Applied sensor: {Name}", item.DisplayName);
