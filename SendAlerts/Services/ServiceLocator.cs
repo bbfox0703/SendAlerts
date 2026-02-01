@@ -52,6 +52,11 @@ public static class ServiceLocator
     /// </summary>
     public static IHwinfoProvider? HwinfoProvider { get; set; }
 
+    /// <summary>
+    /// LibreHardwareMonitor 感測器資料提供者
+    /// </summary>
+    public static ISensorDataProvider? LhmSensorProvider { get; set; }
+
     #region TD2: 系統整合
 
     /// <summary>

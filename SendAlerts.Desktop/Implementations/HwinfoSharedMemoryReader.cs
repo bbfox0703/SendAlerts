@@ -85,6 +85,8 @@ public class HwinfoSharedMemoryReader : IHwinfoProvider
 
     private const uint ExpectedSignature = 0x53695748; // "HWiS"
 
+    public string SourceName => "HWiNFO";
+
     public bool IsAvailable
     {
         get

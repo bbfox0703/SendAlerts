@@ -430,4 +430,14 @@
   <data name="HWiNFO_ShmNotFound" xml:space="preserve">
     <value>HWiNFO Shared Memory が見つかりません。HWiNFO64 が起動しており、Shared Memory サポートが有効になっていることを確認してください（設定 > Shared Memory > Enable）。</value>
   </data>
+  <!-- Chart Source -->
+  <data name="Chart_SourceOff" xml:space="preserve">
+    <value>オフ</value>
+  </data>
+  <data name="Chart_SourceTooltip" xml:space="preserve">
+    <value>チャートのデータソースを選択</value>
+  </data>
+  <data name="Chart_SensorChart" xml:space="preserve">
+    <value>センサーチャート</value>
+  </data>
 </root>

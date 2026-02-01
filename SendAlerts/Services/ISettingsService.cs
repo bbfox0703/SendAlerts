@@ -196,21 +196,40 @@ public class AppSettings
     public bool ShutdownWatchdogOnExit { get; set; } = true;
 
     // ==========================================================================
-    // HWiNFO Chart 設定
+    // HWiNFO Chart 設定 (Legacy — 保留供遷移)
     // ==========================================================================
 
     /// <summary>
-    /// 是否啟用 HWiNFO 感測器圖表
+    /// [Legacy] 是否啟用 HWiNFO 感測器圖表 (遷移至 ChartSource)
     /// </summary>
     public bool HwinfoChartEnabled { get; set; } = false;
 
     /// <summary>
-    /// 選中的感測器群組名稱
+    /// [Legacy] 選中的感測器群組名稱 (遷移至 ChartSelectedSensor)
     /// </summary>
     public string? HwinfoSelectedSensor { get; set; }
 
     /// <summary>
-    /// 選中的感測器項目原始名稱 (LabelOrig)
+    /// [Legacy] 選中的感測器項目原始名稱 (遷移至 ChartSelectedEntry)
     /// </summary>
     public string? HwinfoSelectedEntry { get; set; }
+
+    // ==========================================================================
+    // Chart 設定 (多資料來源)
+    // ==========================================================================
+
+    /// <summary>
+    /// 第四張圖表的資料來源
+    /// </summary>
+    public ChartSourceType ChartSource { get; set; } = ChartSourceType.Off;
+
+    /// <summary>
+    /// 選中的感測器群組名稱
+    /// </summary>
+    public string? ChartSelectedSensor { get; set; }
+
+    /// <summary>
+    /// 選中的感測器項目原始名稱 (LabelOrig)
+    /// </summary>
+    public string? ChartSelectedEntry { get; set; }
 }

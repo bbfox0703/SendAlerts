@@ -139,6 +139,8 @@ sealed class Program
             try { ShutdownNamedPipeServer(); } catch (Exception ex) { Log.Warning(ex, "清理 NamedPipeServer 失敗"); }
             try { ServiceLocator.HwinfoProvider?.Dispose(); ServiceLocator.HwinfoProvider = null; }
             catch (Exception ex) { Log.Warning(ex, "清理 HwinfoProvider 失敗"); }
+            try { ServiceLocator.LhmSensorProvider?.Dispose(); ServiceLocator.LhmSensorProvider = null; }
+            catch (Exception ex) { Log.Warning(ex, "清理 LhmSensorProvider 失敗"); }
             try
             {
                 foreach (var provider in ServiceLocator.AvailableProviders)
@@ -393,6 +395,9 @@ sealed class Program
         // HWiNFO Shared Memory Provider
         InitializeHwinfoProvider();
 
+        // LibreHardwareMonitor Sensor Provider
+        InitializeLhmProvider();
+
         // TA3-2: Alert Service (Alert Center 核心)
         InitializeAlertService();
     }
@@ -496,6 +501,31 @@ sealed class Program
         catch (Exception ex)
         {
             Log.Warning(ex, "[HWiNFO] 初始化 HWiNFO Provider 失敗");
+        }
+    }
+
+    /// <summary>
+    /// Initialize LibreHardwareMonitor sensor provider
+    /// </summary>
+    private static void InitializeLhmProvider()
+    {
+        try
+        {
+            var lhmProvider = new LhmSensorProvider();
+            ServiceLocator.LhmSensorProvider = lhmProvider;
+
+            if (lhmProvider.IsAvailable)
+            {
+                Log.Information("[LHM] LibreHardwareMonitor provider available");
+            }
+            else
+            {
+                Log.Debug("[LHM] LibreHardwareMonitor provider not available");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "[LHM] Failed to initialize LibreHardwareMonitor provider");
         }
     }
 
