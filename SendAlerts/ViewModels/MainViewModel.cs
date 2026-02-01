@@ -103,7 +103,10 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private string _hwinfoChartUnit = "";
     [ObservableProperty] private double _hwinfoChartYMax = 50;
     [ObservableProperty] private HwinfoSensorItem? _selectedHwinfoSensor;
+    [ObservableProperty] private string _hwinfoFilterText = "";
     public ObservableCollection<HwinfoSensorItem> HwinfoSensorItems { get; } = new();
+    public ObservableCollection<HwinfoSensorItem> HwinfoFilteredItems { get; } = new();
+    private readonly List<HwinfoSensorItem> _allHwinfoItems = new();
 
     /// <summary>通知 View 刷新 HWiNFO 圖表</summary>
     public event Action? HwinfoChartDataUpdated;
@@ -545,6 +548,7 @@ public partial class MainViewModel : ViewModelBase
         }
 
         var previousSelection = SelectedHwinfoSensor;
+        _allHwinfoItems.Clear();
         HwinfoSensorItems.Clear();
 
         var groups = provider.GetSensorGroups();
@@ -552,15 +556,19 @@ public partial class MainViewModel : ViewModelBase
         {
             foreach (var entry in group.Entries)
             {
-                HwinfoSensorItems.Add(new HwinfoSensorItem(
-                    group.SensorName, entry.LabelOrig, entry.Label, entry.Unit));
+                var item = new HwinfoSensorItem(
+                    group.SensorName, entry.LabelOrig, entry.Label, entry.Unit);
+                _allHwinfoItems.Add(item);
+                HwinfoSensorItems.Add(item);
             }
         }
+
+        ApplyHwinfoFilter();
 
         // Try to restore selection
         if (previousSelection is not null)
         {
-            foreach (var item in HwinfoSensorItems)
+            foreach (var item in HwinfoFilteredItems)
             {
                 if (item.SensorName == previousSelection.SensorName &&
                     item.LabelOrig == previousSelection.LabelOrig)
@@ -571,7 +579,27 @@ public partial class MainViewModel : ViewModelBase
             }
         }
 
-        Log.Information("[HWiNFO] 感測器清單已刷新，共 {Count} 項", HwinfoSensorItems.Count);
+        Log.Information("[HWiNFO] 感測器清單已刷新，共 {Count} 項", _allHwinfoItems.Count);
+    }
+
+    partial void OnHwinfoFilterTextChanged(string value)
+    {
+        ApplyHwinfoFilter();
+    }
+
+    private void ApplyHwinfoFilter()
+    {
+        HwinfoFilteredItems.Clear();
+        var filter = HwinfoFilterText?.Trim() ?? "";
+
+        foreach (var item in _allHwinfoItems)
+        {
+            if (filter.Length == 0 ||
+                item.DisplayName.Contains(filter, StringComparison.OrdinalIgnoreCase))
+            {
+                HwinfoFilteredItems.Add(item);
+            }
+        }
     }
 
     partial void OnSelectedHwinfoSensorChanged(HwinfoSensorItem? value)

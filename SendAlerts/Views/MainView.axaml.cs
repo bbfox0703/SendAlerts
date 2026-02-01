@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -69,6 +70,10 @@ public partial class MainView : UserControl
         _vm.ChartDataCleared += OnChartDataCleared;
         _vm.SamplingIntervalChanged += OnSamplingIntervalChanged;
         _vm.HwinfoChartDataUpdated += OnHwinfoChartDataUpdated;
+
+        // Dynamic row visibility for HWiNFO chart (Row 3)
+        _vm.PropertyChanged += OnVmPropertyChanged;
+        UpdateHwinfoRowVisibility();
     }
 
     private ChartInfo SetupChart(AvaPlot chart, double[] data, Color lineColor, double yMin, double yMax)
@@ -373,6 +378,35 @@ public partial class MainView : UserControl
         RefreshChart(_hwinfoInfo, 0, _vm.HwinfoChartYMax);
     }
 
+    private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.IsHwinfoChartVisible))
+            UpdateHwinfoRowVisibility();
+    }
+
+    private void UpdateHwinfoRowVisibility()
+    {
+        // Find the main Grid (parent of chart borders)
+        var content = this.Content as Avalonia.Controls.DockPanel;
+        if (content is null) return;
+
+        Grid? mainGrid = null;
+        foreach (var child in content.Children)
+        {
+            if (child is Grid g && g.RowDefinitions.Count >= 5)
+            {
+                mainGrid = g;
+                break;
+            }
+        }
+        if (mainGrid is null) return;
+
+        var visible = _vm?.IsHwinfoChartVisible == true;
+        mainGrid.RowDefinitions[3].Height = visible
+            ? new GridLength(1, GridUnitType.Star)
+            : new GridLength(0);
+    }
+
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);
@@ -383,6 +417,7 @@ public partial class MainView : UserControl
             _vm.ChartDataCleared -= OnChartDataCleared;
             _vm.SamplingIntervalChanged -= OnSamplingIntervalChanged;
             _vm.HwinfoChartDataUpdated -= OnHwinfoChartDataUpdated;
+            _vm.PropertyChanged -= OnVmPropertyChanged;
         }
 
         _vm = DataContext as MainViewModel;
@@ -393,6 +428,7 @@ public partial class MainView : UserControl
             _vm.ChartDataCleared += OnChartDataCleared;
             _vm.SamplingIntervalChanged += OnSamplingIntervalChanged;
             _vm.HwinfoChartDataUpdated += OnHwinfoChartDataUpdated;
+            _vm.PropertyChanged += OnVmPropertyChanged;
         }
     }
 

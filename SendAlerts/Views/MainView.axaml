@@ -65,7 +65,7 @@
       </Grid>
     </Border>
 
-    <Grid RowDefinitions="*, *, *, Auto, Auto">
+    <Grid RowDefinitions="*, *, *, *, Auto">
 
       <!-- Primary Metric Chart (GPU/CPU Utilization) -->
       <Border Grid.Row="0" Margin="5" Background="#1a1a1a" CornerRadius="5">
@@ -123,9 +123,12 @@
         <DockPanel>
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,5" Spacing="5">
             <TextBlock Text="HWiNFO:" Foreground="Gold" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
-            <ComboBox ItemsSource="{Binding HwinfoSensorItems}"
+            <TextBox Text="{Binding HwinfoFilterText}" Watermark="Filter..." Width="120" FontSize="11"
+                     VerticalAlignment="Center" Padding="4,3"/>
+            <ComboBox ItemsSource="{Binding HwinfoFilteredItems}"
                       SelectedItem="{Binding SelectedHwinfoSensor}"
-                      MinWidth="300" MaxWidth="500" FontSize="11" VerticalAlignment="Center"/>
+                      MinWidth="350" MaxWidth="550" FontSize="11" VerticalAlignment="Center"
+                      MaxDropDownHeight="400"/>
             <Button Content="&#x21BB;" Command="{Binding RefreshHwinfoSensorListCommand}"
                     ToolTip.Tip="Refresh sensor list" FontSize="14" Padding="4,2" VerticalAlignment="Center"/>
             <TextBlock Foreground="Gold" FontSize="14" VerticalAlignment="Center">
