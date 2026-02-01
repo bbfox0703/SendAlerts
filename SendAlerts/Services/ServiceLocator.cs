@@ -47,6 +47,11 @@ public static class ServiceLocator
     /// </summary>
     public static IHttpUrlAclManager? HttpUrlAclManager { get; set; }
 
+    /// <summary>
+    /// HWiNFO Shared Memory 資料提供者
+    /// </summary>
+    public static IHwinfoProvider? HwinfoProvider { get; set; }
+
     #region TD2: 系統整合
 
     /// <summary>

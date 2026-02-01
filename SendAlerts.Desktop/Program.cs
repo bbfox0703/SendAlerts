@@ -137,6 +137,8 @@ sealed class Program
             try { ShutdownHttpApiServer(); } catch (Exception ex) { Log.Warning(ex, "清理 HttpApiServer 失敗"); }
             try { ShutdownTrayIcon(); } catch (Exception ex) { Log.Warning(ex, "清理 TrayIcon 失敗"); }
             try { ShutdownNamedPipeServer(); } catch (Exception ex) { Log.Warning(ex, "清理 NamedPipeServer 失敗"); }
+            try { ServiceLocator.HwinfoProvider?.Dispose(); ServiceLocator.HwinfoProvider = null; }
+            catch (Exception ex) { Log.Warning(ex, "清理 HwinfoProvider 失敗"); }
             try
             {
                 foreach (var provider in ServiceLocator.AvailableProviders)
@@ -388,6 +390,9 @@ sealed class Program
             ServiceLocator.GpuProvider.IsAvailable,
             providers.Count);
 
+        // HWiNFO Shared Memory Provider
+        InitializeHwinfoProvider();
+
         // TA3-2: Alert Service (Alert Center 核心)
         InitializeAlertService();
     }
@@ -466,6 +471,31 @@ sealed class Program
         {
             Log.Warning("[HttpApiServer] 請求失敗 | IP: {IP} | Endpoint: {Endpoint} | Details: {Details}",
                 e.RemoteIp, e.Endpoint, e.Details);
+        }
+    }
+
+    /// <summary>
+    /// 初始化 HWiNFO Shared Memory Provider
+    /// </summary>
+    private static void InitializeHwinfoProvider()
+    {
+        try
+        {
+            var hwinfoProvider = new HwinfoSharedMemoryReader();
+            ServiceLocator.HwinfoProvider = hwinfoProvider;
+
+            if (hwinfoProvider.IsAvailable)
+            {
+                Log.Information("[HWiNFO] Shared Memory 可用");
+            }
+            else
+            {
+                Log.Debug("[HWiNFO] Shared Memory 不可用 (HWiNFO64 未啟動或未開啟 SHM)");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "[HWiNFO] 初始化 HWiNFO Provider 失敗");
         }
     }
 

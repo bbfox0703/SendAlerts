@@ -150,7 +150,7 @@
     <value>警報群組</value>
   </data>
   <data name="Main_DisplayOnly" xml:space="preserve">
-    <value>僅供顯示 - 使用外部工具 (HWiNFO64) 透過 Named Pipe 觸發警報</value>
+    <value>僅供顯示 - 使用外部工具 (例如HWiNFO) 透過 Named Pipe 觸發警報</value>
   </data>
   <data name="Main_PipeConnected" xml:space="preserve">
     <value>Pipe：已連線</value>
@@ -406,5 +406,25 @@
   </data>
   <data name="Confirm_IntervalChange_Message" xml:space="preserve">
     <value>取樣間隔從 {0} 秒變更為 {1} 秒，這將清空所有圖表資料並重設時間窗。是否繼續？</value>
+  </data>
+
+  <!-- HWiNFO Chart -->
+  <data name="HWiNFO_Toggle" xml:space="preserve">
+    <value>HWiNFO繪圖</value>
+  </data>
+  <data name="HWiNFO_ToggleTooltip" xml:space="preserve">
+    <value>顯示/隱藏 HWiNFO 感測器圖表</value>
+  </data>
+  <data name="HWiNFO_Apply" xml:space="preserve">
+    <value>套用</value>
+  </data>
+  <data name="HWiNFO_ApplyTooltip" xml:space="preserve">
+    <value>套用選取的感測器至圖表</value>
+  </data>
+  <data name="HWiNFO_FilterWatermark" xml:space="preserve">
+    <value>篩選...</value>
+  </data>
+  <data name="HWiNFO_RefreshTooltip" xml:space="preserve">
+    <value>重新整理感測器清單</value>
   </data>
 </root>
