@@ -21,10 +21,13 @@ public partial class MainView : UserControl
     private readonly double[] _temperatureData = new double[Capacity];
     private readonly double[] _powerData = new double[Capacity];
 
+    private readonly double[] _hwinfoData = new double[Capacity];
+
     // Chart info bundles
     private ChartInfo? _utilInfo;
     private ChartInfo? _tempInfo;
     private ChartInfo? _powerInfo;
+    private ChartInfo? _hwinfoInfo;
 
     // Current sampling interval (for tooltip time calculation)
     private int _currentInterval = 1;
@@ -45,6 +48,7 @@ public partial class MainView : UserControl
         var utilizationChart = this.FindControl<AvaPlot>("UtilizationChart");
         var temperatureChart = this.FindControl<AvaPlot>("TemperatureChart");
         var powerChart = this.FindControl<AvaPlot>("PowerChart");
+        var hwinfoChart = this.FindControl<AvaPlot>("HwinfoChart");
 
         if (utilizationChart is null || temperatureChart is null || powerChart is null)
             return;
@@ -58,9 +62,13 @@ public partial class MainView : UserControl
         _tempInfo = SetupChart(temperatureChart, _temperatureData, Colors.OrangeRed, 0, 100);
         _powerInfo = SetupChart(powerChart, _powerData, Colors.Cyan, 0, _vm.PowerChartYMax);
 
+        if (hwinfoChart is not null)
+            _hwinfoInfo = SetupChart(hwinfoChart, _hwinfoData, Colors.Gold, 0, _vm.HwinfoChartYMax);
+
         _vm.ChartDataUpdated += OnChartDataUpdated;
         _vm.ChartDataCleared += OnChartDataCleared;
         _vm.SamplingIntervalChanged += OnSamplingIntervalChanged;
+        _vm.HwinfoChartDataUpdated += OnHwinfoChartDataUpdated;
     }
 
     private ChartInfo SetupChart(AvaPlot chart, double[] data, Color lineColor, double yMin, double yMax)
@@ -172,6 +180,7 @@ public partial class MainView : UserControl
         UpdateChartXTicks(_utilInfo, positions, labels);
         UpdateChartXTicks(_tempInfo, positions, labels);
         UpdateChartXTicks(_powerInfo, positions, labels);
+        UpdateChartXTicks(_hwinfoInfo, positions, labels);
     }
 
     private static void UpdateChartXTicks(ChartInfo? info, double[] positions, string[] labels)
@@ -244,11 +253,13 @@ public partial class MainView : UserControl
         Array.Clear(_utilizationData);
         Array.Clear(_temperatureData);
         Array.Clear(_powerData);
+        Array.Clear(_hwinfoData);
 
         // Hide crosshairs/tooltips
         HideCrosshair(_utilInfo);
         HideCrosshair(_tempInfo);
         HideCrosshair(_powerInfo);
+        HideCrosshair(_hwinfoInfo);
 
         // Refresh with updated Y limits
         if (_vm is not null)
@@ -256,6 +267,7 @@ public partial class MainView : UserControl
             RefreshChart(_utilInfo, 0, 100);
             RefreshChart(_tempInfo, 0, 100);
             RefreshChart(_powerInfo, 0, _vm.PowerChartYMax);
+            RefreshChart(_hwinfoInfo, 0, _vm.HwinfoChartYMax);
         }
     }
 
@@ -353,6 +365,14 @@ public partial class MainView : UserControl
         data[^1] = newValue;
     }
 
+    private void OnHwinfoChartDataUpdated()
+    {
+        if (_vm is null || _hwinfoInfo is null) return;
+
+        ShiftAndAppend(_hwinfoData, _vm.CurrentHwinfoValue);
+        RefreshChart(_hwinfoInfo, 0, _vm.HwinfoChartYMax);
+    }
+
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);
@@ -362,6 +382,7 @@ public partial class MainView : UserControl
             _vm.ChartDataUpdated -= OnChartDataUpdated;
             _vm.ChartDataCleared -= OnChartDataCleared;
             _vm.SamplingIntervalChanged -= OnSamplingIntervalChanged;
+            _vm.HwinfoChartDataUpdated -= OnHwinfoChartDataUpdated;
         }
 
         _vm = DataContext as MainViewModel;
@@ -371,6 +392,7 @@ public partial class MainView : UserControl
             _vm.ChartDataUpdated += OnChartDataUpdated;
             _vm.ChartDataCleared += OnChartDataCleared;
             _vm.SamplingIntervalChanged += OnSamplingIntervalChanged;
+            _vm.HwinfoChartDataUpdated += OnHwinfoChartDataUpdated;
         }
     }
 

@@ -194,4 +194,23 @@ public class AppSettings
     /// 正常關閉 Desktop 時是否連帶關閉 Watchdog
     /// </summary>
     public bool ShutdownWatchdogOnExit { get; set; } = true;
+
+    // ==========================================================================
+    // HWiNFO Chart 設定
+    // ==========================================================================
+
+    /// <summary>
+    /// 是否啟用 HWiNFO 感測器圖表
+    /// </summary>
+    public bool HwinfoChartEnabled { get; set; } = false;
+
+    /// <summary>
+    /// 選中的感測器群組名稱
+    /// </summary>
+    public string? HwinfoSelectedSensor { get; set; }
+
+    /// <summary>
+    /// 選中的感測器項目原始名稱 (LabelOrig)
+    /// </summary>
+    public string? HwinfoSelectedEntry { get; set; }
 }

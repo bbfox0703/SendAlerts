@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SendAlerts.Core.Interfaces;
+using SendAlerts.Models;
 using SendAlerts.Services;
 using Serilog;
 
@@ -95,6 +96,25 @@ public partial class MainViewModel : ViewModelBase
     public event Action? ChartDataCleared;
     public event Action<int>? SamplingIntervalChanged;
 
+    // --- HWiNFO Chart ---
+    [ObservableProperty] private bool _isHwinfoChartVisible;
+    [ObservableProperty] private double _currentHwinfoValue;
+    [ObservableProperty] private string _hwinfoChartLabel = "";
+    [ObservableProperty] private string _hwinfoChartUnit = "";
+    [ObservableProperty] private double _hwinfoChartYMax = 50;
+    [ObservableProperty] private HwinfoSensorItem? _selectedHwinfoSensor;
+    public ObservableCollection<HwinfoSensorItem> HwinfoSensorItems { get; } = new();
+
+    /// <summary>通知 View 刷新 HWiNFO 圖表</summary>
+    public event Action? HwinfoChartDataUpdated;
+
+    // HWiNFO buffer (與主 buffer 分開)
+    private double[] _hwinfoBuffer = Array.Empty<double>();
+    private int _hwinfoBufferIndex;
+    private int _hwinfoBufferCount;
+    private double _hwinfoSum;
+    private bool _hwinfoUnavailableLogged;
+
     // --- TB3-3: 警報歷史 ---
     public ObservableCollection<AlertHistoryItem> AlertHistoryItems { get; } = new();
 
@@ -130,6 +150,9 @@ public partial class MainViewModel : ViewModelBase
         // TB3-2/TB3-3: 訂閱狀態更新事件
         InitializeStatusSubscriptions();
 
+        // HWiNFO: 載入設定
+        InitializeHwinfo();
+
         Log.Information("SendAlerts 監控啟動 (Display-Only Mode): {GpuName} | Mode: {Mode} | PowerLimit: {PowerLimit:F1}{Unit}",
             GpuName, _gpuProvider.Mode, PowerLimit, SecondaryMetricUnit);
     }
@@ -144,6 +167,11 @@ public partial class MainViewModel : ViewModelBase
         _utilizationSum = 0;
         _temperatureSum = 0;
         _powerSum = 0;
+
+        _hwinfoBuffer = new double[_maxPoints];
+        _hwinfoBufferIndex = 0;
+        _hwinfoBufferCount = 0;
+        _hwinfoSum = 0;
     }
 
     /// <summary>
@@ -157,6 +185,7 @@ public partial class MainViewModel : ViewModelBase
             0 => _utilizationBuffer,
             1 => _temperatureBuffer,
             2 => _powerBuffer,
+            3 => _hwinfoBuffer,
             _ => _utilizationBuffer
         };
 
@@ -423,6 +452,51 @@ public partial class MainViewModel : ViewModelBase
                     }
                 }
             }
+
+            // F. HWiNFO Chart 讀取
+            if (IsHwinfoChartVisible && SelectedHwinfoSensor is { } selectedSensor)
+            {
+                var provider = ServiceLocator.HwinfoProvider;
+                if (provider is null) return;
+
+                var entry = provider.ReadEntry(selectedSensor.SensorName, selectedSensor.LabelOrig);
+                if (entry is not null)
+                {
+                    _hwinfoUnavailableLogged = false;
+                    CurrentHwinfoValue = entry.Value;
+
+                    // Write to ring buffer
+                    if (_hwinfoBufferCount >= _maxPoints)
+                        _hwinfoSum -= _hwinfoBuffer[_hwinfoBufferIndex];
+
+                    _hwinfoBuffer[_hwinfoBufferIndex] = entry.Value;
+                    _hwinfoSum += entry.Value;
+
+                    _hwinfoBufferIndex = (_hwinfoBufferIndex + 1) % _maxPoints;
+                    if (_hwinfoBufferCount < _maxPoints) _hwinfoBufferCount++;
+
+                    // Dynamic Y axis
+                    if (entry.Value > HwinfoChartYMax * 0.85)
+                    {
+                        var newMax = Math.Ceiling(entry.Value * 1.5);
+                        if (newMax > HwinfoChartYMax)
+                            HwinfoChartYMax = newMax;
+                    }
+
+                    HwinfoChartDataUpdated?.Invoke();
+                }
+                else
+                {
+                    // HWiNFO unavailable (12hr limit, closed, etc.)
+                    if (!_hwinfoUnavailableLogged)
+                    {
+                        Log.Warning("[HWiNFO] 感測器讀取失敗，可能 HWiNFO64 已關閉或達到 12 小時限制");
+                        _hwinfoUnavailableLogged = true;
+                    }
+                    IsHwinfoChartVisible = false;
+                    SaveHwinfoSettings();
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -430,4 +504,115 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
+    #region HWiNFO Chart
+
+    private void InitializeHwinfo()
+    {
+        var settings = ServiceLocator.SettingsService?.Load();
+        if (settings is null) return;
+
+        if (settings.HwinfoChartEnabled)
+        {
+            RefreshHwinfoSensorList();
+
+            // Restore previous selection
+            if (!string.IsNullOrEmpty(settings.HwinfoSelectedSensor) &&
+                !string.IsNullOrEmpty(settings.HwinfoSelectedEntry))
+            {
+                foreach (var item in HwinfoSensorItems)
+                {
+                    if (item.SensorName == settings.HwinfoSelectedSensor &&
+                        item.LabelOrig == settings.HwinfoSelectedEntry)
+                    {
+                        SelectedHwinfoSensor = item;
+                        break;
+                    }
+                }
+            }
+
+            IsHwinfoChartVisible = SelectedHwinfoSensor is not null;
+        }
+    }
+
+    [RelayCommand]
+    private void RefreshHwinfoSensorList()
+    {
+        var provider = ServiceLocator.HwinfoProvider;
+        if (provider is null || !provider.IsAvailable)
+        {
+            Log.Debug("[HWiNFO] Provider 不可用，無法列出感測器");
+            return;
+        }
+
+        var previousSelection = SelectedHwinfoSensor;
+        HwinfoSensorItems.Clear();
+
+        var groups = provider.GetSensorGroups();
+        foreach (var group in groups)
+        {
+            foreach (var entry in group.Entries)
+            {
+                HwinfoSensorItems.Add(new HwinfoSensorItem(
+                    group.SensorName, entry.LabelOrig, entry.Label, entry.Unit));
+            }
+        }
+
+        // Try to restore selection
+        if (previousSelection is not null)
+        {
+            foreach (var item in HwinfoSensorItems)
+            {
+                if (item.SensorName == previousSelection.SensorName &&
+                    item.LabelOrig == previousSelection.LabelOrig)
+                {
+                    SelectedHwinfoSensor = item;
+                    return;
+                }
+            }
+        }
+
+        Log.Information("[HWiNFO] 感測器清單已刷新，共 {Count} 項", HwinfoSensorItems.Count);
+    }
+
+    partial void OnSelectedHwinfoSensorChanged(HwinfoSensorItem? value)
+    {
+        if (value is not null)
+        {
+            HwinfoChartLabel = value.Label;
+            HwinfoChartUnit = value.Unit;
+            HwinfoChartYMax = 50;
+
+            // Clear HWiNFO buffer
+            Array.Clear(_hwinfoBuffer);
+            _hwinfoBufferIndex = 0;
+            _hwinfoBufferCount = 0;
+            _hwinfoSum = 0;
+            CurrentHwinfoValue = 0;
+        }
+
+        SaveHwinfoSettings();
+    }
+
+    partial void OnIsHwinfoChartVisibleChanged(bool value)
+    {
+        if (value)
+        {
+            RefreshHwinfoSensorList();
+        }
+        SaveHwinfoSettings();
+    }
+
+    private void SaveHwinfoSettings()
+    {
+        var service = ServiceLocator.SettingsService;
+        if (service is null) return;
+
+        var settings = service.Load();
+        settings.HwinfoChartEnabled = IsHwinfoChartVisible;
+        settings.HwinfoSelectedSensor = SelectedHwinfoSensor?.SensorName;
+        settings.HwinfoSelectedEntry = SelectedHwinfoSensor?.LabelOrig;
+        service.Save(settings);
+    }
+
+    #endregion
 }
