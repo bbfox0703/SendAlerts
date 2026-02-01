@@ -129,8 +129,8 @@
                          VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="600"/>
               <TextBlock Foreground="Gold" FontSize="14" FontWeight="Bold" VerticalAlignment="Center">
                 <TextBlock.Text>
-                  <MultiBinding StringFormat="{}{0:F2} {1}">
-                    <Binding Path="CurrentHwinfoValue"/>
+                  <MultiBinding StringFormat="{}{0} {1}">
+                    <Binding Path="HwinfoValueDisplay"/>
                     <Binding Path="HwinfoChartUnit"/>
                   </MultiBinding>
                 </TextBlock.Text>
