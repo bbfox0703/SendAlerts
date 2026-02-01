@@ -30,12 +30,12 @@ public partial class MainViewModel : ViewModelBase
     public string Loc_DisplayModeHint => _loc["Main_DisplayOnly"];
     public string Loc_RecentAlerts => _loc["Main_RecentAlerts"];
     public string Loc_Log => _loc["Main_Log"];
-    public string Loc_HwinfoToggle => _loc["HWiNFO_Toggle"];
-    public string Loc_HwinfoToggleTooltip => _loc["HWiNFO_ToggleTooltip"];
     public string Loc_HwinfoApply => _loc["HWiNFO_Apply"];
     public string Loc_HwinfoApplyTooltip => _loc["HWiNFO_ApplyTooltip"];
     public string Loc_HwinfoFilterWatermark => _loc["HWiNFO_FilterWatermark"];
     public string Loc_HwinfoRefreshTooltip => _loc["HWiNFO_RefreshTooltip"];
+    public string Loc_ChartSourceOff => _loc["Chart_SourceOff"];
+    public string Loc_ChartSourceTooltip => _loc["Chart_SourceTooltip"];
     #endregion
 
     // --- 介面綁定屬性 ---
@@ -101,6 +101,11 @@ public partial class MainViewModel : ViewModelBase
     public event Action? ChartDataUpdated;
     public event Action? ChartDataCleared;
     public event Action<int>? SamplingIntervalChanged;
+
+    // --- Chart Source (multi-provider) ---
+    [ObservableProperty] private ChartSourceType _chartSource;
+    [ObservableProperty] private string _chartSourceDisplayName = "Off";
+    [ObservableProperty] private string _chartTitleText = "";
 
     // --- HWiNFO Chart ---
     [ObservableProperty] private bool _isHwinfoChartVisible;
@@ -487,10 +492,10 @@ public partial class MainViewModel : ViewModelBase
                 }
             }
 
-            // F. HWiNFO Chart 讀取
+            // F. Chart 讀取 (HWiNFO / LHM)
             if (IsHwinfoChartVisible && AppliedHwinfoSensor is { } appliedSensor)
             {
-                var provider = ServiceLocator.HwinfoProvider;
+                var provider = GetActiveProvider();
                 if (provider is null) return;
 
                 var entry = provider.ReadEntry(appliedSensor.SensorName, appliedSensor.LabelOrig);
@@ -544,25 +549,118 @@ public partial class MainViewModel : ViewModelBase
 
     #region HWiNFO Chart
 
-    private void InitializeHwinfo()
+    private ISensorDataProvider? GetActiveProvider() => ChartSource switch
     {
-        var settings = ServiceLocator.SettingsService?.Load();
-        if (settings is null || !settings.HwinfoChartEnabled) return;
+        ChartSourceType.HWiNFO => ServiceLocator.HwinfoProvider as ISensorDataProvider,
+        ChartSourceType.LibreHardwareMonitor => ServiceLocator.LhmSensorProvider,
+        _ => null
+    };
+
+    private void UpdateChartSourceDisplay()
+    {
+        ChartSourceDisplayName = ChartSource switch
+        {
+            ChartSourceType.HWiNFO => "HWiNFO",
+            ChartSourceType.LibreHardwareMonitor => "LHM",
+            _ => _loc["Chart_SourceOff"]
+        };
+        ChartTitleText = ChartSource switch
+        {
+            ChartSourceType.HWiNFO => "HWiNFO:",
+            ChartSourceType.LibreHardwareMonitor => "LHM:",
+            _ => ""
+        };
+    }
+
+    [RelayCommand]
+    private void SetChartSource(ChartSourceType source)
+    {
+        var previousSource = ChartSource;
+        ChartSource = source;
+        UpdateChartSourceDisplay();
+
+        if (source == ChartSourceType.Off)
+        {
+            IsHwinfoChartVisible = false;
+            SaveChartSettings();
+            return;
+        }
+
+        // Check if provider is available
+        var provider = GetActiveProvider();
+        if (provider is null || !provider.IsAvailable)
+        {
+            // Defer to avoid re-entrancy
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                ChartSource = ChartSourceType.Off;
+                UpdateChartSourceDisplay();
+                IsHwinfoChartVisible = false;
+
+                var msg = source == ChartSourceType.HWiNFO
+                    ? _loc["HWiNFO_ShmNotFound"]
+                    : "LibreHardwareMonitor is not available.";
+                HwinfoShmNotFound?.Invoke(msg);
+            });
+            return;
+        }
+
+        // If source changed, clear buffer and reset
+        if (previousSource != source)
+        {
+            ClearHwinfoBuffer();
+            _hwinfoPeak = 0;
+            HwinfoChartYMax = 0.1;
+            CurrentHwinfoValue = 0;
+            _hwinfoUnavailableLogged = false;
+            AppliedHwinfoSensor = null;
+            AppliedHwinfoDisplay = "";
+        }
 
         _hwinfoInitializing = true;
         try
         {
-            // 先顯示 chart（即使 HWiNFO 尚未啟動）
+            IsHwinfoChartVisible = true;
+            RefreshHwinfoSensorList();
+        }
+        finally
+        {
+            _hwinfoInitializing = false;
+        }
+
+        SaveChartSettings();
+    }
+
+    private void InitializeHwinfo()
+    {
+        var settings = ServiceLocator.SettingsService?.Load();
+        if (settings is null) return;
+
+        // Use new ChartSource if available, fallback to legacy HwinfoChartEnabled
+        var source = settings.ChartSource;
+        if (source == ChartSourceType.Off && settings.HwinfoChartEnabled)
+            source = ChartSourceType.HWiNFO;
+
+        if (source == ChartSourceType.Off) return;
+
+        var selectedSensor = settings.ChartSelectedSensor ?? settings.HwinfoSelectedSensor;
+        var selectedEntry = settings.ChartSelectedEntry ?? settings.HwinfoSelectedEntry;
+
+        _hwinfoInitializing = true;
+        try
+        {
+            ChartSource = source;
+            UpdateChartSourceDisplay();
             IsHwinfoChartVisible = true;
 
             // 嘗試從設定還原 applied sensor 名稱（用於顯示）
-            if (!string.IsNullOrEmpty(settings.HwinfoSelectedSensor) &&
-                !string.IsNullOrEmpty(settings.HwinfoSelectedEntry))
+            if (!string.IsNullOrEmpty(selectedSensor) &&
+                !string.IsNullOrEmpty(selectedEntry))
             {
-                AppliedHwinfoDisplay = $"{settings.HwinfoSelectedEntry} [{settings.HwinfoSelectedSensor}]";
+                AppliedHwinfoDisplay = $"{selectedEntry} [{selectedSensor}]";
             }
 
-            // 嘗試立即套用（HWiNFO 可能已開啟）
+            // 嘗試立即套用
             TryAutoApplyHwinfoSensor();
         }
         finally
@@ -576,13 +674,15 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     private void TryAutoApplyHwinfoSensor()
     {
-        var provider = ServiceLocator.HwinfoProvider;
+        var provider = GetActiveProvider();
         if (provider is null || !provider.IsAvailable) return;
 
         var settings = ServiceLocator.SettingsService?.Load();
-        if (settings is null ||
-            string.IsNullOrEmpty(settings.HwinfoSelectedSensor) ||
-            string.IsNullOrEmpty(settings.HwinfoSelectedEntry))
+        if (settings is null) return;
+
+        var selectedSensor = settings.ChartSelectedSensor ?? settings.HwinfoSelectedSensor;
+        var selectedEntry = settings.ChartSelectedEntry ?? settings.HwinfoSelectedEntry;
+        if (string.IsNullOrEmpty(selectedSensor) || string.IsNullOrEmpty(selectedEntry))
             return;
 
         // 刷新清單
@@ -591,8 +691,8 @@ public partial class MainViewModel : ViewModelBase
         // 找到上次的選擇
         foreach (var item in _allHwinfoItems)
         {
-            if (item.SensorName == settings.HwinfoSelectedSensor &&
-                item.LabelOrig == settings.HwinfoSelectedEntry)
+            if (item.SensorName == selectedSensor &&
+                item.LabelOrig == selectedEntry)
             {
                 ApplyHwinfoSensorInternal(item);
                 Log.Information("[HWiNFO] Auto-restored sensor: {Name}", item.DisplayName);
@@ -604,7 +704,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void RefreshHwinfoSensorList()
     {
-        var provider = ServiceLocator.HwinfoProvider;
+        var provider = GetActiveProvider();
         if (provider is null || !provider.IsAvailable)
         {
             Log.Debug("[HWiNFO] Provider unavailable, cannot list sensors");
@@ -707,7 +807,7 @@ public partial class MainViewModel : ViewModelBase
             Log.Information("[HWiNFO] Applied sensor: {Name}", item.DisplayName);
         }
 
-        SaveHwinfoSettings();
+        SaveChartSettings();
     }
 
     private void ClearHwinfoBuffer()
@@ -741,11 +841,9 @@ public partial class MainViewModel : ViewModelBase
     {
         if (value && !_hwinfoInitializing)
         {
-            var provider = ServiceLocator.HwinfoProvider;
+            var provider = GetActiveProvider();
             if (provider is null || !provider.IsAvailable)
             {
-                // User clicked toggle but SHM not available — show warning and revert
-                // Defer revert to avoid re-entrancy in property change handler
                 Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                 {
                     IsHwinfoChartVisible = false;
@@ -755,10 +853,10 @@ public partial class MainViewModel : ViewModelBase
             }
             RefreshHwinfoSensorList();
         }
-        SaveHwinfoSettings();
+        SaveChartSettings();
     }
 
-    private void SaveHwinfoSettings()
+    private void SaveChartSettings()
     {
         if (_hwinfoInitializing) return;
 
@@ -766,9 +864,13 @@ public partial class MainViewModel : ViewModelBase
         if (service is null) return;
 
         var settings = service.Load();
-        settings.HwinfoChartEnabled = IsHwinfoChartVisible;
-        settings.HwinfoSelectedSensor = AppliedHwinfoSensor?.SensorName;
-        settings.HwinfoSelectedEntry = AppliedHwinfoSensor?.LabelOrig;
+        settings.ChartSource = ChartSource;
+        settings.ChartSelectedSensor = AppliedHwinfoSensor?.SensorName;
+        settings.ChartSelectedEntry = AppliedHwinfoSensor?.LabelOrig;
+        // Keep legacy fields in sync
+        settings.HwinfoChartEnabled = ChartSource != ChartSourceType.Off;
+        settings.HwinfoSelectedSensor = settings.ChartSelectedSensor;
+        settings.HwinfoSelectedEntry = settings.ChartSelectedEntry;
         service.Save(settings);
     }
 

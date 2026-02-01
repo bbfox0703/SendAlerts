@@ -5,6 +5,7 @@
              xmlns:vm="clr-namespace:SendAlerts.ViewModels"
              xmlns:sp="clr-namespace:ScottPlot.Avalonia;assembly=ScottPlot.Avalonia"
              xmlns:conv="clr-namespace:SendAlerts.Converters"
+             xmlns:models="clr-namespace:SendAlerts.Models"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="700"
              x:Class="SendAlerts.Views.MainView"
              x:DataType="vm:MainViewModel">
@@ -32,10 +33,23 @@
               MinWidth="60" FontSize="11" Padding="8,4"/>
       <TextBlock Text="{Binding GpuName}" VerticalAlignment="Center" Foreground="White" FontWeight="Bold" Margin="10,0,0,0"/>
       <TextBlock Text="{Binding PowerLimitDisplay}" VerticalAlignment="Center" Foreground="#888" Margin="10,0,0,0"/>
-      <!-- HWiNFO Toggle -->
-      <ToggleButton Content="{Binding Loc_HwinfoToggle}" IsChecked="{Binding IsHwinfoChartVisible}"
-                    ToolTip.Tip="{Binding Loc_HwinfoToggleTooltip}"
-                    Margin="10,0,0,0" FontSize="11" Padding="8,4"/>
+      <!-- Chart Source Selector -->
+      <Button Content="{Binding ChartSourceDisplayName}" Margin="10,0,0,0" FontSize="11" Padding="8,4"
+              ToolTip.Tip="{Binding Loc_ChartSourceTooltip}">
+        <Button.Flyout>
+          <MenuFlyout Placement="BottomEdgeAlignedLeft">
+            <MenuItem Header="{Binding Loc_ChartSourceOff}"
+                      Command="{Binding SetChartSourceCommand}"
+                      CommandParameter="{x:Static models:ChartSourceType.Off}"/>
+            <MenuItem Header="HWiNFO"
+                      Command="{Binding SetChartSourceCommand}"
+                      CommandParameter="{x:Static models:ChartSourceType.HWiNFO}"/>
+            <MenuItem Header="LibreHardwareMonitor"
+                      Command="{Binding SetChartSourceCommand}"
+                      CommandParameter="{x:Static models:ChartSourceType.LibreHardwareMonitor}"/>
+          </MenuFlyout>
+        </Button.Flyout>
+      </Button>
       <!-- TC1-3: 顯示模式提示 -->
       <Border Background="#3a3a00" CornerRadius="3" Padding="8,2" Margin="10,0,0,0" VerticalAlignment="Center">
         <TextBlock Text="{Binding Loc_DisplayModeHint}" Foreground="#ffcc00" FontSize="11"/>
@@ -124,7 +138,7 @@
           <StackPanel DockPanel.Dock="Top" Margin="10,5" Spacing="3">
             <!-- Row 1: 目前套用的感測器 + 即時數值 -->
             <StackPanel Orientation="Horizontal" Spacing="8">
-              <TextBlock Text="HWiNFO:" Foreground="Gold" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+              <TextBlock Text="{Binding ChartTitleText}" Foreground="Gold" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
               <TextBlock Text="{Binding AppliedHwinfoDisplay}" Foreground="#ddd" FontSize="12"
                          VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="600"/>
               <TextBlock Foreground="Gold" FontSize="14" FontWeight="Bold" VerticalAlignment="Center">

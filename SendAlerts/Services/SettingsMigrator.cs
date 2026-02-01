@@ -14,7 +14,7 @@ public static class SettingsMigrator
     /// <summary>
     /// 目前最新的設定版本
     /// </summary>
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 3;
 
     /// <summary>
     /// 執行設定遷移
@@ -36,6 +36,13 @@ public static class SettingsMigrator
             {
                 settings.SettingsVersion = 2;
             }
+        }
+
+        // 版本 2 → 3: HWiNFO Chart → 多來源 Chart
+        if (settings.SettingsVersion < 3)
+        {
+            migrated |= MigrateV2ToV3(settings);
+            settings.SettingsVersion = 3;
         }
 
         if (migrated)
@@ -177,6 +184,23 @@ public static class SettingsMigrator
     }
 
     /// <summary>
+    /// 版本 2 → 3: HWiNFO Chart 設定遷移至多來源 Chart
+    /// </summary>
+    private static bool MigrateV2ToV3(AppSettings settings)
+    {
+        if (settings.HwinfoChartEnabled && settings.ChartSource == Models.ChartSourceType.Off)
+        {
+            settings.ChartSource = Models.ChartSourceType.HWiNFO;
+            settings.ChartSelectedSensor = settings.HwinfoSelectedSensor;
+            settings.ChartSelectedEntry = settings.HwinfoSelectedEntry;
+            Log.Information("[SettingsMigrator] Migrated HWiNFO chart settings to ChartSource");
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// 檢查是否有舊版警報設定
     /// </summary>
     private static bool HasLegacyAlertSettings(AppSettings settings)
@@ -191,7 +215,7 @@ public static class SettingsMigrator
     /// </summary>
     public static bool NeedsMigration(AppSettings settings)
     {
-        return settings != null && settings.SettingsVersion < CurrentVersion && HasLegacyAlertSettings(settings);
+        return settings != null && settings.SettingsVersion < CurrentVersion;
     }
 
     /// <summary>
