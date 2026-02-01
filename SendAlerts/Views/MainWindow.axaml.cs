@@ -54,8 +54,8 @@ public partial class MainWindow : Window
 
     private void OnWindowClosing(object? sender, CancelEventArgs e)
     {
-        // 如果是強制關閉或正在關閉應用程式，則不攔截
-        if (_forceClose)
+        // 如果是強制關閉、OS 關機、或 desktop.Shutdown()，則不攔截
+        if (_forceClose || ServiceLocator.IsSessionEnding)
         {
             return;
         }

@@ -69,6 +69,11 @@ public static class ServiceLocator
     /// </summary>
     public static bool StartMinimized { get; set; }
 
+    /// <summary>
+    /// OS 關機 / SessionEnding 旗標。設定後 MainWindow 不再攔截關閉事件。
+    /// </summary>
+    public static volatile bool IsSessionEnding;
+
     #endregion
 
     #region TB3-2: Named Pipe 狀態
