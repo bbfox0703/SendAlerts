@@ -109,6 +109,7 @@ External Tool (HWiNFO64)
 - **MVVM**: Use `CommunityToolkit.Mvvm` with `[ObservableProperty]` and `partial` classes
 - **Async**: All I/O, logging, and alert actions must be async
 - **Naming**: `PascalCase` for classes/methods, `_camelCase` for private fields
+- **Log messages**: All `Log.*()` messages MUST be in English only. No Chinese/Japanese/other non-ASCII text in log output. Use structured logging parameters for variable data.
 
 ## Tech Stack
 - .NET 10 / C#

@@ -150,7 +150,7 @@
     <value>Alert Groups</value>
   </data>
   <data name="Main_DisplayOnly" xml:space="preserve">
-    <value>Display Only - Use external tools (HWiNFO64) to trigger alerts via Named Pipe</value>
+    <value>Display Only - Use external tools (i.e. HWiNFO) to trigger alerts via Named Pipe</value>
   </data>
   <data name="Main_PipeConnected" xml:space="preserve">
     <value>Pipe: Connected</value>
@@ -406,5 +406,25 @@
   </data>
   <data name="Confirm_IntervalChange_Message" xml:space="preserve">
     <value>Sampling interval changed from {0}s to {1}s. This will clear all chart data and reset the time window. Continue?</value>
+  </data>
+
+  <!-- HWiNFO Chart -->
+  <data name="HWiNFO_Toggle" xml:space="preserve">
+    <value>HWiNFO Chart</value>
+  </data>
+  <data name="HWiNFO_ToggleTooltip" xml:space="preserve">
+    <value>Toggle HWiNFO sensor chart</value>
+  </data>
+  <data name="HWiNFO_Apply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="HWiNFO_ApplyTooltip" xml:space="preserve">
+    <value>Apply selected sensor to chart</value>
+  </data>
+  <data name="HWiNFO_FilterWatermark" xml:space="preserve">
+    <value>Filter...</value>
+  </data>
+  <data name="HWiNFO_RefreshTooltip" xml:space="preserve">
+    <value>Refresh sensor list</value>
   </data>
 </root>

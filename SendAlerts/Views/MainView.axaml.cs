@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -21,10 +22,13 @@ public partial class MainView : UserControl
     private readonly double[] _temperatureData = new double[Capacity];
     private readonly double[] _powerData = new double[Capacity];
 
+    private readonly double[] _hwinfoData;  // initialized with NaN
+
     // Chart info bundles
     private ChartInfo? _utilInfo;
     private ChartInfo? _tempInfo;
     private ChartInfo? _powerInfo;
+    private ChartInfo? _hwinfoInfo;
 
     // Current sampling interval (for tooltip time calculation)
     private int _currentInterval = 1;
@@ -36,6 +40,9 @@ public partial class MainView : UserControl
         _xs = new double[Capacity];
         for (int i = 0; i < Capacity; i++) _xs[i] = i;
 
+        _hwinfoData = new double[Capacity];
+        Array.Fill(_hwinfoData, double.NaN);
+
         InitializeComponent();
         Loaded += OnLoaded;
     }
@@ -45,6 +52,7 @@ public partial class MainView : UserControl
         var utilizationChart = this.FindControl<AvaPlot>("UtilizationChart");
         var temperatureChart = this.FindControl<AvaPlot>("TemperatureChart");
         var powerChart = this.FindControl<AvaPlot>("PowerChart");
+        var hwinfoChart = this.FindControl<AvaPlot>("HwinfoChart");
 
         if (utilizationChart is null || temperatureChart is null || powerChart is null)
             return;
@@ -58,9 +66,18 @@ public partial class MainView : UserControl
         _tempInfo = SetupChart(temperatureChart, _temperatureData, Colors.OrangeRed, 0, 100);
         _powerInfo = SetupChart(powerChart, _powerData, Colors.Cyan, 0, _vm.PowerChartYMax);
 
+        if (hwinfoChart is not null)
+            _hwinfoInfo = SetupChart(hwinfoChart, _hwinfoData, Colors.Gold, 0, _vm.HwinfoChartYMax);
+
         _vm.ChartDataUpdated += OnChartDataUpdated;
         _vm.ChartDataCleared += OnChartDataCleared;
         _vm.SamplingIntervalChanged += OnSamplingIntervalChanged;
+        _vm.HwinfoChartDataUpdated += OnHwinfoChartDataUpdated;
+        _vm.HwinfoChartCleared += OnHwinfoChartCleared;
+
+        // Dynamic row visibility for HWiNFO chart (Row 3)
+        _vm.PropertyChanged += OnVmPropertyChanged;
+        UpdateHwinfoRowVisibility();
     }
 
     private ChartInfo SetupChart(AvaPlot chart, double[] data, Color lineColor, double yMin, double yMax)
@@ -172,6 +189,7 @@ public partial class MainView : UserControl
         UpdateChartXTicks(_utilInfo, positions, labels);
         UpdateChartXTicks(_tempInfo, positions, labels);
         UpdateChartXTicks(_powerInfo, positions, labels);
+        UpdateChartXTicks(_hwinfoInfo, positions, labels);
     }
 
     private static void UpdateChartXTicks(ChartInfo? info, double[] positions, string[] labels)
@@ -199,6 +217,13 @@ public partial class MainView : UserControl
             }
 
             var value = data[index];
+            if (double.IsNaN(value))
+            {
+                crosshair.IsVisible = false;
+                tooltip.IsVisible = false;
+                chart.Refresh();
+                return;
+            }
             crosshair.IsVisible = true;
             crosshair.Position = new Coordinates(index, value);
 
@@ -244,11 +269,13 @@ public partial class MainView : UserControl
         Array.Clear(_utilizationData);
         Array.Clear(_temperatureData);
         Array.Clear(_powerData);
+        Array.Fill(_hwinfoData, double.NaN);
 
         // Hide crosshairs/tooltips
         HideCrosshair(_utilInfo);
         HideCrosshair(_tempInfo);
         HideCrosshair(_powerInfo);
+        HideCrosshair(_hwinfoInfo);
 
         // Refresh with updated Y limits
         if (_vm is not null)
@@ -256,6 +283,7 @@ public partial class MainView : UserControl
             RefreshChart(_utilInfo, 0, 100);
             RefreshChart(_tempInfo, 0, 100);
             RefreshChart(_powerInfo, 0, _vm.PowerChartYMax);
+            RefreshChart(_hwinfoInfo, 0, _vm.HwinfoChartYMax);
         }
     }
 
@@ -333,6 +361,13 @@ public partial class MainView : UserControl
             if (index >= 0 && index < Capacity)
             {
                 var value = info.Data[index];
+                if (double.IsNaN(value))
+                {
+                    info.Crosshair.IsVisible = false;
+                    info.Tooltip.IsVisible = false;
+                    info.Chart.Refresh();
+                    return;
+                }
                 info.Crosshair.Position = new Coordinates(index, value);
 
                 // Update tooltip text
@@ -353,6 +388,51 @@ public partial class MainView : UserControl
         data[^1] = newValue;
     }
 
+    private void OnHwinfoChartDataUpdated()
+    {
+        if (_vm is null || _hwinfoInfo is null) return;
+
+        ShiftAndAppend(_hwinfoData, _vm._lastHwinfoTickValue);
+        RefreshChart(_hwinfoInfo, 0, _vm.HwinfoChartYMax);
+    }
+
+    private void OnHwinfoChartCleared()
+    {
+        Array.Fill(_hwinfoData, double.NaN);
+        HideCrosshair(_hwinfoInfo);
+        if (_vm is not null)
+            RefreshChart(_hwinfoInfo, 0, _vm.HwinfoChartYMax);
+    }
+
+    private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.IsHwinfoChartVisible))
+            UpdateHwinfoRowVisibility();
+    }
+
+    private void UpdateHwinfoRowVisibility()
+    {
+        // Find the main Grid (parent of chart borders)
+        var content = this.Content as Avalonia.Controls.DockPanel;
+        if (content is null) return;
+
+        Grid? mainGrid = null;
+        foreach (var child in content.Children)
+        {
+            if (child is Grid g && g.RowDefinitions.Count >= 5)
+            {
+                mainGrid = g;
+                break;
+            }
+        }
+        if (mainGrid is null) return;
+
+        var visible = _vm?.IsHwinfoChartVisible == true;
+        mainGrid.RowDefinitions[3].Height = visible
+            ? new GridLength(1, GridUnitType.Star)
+            : new GridLength(0);
+    }
+
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);
@@ -362,6 +442,9 @@ public partial class MainView : UserControl
             _vm.ChartDataUpdated -= OnChartDataUpdated;
             _vm.ChartDataCleared -= OnChartDataCleared;
             _vm.SamplingIntervalChanged -= OnSamplingIntervalChanged;
+            _vm.HwinfoChartDataUpdated -= OnHwinfoChartDataUpdated;
+            _vm.HwinfoChartCleared -= OnHwinfoChartCleared;
+            _vm.PropertyChanged -= OnVmPropertyChanged;
         }
 
         _vm = DataContext as MainViewModel;
@@ -371,6 +454,9 @@ public partial class MainView : UserControl
             _vm.ChartDataUpdated += OnChartDataUpdated;
             _vm.ChartDataCleared += OnChartDataCleared;
             _vm.SamplingIntervalChanged += OnSamplingIntervalChanged;
+            _vm.HwinfoChartDataUpdated += OnHwinfoChartDataUpdated;
+            _vm.HwinfoChartCleared += OnHwinfoChartCleared;
+            _vm.PropertyChanged += OnVmPropertyChanged;
         }
     }
 
