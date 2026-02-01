@@ -39,9 +39,6 @@
     <PackageReference Include="DiskInfoToolkit" />
     <PackageReference Include="Microsoft.Win32.SystemEvents" />
     <PackageReference Include="LibreHardwareMonitorLib" />
-    <PackageReference Include="Serilog" />
-    <PackageReference Include="Serilog.Sinks.File" />
-    <PackageReference Include="Serilog.Sinks.Console" />
   </ItemGroup>
 
   <ItemGroup>
