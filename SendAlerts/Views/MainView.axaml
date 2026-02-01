@@ -121,24 +121,37 @@
       <Border Grid.Row="3" Margin="5" Background="#1a1a1a" CornerRadius="5"
               IsVisible="{Binding IsHwinfoChartVisible}">
         <DockPanel>
-          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,5" Spacing="5">
-            <TextBlock Text="HWiNFO:" Foreground="Gold" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
-            <TextBox Text="{Binding HwinfoFilterText}" Watermark="Filter..." Width="120" FontSize="11"
-                     VerticalAlignment="Center" Padding="4,3"/>
-            <ComboBox ItemsSource="{Binding HwinfoFilteredItems}"
-                      SelectedItem="{Binding SelectedHwinfoSensor}"
-                      MinWidth="350" MaxWidth="550" FontSize="11" VerticalAlignment="Center"
-                      MaxDropDownHeight="400"/>
-            <Button Content="&#x21BB;" Command="{Binding RefreshHwinfoSensorListCommand}"
-                    ToolTip.Tip="Refresh sensor list" FontSize="14" Padding="4,2" VerticalAlignment="Center"/>
-            <TextBlock Foreground="Gold" FontSize="14" VerticalAlignment="Center">
-              <TextBlock.Text>
-                <MultiBinding StringFormat="{}{0:F2} {1}">
-                  <Binding Path="CurrentHwinfoValue"/>
-                  <Binding Path="HwinfoChartUnit"/>
-                </MultiBinding>
-              </TextBlock.Text>
-            </TextBlock>
+          <StackPanel DockPanel.Dock="Top" Margin="10,5" Spacing="3">
+            <!-- Row 1: 目前套用的感測器 + 即時數值 -->
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="HWiNFO:" Foreground="Gold" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+              <TextBlock Text="{Binding AppliedHwinfoDisplay}" Foreground="#ddd" FontSize="12"
+                         VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="500"/>
+              <TextBlock Foreground="Gold" FontSize="14" FontWeight="Bold" VerticalAlignment="Center">
+                <TextBlock.Text>
+                  <MultiBinding StringFormat="{}{0:F2} {1}">
+                    <Binding Path="CurrentHwinfoValue"/>
+                    <Binding Path="HwinfoChartUnit"/>
+                  </MultiBinding>
+                </TextBlock.Text>
+              </TextBlock>
+              <Ellipse Width="8" Height="8" Margin="5,0" VerticalAlignment="Center"
+                       Fill="{Binding IsHwinfoReadable, Converter={StaticResource StatusColorConverter}}"/>
+            </StackPanel>
+            <!-- Row 2: Filter + ComboBox + Apply + Refresh -->
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <TextBox Text="{Binding HwinfoFilterText}" Watermark="Filter..." Width="120" FontSize="11"
+                       VerticalAlignment="Center" Padding="4,2"/>
+              <ComboBox ItemsSource="{Binding HwinfoFilteredItems}"
+                        SelectedItem="{Binding SelectedHwinfoSensor}"
+                        MinWidth="350" MaxWidth="500" FontSize="11" VerticalAlignment="Center"
+                        MaxDropDownHeight="400"/>
+              <Button Content="Apply" Command="{Binding ApplyHwinfoSensorCommand}"
+                      FontSize="11" Padding="8,3" VerticalAlignment="Center"
+                      ToolTip.Tip="Apply selected sensor to chart"/>
+              <Button Content="&#x21BB;" Command="{Binding RefreshHwinfoSensorListCommand}"
+                      ToolTip.Tip="Refresh sensor list" FontSize="14" Padding="4,2" VerticalAlignment="Center"/>
+            </StackPanel>
           </StackPanel>
           <sp:AvaPlot x:Name="HwinfoChart" />
         </DockPanel>

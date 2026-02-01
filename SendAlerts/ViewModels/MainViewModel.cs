@@ -102,14 +102,18 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private string _hwinfoChartLabel = "";
     [ObservableProperty] private string _hwinfoChartUnit = "";
     [ObservableProperty] private double _hwinfoChartYMax = 50;
-    [ObservableProperty] private HwinfoSensorItem? _selectedHwinfoSensor;
+    [ObservableProperty] private HwinfoSensorItem? _selectedHwinfoSensor; // ComboBox 選擇 (尚未套用)
+    [ObservableProperty] private HwinfoSensorItem? _appliedHwinfoSensor;  // 實際繪圖的感測器
+    [ObservableProperty] private string _appliedHwinfoDisplay = "";       // 目前套用的顯示名稱
     [ObservableProperty] private string _hwinfoFilterText = "";
+    [ObservableProperty] private bool _isHwinfoReadable;                  // SHM 是否可讀
     public ObservableCollection<HwinfoSensorItem> HwinfoSensorItems { get; } = new();
     public ObservableCollection<HwinfoSensorItem> HwinfoFilteredItems { get; } = new();
     private readonly List<HwinfoSensorItem> _allHwinfoItems = new();
 
     /// <summary>通知 View 刷新 HWiNFO 圖表</summary>
     public event Action? HwinfoChartDataUpdated;
+    public event Action? HwinfoChartCleared;
 
     // HWiNFO buffer (與主 buffer 分開)
     private double[] _hwinfoBuffer = Array.Empty<double>();
@@ -117,6 +121,9 @@ public partial class MainViewModel : ViewModelBase
     private int _hwinfoBufferCount;
     private double _hwinfoSum;
     private bool _hwinfoUnavailableLogged;
+    private int _hwinfoRetryCounter; // 啟動時等待 HWiNFO 可用的計數器
+    internal double _lastHwinfoTickValue; // View 用：最新一筆寫入值 (可能是 NaN)
+    private bool _hwinfoInitializing; // 初始化期間不儲存設定
 
     // --- TB3-3: 警報歷史 ---
     public ObservableCollection<AlertHistoryItem> AlertHistoryItems { get; } = new();
@@ -172,6 +179,7 @@ public partial class MainViewModel : ViewModelBase
         _powerSum = 0;
 
         _hwinfoBuffer = new double[_maxPoints];
+        Array.Fill(_hwinfoBuffer, double.NaN);
         _hwinfoBufferIndex = 0;
         _hwinfoBufferCount = 0;
         _hwinfoSum = 0;
@@ -457,26 +465,21 @@ public partial class MainViewModel : ViewModelBase
             }
 
             // F. HWiNFO Chart 讀取
-            if (IsHwinfoChartVisible && SelectedHwinfoSensor is { } selectedSensor)
+            if (IsHwinfoChartVisible && AppliedHwinfoSensor is { } appliedSensor)
             {
                 var provider = ServiceLocator.HwinfoProvider;
                 if (provider is null) return;
 
-                var entry = provider.ReadEntry(selectedSensor.SensorName, selectedSensor.LabelOrig);
+                var entry = provider.ReadEntry(appliedSensor.SensorName, appliedSensor.LabelOrig);
                 if (entry is not null)
                 {
                     _hwinfoUnavailableLogged = false;
+                    IsHwinfoReadable = true;
                     CurrentHwinfoValue = entry.Value;
+                    _lastHwinfoTickValue = entry.Value;
 
                     // Write to ring buffer
-                    if (_hwinfoBufferCount >= _maxPoints)
-                        _hwinfoSum -= _hwinfoBuffer[_hwinfoBufferIndex];
-
-                    _hwinfoBuffer[_hwinfoBufferIndex] = entry.Value;
-                    _hwinfoSum += entry.Value;
-
-                    _hwinfoBufferIndex = (_hwinfoBufferIndex + 1) % _maxPoints;
-                    if (_hwinfoBufferCount < _maxPoints) _hwinfoBufferCount++;
+                    WriteHwinfoBuffer(entry.Value);
 
                     // Dynamic Y axis
                     if (entry.Value > HwinfoChartYMax * 0.85)
@@ -490,14 +493,26 @@ public partial class MainViewModel : ViewModelBase
                 }
                 else
                 {
-                    // HWiNFO unavailable (12hr limit, closed, etc.)
+                    // HWiNFO unavailable — 寫入 NaN 產生斷線而非假的 0 值
+                    IsHwinfoReadable = false;
+                    _lastHwinfoTickValue = double.NaN;
+                    WriteHwinfoBuffer(double.NaN);
+                    HwinfoChartDataUpdated?.Invoke();
+
                     if (!_hwinfoUnavailableLogged)
                     {
                         Log.Warning("[HWiNFO] 感測器讀取失敗，可能 HWiNFO64 已關閉或達到 12 小時限制");
                         _hwinfoUnavailableLogged = true;
                     }
-                    IsHwinfoChartVisible = false;
-                    SaveHwinfoSettings();
+                }
+            }
+            // 啟動時等待 HWiNFO：chart 已啟用但尚未有 applied sensor（等待 SHM 可用再自動套用）
+            else if (IsHwinfoChartVisible && AppliedHwinfoSensor is null)
+            {
+                _hwinfoRetryCounter++;
+                if (_hwinfoRetryCounter % 5 == 0) // 每 5 秒嘗試一次
+                {
+                    TryAutoApplyHwinfoSensor();
                 }
             }
         }
@@ -512,28 +527,57 @@ public partial class MainViewModel : ViewModelBase
     private void InitializeHwinfo()
     {
         var settings = ServiceLocator.SettingsService?.Load();
-        if (settings is null) return;
+        if (settings is null || !settings.HwinfoChartEnabled) return;
 
-        if (settings.HwinfoChartEnabled)
+        _hwinfoInitializing = true;
+        try
         {
-            RefreshHwinfoSensorList();
+            // 先顯示 chart（即使 HWiNFO 尚未啟動）
+            IsHwinfoChartVisible = true;
 
-            // Restore previous selection
+            // 嘗試從設定還原 applied sensor 名稱（用於顯示）
             if (!string.IsNullOrEmpty(settings.HwinfoSelectedSensor) &&
                 !string.IsNullOrEmpty(settings.HwinfoSelectedEntry))
             {
-                foreach (var item in HwinfoSensorItems)
-                {
-                    if (item.SensorName == settings.HwinfoSelectedSensor &&
-                        item.LabelOrig == settings.HwinfoSelectedEntry)
-                    {
-                        SelectedHwinfoSensor = item;
-                        break;
-                    }
-                }
+                AppliedHwinfoDisplay = $"{settings.HwinfoSelectedEntry} [{settings.HwinfoSelectedSensor}]";
             }
 
-            IsHwinfoChartVisible = SelectedHwinfoSensor is not null;
+            // 嘗試立即套用（HWiNFO 可能已開啟）
+            TryAutoApplyHwinfoSensor();
+        }
+        finally
+        {
+            _hwinfoInitializing = false;
+        }
+    }
+
+    /// <summary>
+    /// 啟動時嘗試自動套用上次選擇的感測器
+    /// </summary>
+    private void TryAutoApplyHwinfoSensor()
+    {
+        var provider = ServiceLocator.HwinfoProvider;
+        if (provider is null || !provider.IsAvailable) return;
+
+        var settings = ServiceLocator.SettingsService?.Load();
+        if (settings is null ||
+            string.IsNullOrEmpty(settings.HwinfoSelectedSensor) ||
+            string.IsNullOrEmpty(settings.HwinfoSelectedEntry))
+            return;
+
+        // 刷新清單
+        RefreshHwinfoSensorList();
+
+        // 找到上次的選擇
+        foreach (var item in _allHwinfoItems)
+        {
+            if (item.SensorName == settings.HwinfoSelectedSensor &&
+                item.LabelOrig == settings.HwinfoSelectedEntry)
+            {
+                ApplyHwinfoSensorInternal(item);
+                Log.Information("[HWiNFO] 自動還原感測器: {Name}", item.DisplayName);
+                return;
+            }
         }
     }
 
@@ -547,7 +591,7 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        var previousSelection = SelectedHwinfoSensor;
+        var previousComboSelection = SelectedHwinfoSensor;
         _allHwinfoItems.Clear();
         HwinfoSensorItems.Clear();
 
@@ -565,16 +609,16 @@ public partial class MainViewModel : ViewModelBase
 
         ApplyHwinfoFilter();
 
-        // Try to restore selection
-        if (previousSelection is not null)
+        // 嘗試還原 ComboBox 選擇
+        if (previousComboSelection is not null)
         {
             foreach (var item in HwinfoFilteredItems)
             {
-                if (item.SensorName == previousSelection.SensorName &&
-                    item.LabelOrig == previousSelection.LabelOrig)
+                if (item.SensorName == previousComboSelection.SensorName &&
+                    item.LabelOrig == previousComboSelection.LabelOrig)
                 {
                     SelectedHwinfoSensor = item;
-                    return;
+                    break;
                 }
             }
         }
@@ -589,6 +633,8 @@ public partial class MainViewModel : ViewModelBase
 
     private void ApplyHwinfoFilter()
     {
+        // 記住目前 ComboBox 選擇
+        var prev = SelectedHwinfoSensor;
         HwinfoFilteredItems.Clear();
         var filter = HwinfoFilterText?.Trim() ?? "";
 
@@ -600,25 +646,74 @@ public partial class MainViewModel : ViewModelBase
                 HwinfoFilteredItems.Add(item);
             }
         }
+
+        // 嘗試保留選擇（若仍在過濾結果中）
+        if (prev is not null && HwinfoFilteredItems.Contains(prev))
+        {
+            SelectedHwinfoSensor = prev;
+        }
     }
 
-    partial void OnSelectedHwinfoSensorChanged(HwinfoSensorItem? value)
+    /// <summary>
+    /// Apply 按鈕：將 ComboBox 選擇套用為實際繪圖的感測器
+    /// </summary>
+    [RelayCommand]
+    private void ApplyHwinfoSensor()
     {
-        if (value is not null)
-        {
-            HwinfoChartLabel = value.Label;
-            HwinfoChartUnit = value.Unit;
-            HwinfoChartYMax = 50;
+        if (SelectedHwinfoSensor is null) return;
+        ApplyHwinfoSensorInternal(SelectedHwinfoSensor);
+    }
 
-            // Clear HWiNFO buffer
-            Array.Clear(_hwinfoBuffer);
-            _hwinfoBufferIndex = 0;
-            _hwinfoBufferCount = 0;
-            _hwinfoSum = 0;
+    private void ApplyHwinfoSensorInternal(HwinfoSensorItem item)
+    {
+        // 判斷是否為不同的感測器
+        var isDifferent = AppliedHwinfoSensor is null ||
+                          AppliedHwinfoSensor.SensorName != item.SensorName ||
+                          AppliedHwinfoSensor.LabelOrig != item.LabelOrig;
+
+        AppliedHwinfoSensor = item;
+        AppliedHwinfoDisplay = $"{item.Label} ({item.Unit}) [{item.SensorName}]";
+        HwinfoChartLabel = item.Label;
+        HwinfoChartUnit = item.Unit;
+
+        if (isDifferent)
+        {
+            // 清空 buffer + 重設 Y 軸
+            ClearHwinfoBuffer();
+            HwinfoChartYMax = 50;
             CurrentHwinfoValue = 0;
+            _hwinfoUnavailableLogged = false;
+            Log.Information("[HWiNFO] 套用感測器: {Name}", item.DisplayName);
         }
 
         SaveHwinfoSettings();
+    }
+
+    private void ClearHwinfoBuffer()
+    {
+        // 填入 NaN 使 ScottPlot 不繪製舊資料
+        Array.Fill(_hwinfoBuffer, double.NaN);
+        _hwinfoBufferIndex = 0;
+        _hwinfoBufferCount = 0;
+        _hwinfoSum = 0;
+        HwinfoChartCleared?.Invoke();
+    }
+
+    private void WriteHwinfoBuffer(double value)
+    {
+        if (_hwinfoBufferCount >= _maxPoints)
+        {
+            var old = _hwinfoBuffer[_hwinfoBufferIndex];
+            if (!double.IsNaN(old))
+                _hwinfoSum -= old;
+        }
+
+        _hwinfoBuffer[_hwinfoBufferIndex] = value;
+        if (!double.IsNaN(value))
+            _hwinfoSum += value;
+
+        _hwinfoBufferIndex = (_hwinfoBufferIndex + 1) % _maxPoints;
+        if (_hwinfoBufferCount < _maxPoints) _hwinfoBufferCount++;
     }
 
     partial void OnIsHwinfoChartVisibleChanged(bool value)
@@ -632,13 +727,15 @@ public partial class MainViewModel : ViewModelBase
 
     private void SaveHwinfoSettings()
     {
+        if (_hwinfoInitializing) return;
+
         var service = ServiceLocator.SettingsService;
         if (service is null) return;
 
         var settings = service.Load();
         settings.HwinfoChartEnabled = IsHwinfoChartVisible;
-        settings.HwinfoSelectedSensor = SelectedHwinfoSensor?.SensorName;
-        settings.HwinfoSelectedEntry = SelectedHwinfoSensor?.LabelOrig;
+        settings.HwinfoSelectedSensor = AppliedHwinfoSensor?.SensorName;
+        settings.HwinfoSelectedEntry = AppliedHwinfoSensor?.LabelOrig;
         service.Save(settings);
     }
 

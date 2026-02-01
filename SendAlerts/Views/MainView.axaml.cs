@@ -22,7 +22,7 @@ public partial class MainView : UserControl
     private readonly double[] _temperatureData = new double[Capacity];
     private readonly double[] _powerData = new double[Capacity];
 
-    private readonly double[] _hwinfoData = new double[Capacity];
+    private readonly double[] _hwinfoData;  // initialized with NaN
 
     // Chart info bundles
     private ChartInfo? _utilInfo;
@@ -39,6 +39,9 @@ public partial class MainView : UserControl
     {
         _xs = new double[Capacity];
         for (int i = 0; i < Capacity; i++) _xs[i] = i;
+
+        _hwinfoData = new double[Capacity];
+        Array.Fill(_hwinfoData, double.NaN);
 
         InitializeComponent();
         Loaded += OnLoaded;
@@ -70,6 +73,7 @@ public partial class MainView : UserControl
         _vm.ChartDataCleared += OnChartDataCleared;
         _vm.SamplingIntervalChanged += OnSamplingIntervalChanged;
         _vm.HwinfoChartDataUpdated += OnHwinfoChartDataUpdated;
+        _vm.HwinfoChartCleared += OnHwinfoChartCleared;
 
         // Dynamic row visibility for HWiNFO chart (Row 3)
         _vm.PropertyChanged += OnVmPropertyChanged;
@@ -213,6 +217,13 @@ public partial class MainView : UserControl
             }
 
             var value = data[index];
+            if (double.IsNaN(value))
+            {
+                crosshair.IsVisible = false;
+                tooltip.IsVisible = false;
+                chart.Refresh();
+                return;
+            }
             crosshair.IsVisible = true;
             crosshair.Position = new Coordinates(index, value);
 
@@ -258,7 +269,7 @@ public partial class MainView : UserControl
         Array.Clear(_utilizationData);
         Array.Clear(_temperatureData);
         Array.Clear(_powerData);
-        Array.Clear(_hwinfoData);
+        Array.Fill(_hwinfoData, double.NaN);
 
         // Hide crosshairs/tooltips
         HideCrosshair(_utilInfo);
@@ -350,6 +361,13 @@ public partial class MainView : UserControl
             if (index >= 0 && index < Capacity)
             {
                 var value = info.Data[index];
+                if (double.IsNaN(value))
+                {
+                    info.Crosshair.IsVisible = false;
+                    info.Tooltip.IsVisible = false;
+                    info.Chart.Refresh();
+                    return;
+                }
                 info.Crosshair.Position = new Coordinates(index, value);
 
                 // Update tooltip text
@@ -374,8 +392,16 @@ public partial class MainView : UserControl
     {
         if (_vm is null || _hwinfoInfo is null) return;
 
-        ShiftAndAppend(_hwinfoData, _vm.CurrentHwinfoValue);
+        ShiftAndAppend(_hwinfoData, _vm._lastHwinfoTickValue);
         RefreshChart(_hwinfoInfo, 0, _vm.HwinfoChartYMax);
+    }
+
+    private void OnHwinfoChartCleared()
+    {
+        Array.Fill(_hwinfoData, double.NaN);
+        HideCrosshair(_hwinfoInfo);
+        if (_vm is not null)
+            RefreshChart(_hwinfoInfo, 0, _vm.HwinfoChartYMax);
     }
 
     private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -417,6 +443,7 @@ public partial class MainView : UserControl
             _vm.ChartDataCleared -= OnChartDataCleared;
             _vm.SamplingIntervalChanged -= OnSamplingIntervalChanged;
             _vm.HwinfoChartDataUpdated -= OnHwinfoChartDataUpdated;
+            _vm.HwinfoChartCleared -= OnHwinfoChartCleared;
             _vm.PropertyChanged -= OnVmPropertyChanged;
         }
 
@@ -428,6 +455,7 @@ public partial class MainView : UserControl
             _vm.ChartDataCleared += OnChartDataCleared;
             _vm.SamplingIntervalChanged += OnSamplingIntervalChanged;
             _vm.HwinfoChartDataUpdated += OnHwinfoChartDataUpdated;
+            _vm.HwinfoChartCleared += OnHwinfoChartCleared;
             _vm.PropertyChanged += OnVmPropertyChanged;
         }
     }
