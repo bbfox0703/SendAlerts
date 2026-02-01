@@ -37,6 +37,7 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="DiskInfoToolkit" />
+    <PackageReference Include="Microsoft.Win32.SystemEvents" />
     <PackageReference Include="LibreHardwareMonitorLib" />
     <PackageReference Include="Serilog" />
     <PackageReference Include="Serilog.Sinks.File" />

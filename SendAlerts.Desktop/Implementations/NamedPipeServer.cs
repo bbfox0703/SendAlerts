@@ -83,7 +83,7 @@ public sealed class NamedPipeServer : IDisposable
 
             if (_listenerTask != null)
             {
-                await _listenerTask.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                await _listenerTask.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
             }
         }
         catch (TimeoutException)

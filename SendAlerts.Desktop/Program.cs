@@ -109,6 +109,20 @@ sealed class Program
             // Watchdog: 若啟用則連帶啟動
             LaunchWatchdogIfEnabled();
 
+            // 處理 OS 關機事件 — 設定旗標讓 MainWindow 不攔截關閉
+            if (OperatingSystem.IsWindows())
+            {
+                Microsoft.Win32.SystemEvents.SessionEnding += (_, _) =>
+                {
+                    ServiceLocator.IsSessionEnding = true;
+                    Log.Information("[Desktop] SessionEnding received, allowing shutdown");
+                };
+            }
+            AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+            {
+                ServiceLocator.IsSessionEnding = true;
+            };
+
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
         catch (Exception ex)
@@ -654,7 +668,7 @@ sealed class Program
             existing.Dispose();
 
             using var client = new NamedPipeClientStream(".", "sendalerts-watchdog-pipe", PipeDirection.Out);
-            client.Connect(2000);
+            client.Connect(500);
             using var writer = new StreamWriter(client);
             writer.Write("{\"Command\":\"Shutdown\"}");
             writer.Flush();
