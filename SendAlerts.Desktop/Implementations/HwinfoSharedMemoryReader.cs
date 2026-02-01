@@ -187,7 +187,7 @@ public class HwinfoSharedMemoryReader : IHwinfoProvider
         }
         catch (Exception ex)
         {
-            Log.Debug(ex, "[HWiNFO] 讀取 Shared Memory 失敗");
+            Log.Debug(ex, "[HWiNFO] Failed to read Shared Memory");
         }
 
         return groups;
@@ -257,7 +257,7 @@ public class HwinfoSharedMemoryReader : IHwinfoProvider
         }
         catch (Exception ex)
         {
-            Log.Debug(ex, "[HWiNFO] 讀取感測器 {Sensor}/{Label} 失敗", sensorName, labelOrig);
+            Log.Debug(ex, "[HWiNFO] Failed to read sensor {Sensor}/{Label}", sensorName, labelOrig);
         }
 
         return null;

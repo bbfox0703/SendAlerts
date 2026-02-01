@@ -30,6 +30,12 @@ public partial class MainViewModel : ViewModelBase
     public string Loc_DisplayModeHint => _loc["Main_DisplayOnly"];
     public string Loc_RecentAlerts => _loc["Main_RecentAlerts"];
     public string Loc_Log => _loc["Main_Log"];
+    public string Loc_HwinfoToggle => _loc["HWiNFO_Toggle"];
+    public string Loc_HwinfoToggleTooltip => _loc["HWiNFO_ToggleTooltip"];
+    public string Loc_HwinfoApply => _loc["HWiNFO_Apply"];
+    public string Loc_HwinfoApplyTooltip => _loc["HWiNFO_ApplyTooltip"];
+    public string Loc_HwinfoFilterWatermark => _loc["HWiNFO_FilterWatermark"];
+    public string Loc_HwinfoRefreshTooltip => _loc["HWiNFO_RefreshTooltip"];
     #endregion
 
     // --- 介面綁定屬性 ---
@@ -163,7 +169,7 @@ public partial class MainViewModel : ViewModelBase
         // HWiNFO: 載入設定
         InitializeHwinfo();
 
-        Log.Information("SendAlerts 監控啟動 (Display-Only Mode): {GpuName} | Mode: {Mode} | PowerLimit: {PowerLimit:F1}{Unit}",
+        Log.Information("SendAlerts monitor started (Display-Only Mode): {GpuName} | Mode: {Mode} | PowerLimit: {PowerLimit:F1}{Unit}",
             GpuName, _gpuProvider.Mode, PowerLimit, SecondaryMetricUnit);
     }
 
@@ -235,7 +241,7 @@ public partial class MainViewModel : ViewModelBase
             ChartDataCleared?.Invoke();
             SamplingIntervalChanged?.Invoke(seconds);
             _timer.Start();
-            Log.Information("取樣間隔已更新: {Old}s → {New}s，圖表已清空", oldInterval, seconds);
+            Log.Information("Sampling interval updated: {Old}s -> {New}s, charts cleared", oldInterval, seconds);
         }
     }
 
@@ -391,7 +397,7 @@ public partial class MainViewModel : ViewModelBase
         ChartDataCleared?.Invoke();
         _timer.Start();
 
-        Log.Information("已切換 Provider: {Name} ({Type})", CurrentProviderName, _gpuProvider.GetType().Name);
+        Log.Information("Switched provider: {Name} ({Type})", CurrentProviderName, _gpuProvider.GetType().Name);
     }
 
     private static string GetVersionString()
@@ -501,7 +507,7 @@ public partial class MainViewModel : ViewModelBase
 
                     if (!_hwinfoUnavailableLogged)
                     {
-                        Log.Warning("[HWiNFO] 感測器讀取失敗，可能 HWiNFO64 已關閉或達到 12 小時限制");
+                        Log.Warning("[HWiNFO] Sensor read failed, HWiNFO64 may be closed or 12-hour limit reached");
                         _hwinfoUnavailableLogged = true;
                     }
                 }
@@ -518,7 +524,7 @@ public partial class MainViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "數據讀取過程中發生錯誤");
+            Log.Error(ex, "Error during data reading");
         }
     }
 
@@ -575,7 +581,7 @@ public partial class MainViewModel : ViewModelBase
                 item.LabelOrig == settings.HwinfoSelectedEntry)
             {
                 ApplyHwinfoSensorInternal(item);
-                Log.Information("[HWiNFO] 自動還原感測器: {Name}", item.DisplayName);
+                Log.Information("[HWiNFO] Auto-restored sensor: {Name}", item.DisplayName);
                 return;
             }
         }
@@ -587,7 +593,7 @@ public partial class MainViewModel : ViewModelBase
         var provider = ServiceLocator.HwinfoProvider;
         if (provider is null || !provider.IsAvailable)
         {
-            Log.Debug("[HWiNFO] Provider 不可用，無法列出感測器");
+            Log.Debug("[HWiNFO] Provider unavailable, cannot list sensors");
             return;
         }
 
@@ -623,7 +629,7 @@ public partial class MainViewModel : ViewModelBase
             }
         }
 
-        Log.Information("[HWiNFO] 感測器清單已刷新，共 {Count} 項", _allHwinfoItems.Count);
+        Log.Information("[HWiNFO] Sensor list refreshed, {Count} items", _allHwinfoItems.Count);
     }
 
     partial void OnHwinfoFilterTextChanged(string value)
@@ -683,7 +689,7 @@ public partial class MainViewModel : ViewModelBase
             HwinfoChartYMax = 50;
             CurrentHwinfoValue = 0;
             _hwinfoUnavailableLogged = false;
-            Log.Information("[HWiNFO] 套用感測器: {Name}", item.DisplayName);
+            Log.Information("[HWiNFO] Applied sensor: {Name}", item.DisplayName);
         }
 
         SaveHwinfoSettings();
