@@ -427,4 +427,7 @@
   <data name="HWiNFO_RefreshTooltip" xml:space="preserve">
     <value>センサーリストを更新</value>
   </data>
+  <data name="HWiNFO_ShmNotFound" xml:space="preserve">
+    <value>HWiNFO Shared Memory が見つかりません。HWiNFO64 が起動しており、Shared Memory サポートが有効になっていることを確認してください（設定 > Shared Memory > Enable）。</value>
+  </data>
 </root>

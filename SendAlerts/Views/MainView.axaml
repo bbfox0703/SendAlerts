@@ -126,7 +126,7 @@
             <StackPanel Orientation="Horizontal" Spacing="8">
               <TextBlock Text="HWiNFO:" Foreground="Gold" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
               <TextBlock Text="{Binding AppliedHwinfoDisplay}" Foreground="#ddd" FontSize="12"
-                         VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="500"/>
+                         VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="600"/>
               <TextBlock Foreground="Gold" FontSize="14" FontWeight="Bold" VerticalAlignment="Center">
                 <TextBlock.Text>
                   <MultiBinding StringFormat="{}{0:F2} {1}">
@@ -144,7 +144,7 @@
                        VerticalAlignment="Center" Padding="4,2"/>
               <ComboBox ItemsSource="{Binding HwinfoFilteredItems}"
                         SelectedItem="{Binding SelectedHwinfoSensor}"
-                        MinWidth="350" MaxWidth="500" FontSize="11" VerticalAlignment="Center"
+                        MinWidth="420" MaxWidth="600" FontSize="11" VerticalAlignment="Center"
                         MaxDropDownHeight="400"/>
               <Button Content="{Binding Loc_HwinfoApply}" Command="{Binding ApplyHwinfoSensorCommand}"
                       FontSize="11" Padding="8,3" VerticalAlignment="Center"

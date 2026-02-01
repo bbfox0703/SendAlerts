@@ -427,4 +427,7 @@
   <data name="HWiNFO_RefreshTooltip" xml:space="preserve">
     <value>Refresh sensor list</value>
   </data>
+  <data name="HWiNFO_ShmNotFound" xml:space="preserve">
+    <value>HWiNFO Shared Memory not found. Please ensure HWiNFO64 is running with Shared Memory Support enabled (Settings > Shared Memory > Enable).</value>
+  </data>
 </root>

@@ -427,4 +427,7 @@
   <data name="HWiNFO_RefreshTooltip" xml:space="preserve">
     <value>重新整理感測器清單</value>
   </data>
+  <data name="HWiNFO_ShmNotFound" xml:space="preserve">
+    <value>找不到 HWiNFO Shared Memory。請確認 HWiNFO64 已啟動並開啟 Shared Memory 功能（設定 > Shared Memory > Enable）。</value>
+  </data>
 </root>
