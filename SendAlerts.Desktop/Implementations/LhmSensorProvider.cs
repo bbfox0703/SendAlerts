@@ -88,16 +88,15 @@ public class LhmSensorProvider : ISensorDataProvider
         var entries = new List<HwinfoSensorEntry>();
         foreach (var sensor in hardware.Sensors)
         {
-            if (!sensor.Value.HasValue) continue;
-
             // Use "SensorType/Name" as LabelOrig to ensure uniqueness
             var labelOrig = $"{sensor.SensorType}/{sensor.Name}";
             var label = $"{sensor.Name} [{sensor.SensorType}]";
             var unit = SensorTypeToUnit(sensor.SensorType);
+            var value = sensor.Value ?? 0;
 
             entries.Add(new HwinfoSensorEntry(
                 label, labelOrig, unit,
-                sensor.Value.Value,
+                value,
                 sensor.Min ?? 0,
                 sensor.Max ?? 0,
                 0)); // LHM doesn't track avg

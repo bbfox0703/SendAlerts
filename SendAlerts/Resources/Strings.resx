@@ -437,4 +437,7 @@
   <data name="Chart_SourceTooltip" xml:space="preserve">
     <value>Select chart data source</value>
   </data>
+  <data name="Chart_SensorChart" xml:space="preserve">
+    <value>Sensor Chart</value>
+  </data>
 </root>

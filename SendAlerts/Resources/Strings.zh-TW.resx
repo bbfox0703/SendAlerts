@@ -437,4 +437,7 @@
   <data name="Chart_SourceTooltip" xml:space="preserve">
     <value>選擇圖表資料來源</value>
   </data>
+  <data name="Chart_SensorChart" xml:space="preserve">
+    <value>感測器繪圖</value>
+  </data>
 </root>

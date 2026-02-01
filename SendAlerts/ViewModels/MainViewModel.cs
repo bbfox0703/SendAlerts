@@ -104,7 +104,7 @@ public partial class MainViewModel : ViewModelBase
 
     // --- Chart Source (multi-provider) ---
     [ObservableProperty] private ChartSourceType _chartSource;
-    [ObservableProperty] private string _chartSourceDisplayName = "Off";
+    [ObservableProperty] private string _chartSourceDisplayName = "Sensor Chart";
     [ObservableProperty] private string _chartTitleText = "";
 
     // --- HWiNFO Chart ---
@@ -562,7 +562,7 @@ public partial class MainViewModel : ViewModelBase
         {
             ChartSourceType.HWiNFO => "HWiNFO",
             ChartSourceType.LibreHardwareMonitor => "LHM",
-            _ => _loc["Chart_SourceOff"]
+            _ => _loc["Chart_SensorChart"]
         };
         ChartTitleText = ChartSource switch
         {
