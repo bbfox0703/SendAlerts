@@ -17,6 +17,8 @@ public partial class ConfirmDialog : Window
         CancelButton.Content = cancelText;
     }
 
+    public void HideCancelButton() => CancelButton.IsVisible = false;
+
     private void OnConfirmClick(object? sender, RoutedEventArgs e)
     {
         IsConfirmed = true;

@@ -75,6 +75,8 @@ public partial class MainView : UserControl
         _vm.HwinfoChartDataUpdated += OnHwinfoChartDataUpdated;
         _vm.HwinfoChartCleared += OnHwinfoChartCleared;
 
+        _vm.HwinfoShmNotFound += OnHwinfoShmNotFound;
+
         // Dynamic row visibility for HWiNFO chart (Row 3)
         _vm.PropertyChanged += OnVmPropertyChanged;
         UpdateHwinfoRowVisibility();
@@ -404,6 +406,17 @@ public partial class MainView : UserControl
             RefreshChart(_hwinfoInfo, 0, _vm.HwinfoChartYMax);
     }
 
+    private async void OnHwinfoShmNotFound(string message)
+    {
+        var parentWindow = TopLevel.GetTopLevel(this) as Window;
+        if (parentWindow is null) return;
+
+        var loc = LocalizationService.Instance;
+        var dialog = new ConfirmDialog("HWiNFO", message, loc["OK"]);
+        dialog.HideCancelButton();
+        await dialog.ShowDialog(parentWindow);
+    }
+
     private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(MainViewModel.IsHwinfoChartVisible))
@@ -444,6 +457,7 @@ public partial class MainView : UserControl
             _vm.SamplingIntervalChanged -= OnSamplingIntervalChanged;
             _vm.HwinfoChartDataUpdated -= OnHwinfoChartDataUpdated;
             _vm.HwinfoChartCleared -= OnHwinfoChartCleared;
+            _vm.HwinfoShmNotFound -= OnHwinfoShmNotFound;
             _vm.PropertyChanged -= OnVmPropertyChanged;
         }
 

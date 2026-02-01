@@ -120,6 +120,8 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>通知 View 刷新 HWiNFO 圖表</summary>
     public event Action? HwinfoChartDataUpdated;
     public event Action? HwinfoChartCleared;
+    /// <summary>HWiNFO SHM 不可用時通知 View 顯示訊息</summary>
+    public event Action<string>? HwinfoShmNotFound;
 
     // HWiNFO buffer (與主 buffer 分開)
     private double[] _hwinfoBuffer = Array.Empty<double>();
@@ -724,8 +726,20 @@ public partial class MainViewModel : ViewModelBase
 
     partial void OnIsHwinfoChartVisibleChanged(bool value)
     {
-        if (value)
+        if (value && !_hwinfoInitializing)
         {
+            var provider = ServiceLocator.HwinfoProvider;
+            if (provider is null || !provider.IsAvailable)
+            {
+                // User clicked toggle but SHM not available — show warning and revert
+                // Defer revert to avoid re-entrancy in property change handler
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    IsHwinfoChartVisible = false;
+                    HwinfoShmNotFound?.Invoke(_loc["HWiNFO_ShmNotFound"]);
+                });
+                return;
+            }
             RefreshHwinfoSensorList();
         }
         SaveHwinfoSettings();
