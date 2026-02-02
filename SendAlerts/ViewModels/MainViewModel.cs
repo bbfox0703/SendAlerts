@@ -676,9 +676,10 @@ public partial class MainViewModel : ViewModelBase
     // ==========================================================================
 
     [RelayCommand]
-    private void OpenSlotConfig(int slotIndex)
+    private void OpenSlotConfig(string slotIndexStr)
     {
-        OpenChartConfigRequested?.Invoke(slotIndex);
+        if (int.TryParse(slotIndexStr, out var slotIndex))
+            OpenChartConfigRequested?.Invoke(slotIndex);
     }
 
     /// <summary>
