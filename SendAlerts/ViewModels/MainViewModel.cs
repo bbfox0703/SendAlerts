@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Collections.ObjectModel;
 using System.Reflection;
 using Avalonia.Threading;
@@ -206,36 +207,49 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
+    private static List<ChartSlotConfig> BuildDefaultChartSlots()
+    {
+        var hasGpu = ServiceLocator.ProvidersByMode.ContainsKey(HardwareMode.Gpu);
+        var slots = new List<ChartSlotConfig>();
+        if (hasGpu)
+        {
+            slots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.GpuCoreUtilization });
+            slots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.GpuTemperature });
+            slots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.GpuPowerUsage });
+        }
+        else
+        {
+            slots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.CpuUtilization });
+            slots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.MemoryUsage });
+            slots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.NetworkIO });
+        }
+        slots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.Off });
+        return slots;
+    }
+
     private void LoadChartSlotConfigs()
     {
         var settings = ServiceLocator.SettingsService?.Load();
-        if (settings == null) return;
+        List<ChartSlotConfig> slotConfigs;
 
-        // Ensure we have 4 slots
-        if (settings.ChartSlots.Count < 4)
+        if (settings == null || settings.ChartSlots.Count < 4)
         {
-            // Generate defaults
-            var hasGpu = ServiceLocator.ProvidersByMode.ContainsKey(HardwareMode.Gpu);
-            settings.ChartSlots.Clear();
-            if (hasGpu)
+            // No config or incomplete — use defaults
+            slotConfigs = BuildDefaultChartSlots();
+            if (settings != null)
             {
-                settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.GpuCoreUtilization });
-                settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.GpuTemperature });
-                settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.GpuPowerUsage });
+                settings.ChartSlots = new List<ChartSlotConfig>(slotConfigs.Select(c => c.Clone()));
+                ServiceLocator.SettingsService?.Save(settings);
             }
-            else
-            {
-                settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.CpuUtilization });
-                settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.MemoryUsage });
-                settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.NetworkIO });
-            }
-            settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.Off });
-            ServiceLocator.SettingsService?.Save(settings);
+        }
+        else
+        {
+            slotConfigs = settings.ChartSlots;
         }
 
         for (int i = 0; i < 4; i++)
         {
-            ApplySlotConfig(i, settings.ChartSlots[i], save: false);
+            ApplySlotConfig(i, slotConfigs[i], save: false);
         }
     }
 
