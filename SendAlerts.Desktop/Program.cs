@@ -109,13 +109,15 @@ sealed class Program
             // Watchdog: 若啟用則連帶啟動
             LaunchWatchdogIfEnabled();
 
-            // 處理 OS 關機事件 — 設定旗標讓 MainWindow 不攔截關閉
+            // 處理 OS 關機事件 — 立即退出，不阻擋 OS shutdown
             if (OperatingSystem.IsWindows())
             {
                 Microsoft.Win32.SystemEvents.SessionEnding += (_, _) =>
                 {
                     ServiceLocator.IsSessionEnding = true;
-                    Log.Information("[Desktop] SessionEnding received, allowing shutdown");
+                    Log.Information("[Desktop] SessionEnding received, exiting immediately");
+                    Log.CloseAndFlush();
+                    Environment.Exit(0);
                 };
             }
             AppDomain.CurrentDomain.ProcessExit += (_, _) =>
