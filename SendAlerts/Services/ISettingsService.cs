@@ -215,21 +215,30 @@ public class AppSettings
     public string? HwinfoSelectedEntry { get; set; }
 
     // ==========================================================================
-    // Chart 設定 (多資料來源)
+    // Chart 設定 (多資料來源) — Legacy, kept for migration
     // ==========================================================================
 
     /// <summary>
-    /// 第四張圖表的資料來源
+    /// [Legacy] 第四張圖表的資料來源 (遷移至 ChartSlots)
     /// </summary>
     public ChartSourceType ChartSource { get; set; } = ChartSourceType.Off;
 
     /// <summary>
-    /// 選中的感測器群組名稱
+    /// [Legacy] 選中的感測器群組名稱 (遷移至 ChartSlots)
     /// </summary>
     public string? ChartSelectedSensor { get; set; }
 
     /// <summary>
-    /// 選中的感測器項目原始名稱 (LabelOrig)
+    /// [Legacy] 選中的感測器項目原始名稱 (遷移至 ChartSlots)
     /// </summary>
     public string? ChartSelectedEntry { get; set; }
+
+    // ==========================================================================
+    // Flexible Chart Slots (v4)
+    // ==========================================================================
+
+    /// <summary>
+    /// 4 chart slot configurations. Empty list = use defaults.
+    /// </summary>
+    public List<ChartSlotConfig> ChartSlots { get; set; } = new();
 }

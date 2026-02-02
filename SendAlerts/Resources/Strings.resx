@@ -440,4 +440,7 @@
   <data name="Chart_SensorChart" xml:space="preserve">
     <value>Sensor Chart</value>
   </data>
+  <data name="Chart_ConfigTitle" xml:space="preserve">
+    <value>Chart Config</value>
+  </data>
 </root>

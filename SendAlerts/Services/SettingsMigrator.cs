@@ -14,7 +14,7 @@ public static class SettingsMigrator
     /// <summary>
     /// 目前最新的設定版本
     /// </summary>
-    public const int CurrentVersion = 3;
+    public const int CurrentVersion = 4;
 
     /// <summary>
     /// 執行設定遷移
@@ -43,6 +43,13 @@ public static class SettingsMigrator
         {
             migrated |= MigrateV2ToV3(settings);
             settings.SettingsVersion = 3;
+        }
+
+        // 版本 3 → 4: 3+1 chart → 4 flexible chart slots
+        if (settings.SettingsVersion < 4)
+        {
+            migrated |= MigrateV3ToV4(settings);
+            settings.SettingsVersion = 4;
         }
 
         if (migrated)
@@ -198,6 +205,53 @@ public static class SettingsMigrator
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// 版本 3 → 4: 3+1 chart → 4 flexible chart slots
+    /// </summary>
+    private static bool MigrateV3ToV4(AppSettings settings)
+    {
+        if (settings.ChartSlots.Count > 0) return false;
+
+        // Determine which built-in provider was last active
+        var gpuProvider = ServiceLocator.GpuProvider;
+        var isGpu = gpuProvider?.Mode == Core.Interfaces.HardwareMode.Gpu;
+
+        // Slot 0-2: based on active provider mode
+        if (isGpu)
+        {
+            settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.GpuCoreUtilization });
+            settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.GpuTemperature });
+            settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.GpuPowerUsage });
+        }
+        else
+        {
+            settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.CpuUtilization });
+            settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.MemoryUsage });
+            settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.NetworkIO });
+        }
+
+        // Slot 3: from legacy ChartSource/ChartSelectedSensor/ChartSelectedEntry
+        if (settings.ChartSource != ChartSourceType.Off &&
+            !string.IsNullOrEmpty(settings.ChartSelectedSensor) &&
+            !string.IsNullOrEmpty(settings.ChartSelectedEntry))
+        {
+            settings.ChartSlots.Add(new ChartSlotConfig
+            {
+                SourceType = ChartSlotSourceType.External,
+                ExternalSource = settings.ChartSource,
+                SensorName = settings.ChartSelectedSensor,
+                SensorEntry = settings.ChartSelectedEntry
+            });
+        }
+        else
+        {
+            settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.Off });
+        }
+
+        Log.Information("[SettingsMigrator] Migrated to v4: 4 flexible chart slots (GPU={IsGpu})", isGpu);
+        return true;
     }
 
     /// <summary>

@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SendAlerts.Core.Interfaces;
+using SendAlerts.Interfaces;
 using SendAlerts.Models;
 using SendAlerts.Services;
 using Serilog;
@@ -13,13 +14,11 @@ using Serilog;
 namespace SendAlerts.ViewModels;
 
 /// <summary>
-/// TC1-1: MainViewModel - 純顯示模式 (Display-Only)
-/// 專案轉型後，本 ViewModel 僅負責顯示硬體數據，不再主動觸發警報。
-/// 警報功能已移至 Alert Center (透過 Named Pipe 由外部工具觸發)。
+/// MainViewModel — Flexible 4-slot chart system.
+/// Each slot can display a built-in preset or an external sensor (HWiNFO/LHM).
 /// </summary>
 public partial class MainViewModel : ViewModelBase
 {
-    private IGpuProvider _gpuProvider;
     private readonly DispatcherTimer _timer;
     private readonly LocalizationService _loc = LocalizationService.Instance;
 
@@ -30,92 +29,367 @@ public partial class MainViewModel : ViewModelBase
     public string Loc_DisplayModeHint => _loc["Main_DisplayOnly"];
     public string Loc_RecentAlerts => _loc["Main_RecentAlerts"];
     public string Loc_Log => _loc["Main_Log"];
-    public string Loc_HwinfoApply => _loc["HWiNFO_Apply"];
-    public string Loc_HwinfoApplyTooltip => _loc["HWiNFO_ApplyTooltip"];
-    public string Loc_HwinfoFilterWatermark => _loc["HWiNFO_FilterWatermark"];
-    public string Loc_HwinfoRefreshTooltip => _loc["HWiNFO_RefreshTooltip"];
-    public string Loc_ChartSourceOff => _loc["Chart_SourceOff"];
-    public string Loc_ChartSourceTooltip => _loc["Chart_SourceTooltip"];
     #endregion
 
-    // --- 介面綁定屬性 ---
-    [ObservableProperty] private string _gpuName = "正在偵測...";
-    [ObservableProperty] private float _currentUtilization;
-    [ObservableProperty] private float _currentTemperature;
-    [ObservableProperty] private float _currentPower;
-    [ObservableProperty] private float _powerLimit;
+    // --- GPU name / power limit (from best available provider) ---
+    [ObservableProperty] private string _gpuName = "Detecting...";
     [ObservableProperty] private string _powerLimitDisplay = "";
 
-    // --- TDP 定時重測 ---
+    // --- TDP refresh ---
     private int _tdpRefreshCounter;
-    private const int TdpRefreshIntervalSeconds = 600; // 10 分鐘
+    private const int TdpRefreshIntervalSeconds = 600;
 
-    // --- 動態標籤 (支援 GPU/CPU 模式切換) ---
-    [ObservableProperty] private string _primaryMetricLabel = "GPU Core Utilization";
-    [ObservableProperty] private string _temperatureLabel = "GPU Temperature";
-    [ObservableProperty] private string _temperatureUnit = "°C";
-    [ObservableProperty] private string _secondaryMetricLabel = "Power Usage";
-    [ObservableProperty] private string _secondaryMetricUnit = "W";
-    [ObservableProperty] private bool _isGpuMode = true;
-
-    // --- Provider 切換 ---
-    [ObservableProperty] private string _currentProviderName = "";
-    [ObservableProperty] private string _switchProviderTooltip = "";
-    [ObservableProperty] private bool _canSwitchProvider;
-
-    // --- TB3-2: 狀態列屬性 ---
+    // --- TB3-2: Status bar ---
     [ObservableProperty] private string _statusText = "System Ready";
     [ObservableProperty] private bool _isPipeServerRunning;
 
-    // --- 平均值摘要 ---
+    // --- Average summary ---
     [ObservableProperty] private string _avgSummary = "";
 
-    // --- 版本顯示 ---
+    // --- Version ---
     public string VersionDisplay { get; } = GetVersionString();
 
-    // --- Power 圖表 Y 軸上限 (供 View 使用) ---
-    [ObservableProperty] private double _powerChartYMax = 50;
-
-    // --- Network MB/s 切換 (只向上不縮回) ---
-    internal bool _networkScaleMB;
-
-    // --- 圖表固定 30 分鐘 ---
+    // --- Chart: 30 min fixed ---
     private const int HistoryDurationSeconds = 1800;
     private int _maxPoints;
 
-    // --- 環形 buffer (ScottPlot 資料) ---
-    private double[] _utilizationBuffer = Array.Empty<double>();
-    private double[] _temperatureBuffer = Array.Empty<double>();
-    private double[] _powerBuffer = Array.Empty<double>();
-    private int _bufferIndex;
-    private int _bufferCount;
+    // ==========================================================================
+    // 4 Flexible Chart Slots
+    // ==========================================================================
 
-    // --- Running sum for averages (避免 LINQ) ---
-    private double _utilizationSum;
-    private double _temperatureSum;
-    private double _powerSum;
+    internal class ChartSlotState
+    {
+        public ChartSlotConfig Config { get; set; } = new() { SourceType = ChartSlotSourceType.Off };
+        public double[] Buffer = Array.Empty<double>();
+        public int BufferIndex;
+        public int BufferCount;
+        public double Sum;
+        public double Peak;
+        public double YMax = 100;
+        public double CurrentValue;
+        public string Label = "";
+        public string Unit = "";
+        public bool IsActive;
+        public bool NetworkScaleMB; // for NetworkIO only
+        public HwinfoSensorItem? AppliedSensor;
+        public bool UnavailableLogged;
+        public int RetryCounter;
+        public double LastTickValue; // View reads this for ShiftAndAppend
 
-    /// <summary>
-    /// 通知 View 刷新圖表
-    /// </summary>
+        public void ClearBuffer()
+        {
+            Array.Fill(Buffer, double.NaN);
+            BufferIndex = 0;
+            BufferCount = 0;
+            Sum = 0;
+            Peak = 0;
+        }
+
+        public void WriteBuffer(double value, int maxPoints)
+        {
+            if (BufferCount >= maxPoints)
+            {
+                var old = Buffer[BufferIndex];
+                if (!double.IsNaN(old)) Sum -= old;
+            }
+            Buffer[BufferIndex] = value;
+            if (!double.IsNaN(value)) Sum += value;
+            BufferIndex = (BufferIndex + 1) % maxPoints;
+            if (BufferCount < maxPoints) BufferCount++;
+        }
+    }
+
+    internal readonly ChartSlotState[] _slots = new ChartSlotState[4];
+
+    // Per-slot observable properties (×4)
+    // Slot 0
+    [ObservableProperty] private string _slot0Label = "";
+    [ObservableProperty] private string _slot0ValueDisplay = "";
+    [ObservableProperty] private string _slot0Unit = "";
+    [ObservableProperty] private double _slot0YMax = 100;
+    [ObservableProperty] private bool _slot0IsVisible;
+    [ObservableProperty] private string _slot0Color = ChartColors.SlotLineColors[0];
+    [ObservableProperty] private bool _slot0IsReadable = true;
+    // Slot 1
+    [ObservableProperty] private string _slot1Label = "";
+    [ObservableProperty] private string _slot1ValueDisplay = "";
+    [ObservableProperty] private string _slot1Unit = "";
+    [ObservableProperty] private double _slot1YMax = 100;
+    [ObservableProperty] private bool _slot1IsVisible;
+    [ObservableProperty] private string _slot1Color = ChartColors.SlotLineColors[1];
+    [ObservableProperty] private bool _slot1IsReadable = true;
+    // Slot 2
+    [ObservableProperty] private string _slot2Label = "";
+    [ObservableProperty] private string _slot2ValueDisplay = "";
+    [ObservableProperty] private string _slot2Unit = "";
+    [ObservableProperty] private double _slot2YMax = 100;
+    [ObservableProperty] private bool _slot2IsVisible;
+    [ObservableProperty] private string _slot2Color = ChartColors.SlotLineColors[2];
+    [ObservableProperty] private bool _slot2IsReadable = true;
+    // Slot 3
+    [ObservableProperty] private string _slot3Label = "";
+    [ObservableProperty] private string _slot3ValueDisplay = "";
+    [ObservableProperty] private string _slot3Unit = "";
+    [ObservableProperty] private double _slot3YMax = 100;
+    [ObservableProperty] private bool _slot3IsVisible;
+    [ObservableProperty] private string _slot3Color = ChartColors.SlotLineColors[3];
+    [ObservableProperty] private bool _slot3IsReadable = true;
+
+    /// <summary>Notify View to refresh all charts</summary>
     public event Action? ChartDataUpdated;
     public event Action? ChartDataCleared;
     public event Action<int>? SamplingIntervalChanged;
 
-    // --- Chart Source (multi-provider) ---
-    [ObservableProperty] private ChartSourceType _chartSource;
-    [ObservableProperty] private string _chartSourceDisplayName = "Sensor Chart";
-    [ObservableProperty] private string _chartTitleText = "";
+    /// <summary>Request View to open ChartConfigDialog for a slot</summary>
+    public event Action<int>? OpenChartConfigRequested;
 
-    // --- HWiNFO Chart ---
-    [ObservableProperty] private bool _isHwinfoChartVisible;
-    [ObservableProperty] private double _currentHwinfoValue;
-    public string HwinfoValueDisplay => FormatHwinfoValue(CurrentHwinfoValue);
+    // --- TB3-3: Alert history ---
+    public ObservableCollection<AlertHistoryItem> AlertHistoryItems { get; } = new();
 
-    partial void OnCurrentHwinfoValueChanged(double value) => OnPropertyChanged(nameof(HwinfoValueDisplay));
+    public MainViewModel()
+    {
+        // Design-time only
+        _timer = new DispatcherTimer();
+        for (int i = 0; i < 4; i++) _slots[i] = new ChartSlotState();
+    }
 
-    /// <summary>Adaptive formatting: integer if whole number, up to 3 decimal places otherwise.</summary>
-    internal static string FormatHwinfoValue(double value)
+    public MainViewModel(bool initialize)
+    {
+        _timer = new DispatcherTimer();
+        for (int i = 0; i < 4; i++) _slots[i] = new ChartSlotState();
+        if (!initialize) return;
+
+        // Determine GPU name from best provider
+        var gpuProvider = ServiceLocator.ProvidersByMode.GetValueOrDefault(HardwareMode.Gpu)
+                          ?? ServiceLocator.GpuProvider;
+        if (gpuProvider != null)
+        {
+            GpuName = gpuProvider.GetGpuName();
+            if (GpuName is "Unknown" or "N/A") GpuName = "GPU Detect Error";
+            UpdatePowerLimitDisplay(gpuProvider);
+        }
+        else
+        {
+            GpuName = "No GPU";
+            PowerLimitDisplay = "";
+        }
+
+        // Initialize buffers
+        var samplingInterval = ServiceLocator.SettingsService?.Load().SamplingIntervalSeconds ?? 1;
+        _maxPoints = HistoryDurationSeconds;
+        InitializeSlotBuffers();
+
+        // Load chart slot configs
+        LoadChartSlotConfigs();
+
+        // Timer
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(samplingInterval) };
+        _timer.Tick += OnTimerTick;
+        _timer.Start();
+
+        // Status subscriptions
+        InitializeStatusSubscriptions();
+
+        Log.Information("SendAlerts started (Flexible Charts): {GpuName}", GpuName);
+    }
+
+    private void InitializeSlotBuffers()
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            _slots[i].Buffer = new double[_maxPoints];
+            Array.Fill(_slots[i].Buffer, double.NaN);
+            _slots[i].BufferIndex = 0;
+            _slots[i].BufferCount = 0;
+            _slots[i].Sum = 0;
+            _slots[i].Peak = 0;
+        }
+    }
+
+    private void LoadChartSlotConfigs()
+    {
+        var settings = ServiceLocator.SettingsService?.Load();
+        if (settings == null) return;
+
+        // Ensure we have 4 slots
+        if (settings.ChartSlots.Count < 4)
+        {
+            // Generate defaults
+            var hasGpu = ServiceLocator.ProvidersByMode.ContainsKey(HardwareMode.Gpu);
+            settings.ChartSlots.Clear();
+            if (hasGpu)
+            {
+                settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.GpuCoreUtilization });
+                settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.GpuTemperature });
+                settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.GpuPowerUsage });
+            }
+            else
+            {
+                settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.CpuUtilization });
+                settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.MemoryUsage });
+                settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.BuiltIn, BuiltInPreset = BuiltInChartPreset.NetworkIO });
+            }
+            settings.ChartSlots.Add(new ChartSlotConfig { SourceType = ChartSlotSourceType.Off });
+            ServiceLocator.SettingsService?.Save(settings);
+        }
+
+        for (int i = 0; i < 4; i++)
+        {
+            ApplySlotConfig(i, settings.ChartSlots[i], save: false);
+        }
+    }
+
+    /// <summary>
+    /// Apply a configuration to a slot. Handles label, unit, YMax, active state.
+    /// </summary>
+    public void ApplySlotConfig(int index, ChartSlotConfig config, bool save = true)
+    {
+        if (index < 0 || index >= 4) return;
+
+        var slot = _slots[index];
+        slot.Config = config;
+        slot.ClearBuffer();
+        slot.NetworkScaleMB = false;
+        slot.UnavailableLogged = false;
+        slot.RetryCounter = 0;
+        slot.AppliedSensor = null;
+
+        switch (config.SourceType)
+        {
+            case ChartSlotSourceType.Off:
+                slot.IsActive = false;
+                slot.Label = "";
+                slot.Unit = "";
+                slot.YMax = 100;
+                break;
+
+            case ChartSlotSourceType.BuiltIn:
+                ApplyBuiltInPreset(slot, config.BuiltInPreset);
+                break;
+
+            case ChartSlotSourceType.External:
+                slot.IsActive = true;
+                slot.Label = config.SensorEntry ?? "External";
+                slot.Unit = "";
+                slot.YMax = 0.1;
+                slot.Peak = 0;
+                // Try to auto-apply sensor
+                TryAutoApplyExternalSensor(index);
+                break;
+        }
+
+        UpdateSlotDisplayProperties(index);
+
+        if (save) SaveChartSlotConfigs();
+    }
+
+    private void ApplyBuiltInPreset(ChartSlotState slot, BuiltInChartPreset preset)
+    {
+        slot.IsActive = preset != BuiltInChartPreset.None;
+
+        switch (preset)
+        {
+            case BuiltInChartPreset.GpuCoreUtilization:
+                slot.Label = "GPU Core Utilization";
+                slot.Unit = "%";
+                slot.YMax = 100;
+                break;
+            case BuiltInChartPreset.GpuTemperature:
+                slot.Label = "GPU Temperature";
+                slot.Unit = "\u00b0C";
+                slot.YMax = 100;
+                break;
+            case BuiltInChartPreset.GpuPowerUsage:
+                slot.Label = "Power Usage";
+                slot.Unit = "W";
+                slot.YMax = 50;
+                break;
+            case BuiltInChartPreset.CpuUtilization:
+                slot.Label = "CPU Utilization";
+                slot.Unit = "%";
+                slot.YMax = 100;
+                break;
+            case BuiltInChartPreset.MemoryUsage:
+                slot.Label = "Memory Usage";
+                slot.Unit = "%";
+                slot.YMax = 100;
+                break;
+            case BuiltInChartPreset.NetworkIO:
+                slot.Label = "Network I/O";
+                slot.Unit = "KB/s";
+                slot.YMax = 50;
+                break;
+            default:
+                slot.Label = "";
+                slot.Unit = "";
+                slot.YMax = 100;
+                slot.IsActive = false;
+                break;
+        }
+    }
+
+    private void TryAutoApplyExternalSensor(int index)
+    {
+        var slot = _slots[index];
+        var config = slot.Config;
+        if (string.IsNullOrEmpty(config.SensorName) || string.IsNullOrEmpty(config.SensorEntry))
+            return;
+
+        var provider = GetExternalProvider(config.ExternalSource);
+        if (provider is null || !provider.IsAvailable) return;
+
+        // Try to find and apply sensor
+        var groups = provider.GetSensorGroups();
+        foreach (var group in groups)
+        {
+            foreach (var entry in group.Entries)
+            {
+                if (group.SensorName == config.SensorName && entry.LabelOrig == config.SensorEntry)
+                {
+                    slot.AppliedSensor = new HwinfoSensorItem(group.SensorName, entry.LabelOrig, entry.Label, entry.Unit);
+                    slot.Label = entry.Label;
+                    slot.Unit = entry.Unit;
+                    var sourceName = config.ExternalSource == ChartSourceType.HWiNFO ? "HWiNFO" : "LHM";
+                    Log.Information("[Chart] Slot {Index} auto-restored external sensor: {Source}:{Name}", index, sourceName, entry.Label);
+                    UpdateSlotDisplayProperties(index);
+                    return;
+                }
+            }
+        }
+    }
+
+    internal void UpdateSlotDisplayProperties(int index)
+    {
+        var slot = _slots[index];
+        var label = slot.Label;
+        var value = slot.IsActive ? FormatValue(slot.CurrentValue) : "";
+        var unit = slot.Unit;
+        var yMax = slot.YMax;
+        var visible = slot.IsActive;
+        var readable = slot.Config.SourceType != ChartSlotSourceType.External || slot.AppliedSensor != null;
+
+        switch (index)
+        {
+            case 0:
+                Slot0Label = label; Slot0ValueDisplay = value; Slot0Unit = unit;
+                Slot0YMax = yMax; Slot0IsVisible = visible; Slot0IsReadable = readable;
+                break;
+            case 1:
+                Slot1Label = label; Slot1ValueDisplay = value; Slot1Unit = unit;
+                Slot1YMax = yMax; Slot1IsVisible = visible; Slot1IsReadable = readable;
+                break;
+            case 2:
+                Slot2Label = label; Slot2ValueDisplay = value; Slot2Unit = unit;
+                Slot2YMax = yMax; Slot2IsVisible = visible; Slot2IsReadable = readable;
+                break;
+            case 3:
+                Slot3Label = label; Slot3ValueDisplay = value; Slot3Unit = unit;
+                Slot3YMax = yMax; Slot3IsVisible = visible; Slot3IsReadable = readable;
+                break;
+        }
+    }
+
+    internal static string FormatValue(double value)
     {
         if (double.IsNaN(value)) return "--";
         if (value == Math.Floor(value)) return value.ToString("F0");
@@ -123,133 +397,53 @@ public partial class MainViewModel : ViewModelBase
         if (Math.Abs(value * 100 - Math.Round(value * 100)) < 0.01) return value.ToString("F2");
         return value.ToString("F3");
     }
-    [ObservableProperty] private string _hwinfoChartLabel = "";
-    [ObservableProperty] private string _hwinfoChartUnit = "";
-    [ObservableProperty] private double _hwinfoChartYMax = 0.1;
-    [ObservableProperty] private HwinfoSensorItem? _selectedHwinfoSensor; // ComboBox 選擇 (尚未套用)
-    [ObservableProperty] private HwinfoSensorItem? _appliedHwinfoSensor;  // 實際繪圖的感測器
-    [ObservableProperty] private string _appliedHwinfoDisplay = "";       // 目前套用的顯示名稱
-    [ObservableProperty] private string _hwinfoFilterText = "";
-    [ObservableProperty] private bool _isHwinfoReadable;                  // SHM 是否可讀
-    public ObservableCollection<HwinfoSensorItem> HwinfoSensorItems { get; } = new();
-    public ObservableCollection<HwinfoSensorItem> HwinfoFilteredItems { get; } = new();
-    private readonly List<HwinfoSensorItem> _allHwinfoItems = new();
 
-    /// <summary>通知 View 刷新 HWiNFO 圖表</summary>
-    public event Action? HwinfoChartDataUpdated;
-    public event Action? HwinfoChartCleared;
-    /// <summary>HWiNFO SHM 不可用時通知 View 顯示訊息</summary>
-    public event Action<string>? HwinfoShmNotFound;
-
-    // HWiNFO buffer (與主 buffer 分開)
-    private double[] _hwinfoBuffer = Array.Empty<double>();
-    private int _hwinfoBufferIndex;
-    private int _hwinfoBufferCount;
-    private double _hwinfoSum;
-    private bool _hwinfoUnavailableLogged;
-    private int _hwinfoRetryCounter; // 啟動時等待 HWiNFO 可用的計數器
-    internal double _lastHwinfoTickValue; // View 用：最新一筆寫入值 (可能是 NaN)
-    private bool _hwinfoInitializing; // 初始化期間不儲存設定
-    private double _hwinfoPeak; // 記錄中的最大值 (忽略 NaN)
-
-    // --- TB3-3: 警報歷史 ---
-    public ObservableCollection<AlertHistoryItem> AlertHistoryItems { get; } = new();
-
-    public MainViewModel(IGpuProvider gpuProvider)
+    private void UpdatePowerLimitDisplay(IGpuProvider provider)
     {
-        _gpuProvider = gpuProvider;
-        GpuName = _gpuProvider.GetGpuName();
-        if (GpuName is "Unknown" or "N/A")
-            GpuName = "GPU Detect Error";
-        PowerLimit = _gpuProvider.PowerLimit;
-
-        // 初始化動態標籤 (支援 GPU/CPU 模式)
-        ApplyProviderLabels();
-
-        // 根據 GPU TDP 設定 Power 圖表 Y 軸上限
-        UpdatePowerChartYMax();
-
-        // Provider 切換
-        CanSwitchProvider = ServiceLocator.AvailableProviders.Count > 1;
-        CurrentProviderName = GetProviderDisplayName(_gpuProvider);
-        UpdateSwitchTooltip();
-
-        // 初始化 buffer (固定 1800 點，interval 僅影響時間窗)
-        var samplingInterval = ServiceLocator.SettingsService?.Load().SamplingIntervalSeconds ?? 1;
-        _maxPoints = HistoryDurationSeconds;
-        InitializeBuffers();
-
-        // 設定定時器 (純讀取顯示，不觸發警報)
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(samplingInterval) };
-        _timer.Tick += OnTimerTick;
-        _timer.Start();
-
-        // TB3-2/TB3-3: 訂閱狀態更新事件
-        InitializeStatusSubscriptions();
-
-        // HWiNFO: 載入設定
-        InitializeHwinfo();
-
-        Log.Information("SendAlerts monitor started (Display-Only Mode): {GpuName} | Mode: {Mode} | PowerLimit: {PowerLimit:F1}{Unit}",
-            GpuName, _gpuProvider.Mode, PowerLimit, SecondaryMetricUnit);
-    }
-
-    private void InitializeBuffers()
-    {
-        _utilizationBuffer = new double[_maxPoints];
-        _temperatureBuffer = new double[_maxPoints];
-        _powerBuffer = new double[_maxPoints];
-        _bufferIndex = 0;
-        _bufferCount = 0;
-        _utilizationSum = 0;
-        _temperatureSum = 0;
-        _powerSum = 0;
-
-        _hwinfoBuffer = new double[_maxPoints];
-        Array.Fill(_hwinfoBuffer, double.NaN);
-        _hwinfoBufferIndex = 0;
-        _hwinfoBufferCount = 0;
-        _hwinfoSum = 0;
-        _hwinfoPeak = 0;
-    }
-
-    /// <summary>
-    /// 取得 buffer 中有效資料的 Span (供 View code-behind 使用)
-    /// 回傳順序為時間順序 (最舊→最新)
-    /// </summary>
-    public double[] GetBufferSnapshot(int chartIndex)
-    {
-        var source = chartIndex switch
+        var powerLimit = provider.PowerLimit;
+        if (provider.Mode == HardwareMode.Gpu)
         {
-            0 => _utilizationBuffer,
-            1 => _temperatureBuffer,
-            2 => _powerBuffer,
-            3 => _hwinfoBuffer,
-            _ => _utilizationBuffer
-        };
-
-        var result = new double[_bufferCount];
-        if (_bufferCount < _maxPoints)
-        {
-            // buffer 尚未滿，資料從 0 開始
-            Array.Copy(source, 0, result, 0, _bufferCount);
+            if (powerLimit <= 0)
+            {
+                var tdp = GpuTdpLookup.FindTdp(GpuName);
+                PowerLimitDisplay = tdp.HasValue ? $"(TDP: ~{tdp.Value}W est.)" : "(TDP: N/A)";
+            }
+            else
+            {
+                PowerLimitDisplay = $"(TDP: {powerLimit:F0}W)";
+            }
         }
         else
         {
-            // buffer 已滿，需環繞拷貝
-            var tailLen = _maxPoints - _bufferIndex;
-            Array.Copy(source, _bufferIndex, result, 0, tailLen);
-            Array.Copy(source, 0, result, tailLen, _bufferIndex);
+            PowerLimitDisplay = $"(Mem: {powerLimit:F0}G)";
+        }
+    }
+
+    /// <summary>Get buffer snapshot for View (time-ordered)</summary>
+    public double[] GetBufferSnapshot(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= 4) return Array.Empty<double>();
+        var slot = _slots[slotIndex];
+        var count = slot.BufferCount;
+        var result = new double[count];
+        if (count == 0) return result;
+
+        if (count < _maxPoints)
+        {
+            Array.Copy(slot.Buffer, 0, result, 0, count);
+        }
+        else
+        {
+            var tailLen = _maxPoints - slot.BufferIndex;
+            Array.Copy(slot.Buffer, slot.BufferIndex, result, 0, tailLen);
+            Array.Copy(slot.Buffer, 0, result, tailLen, slot.BufferIndex);
         }
         return result;
     }
 
-    public int BufferCount => _bufferCount;
+    public int GetSlotBufferCount(int slotIndex) =>
+        slotIndex >= 0 && slotIndex < 4 ? _slots[slotIndex].BufferCount : 0;
 
-    /// <summary>
-    /// 更新取樣間隔 (設定變更後呼叫)
-    /// interval 變更時清空 buffer 並通知 View 重算 X 軸
-    /// </summary>
     public void UpdateSamplingInterval(int seconds)
     {
         seconds = Math.Clamp(seconds, AppConstants.SamplingIntervalMin, AppConstants.SamplingIntervalMax);
@@ -259,20 +453,291 @@ public partial class MainViewModel : ViewModelBase
         if (seconds != oldInterval)
         {
             _timer.Stop();
-            InitializeBuffers();
+            InitializeSlotBuffers();
             ChartDataCleared?.Invoke();
             SamplingIntervalChanged?.Invoke(seconds);
             _timer.Start();
-            Log.Information("Sampling interval updated: {Old}s -> {New}s, charts cleared", oldInterval, seconds);
+            Log.Information("Sampling interval updated: {Old}s -> {New}s", oldInterval, seconds);
         }
     }
 
+    // ==========================================================================
+    // Timer Tick — unified loop for all 4 slots
+    // ==========================================================================
+
+    private void OnTimerTick(object? sender, EventArgs e)
+    {
+        try
+        {
+            // Cache readings per HardwareMode to avoid duplicate calls
+            var readings = new Dictionary<HardwareMode, GpuReading>();
+            foreach (var (mode, provider) in ServiceLocator.ProvidersByMode)
+            {
+                try { readings[mode] = provider.GetCurrentReading(); }
+                catch { /* provider error, skip */ }
+            }
+
+            // Process each slot
+            for (int i = 0; i < 4; i++)
+            {
+                var slot = _slots[i];
+                if (!slot.IsActive) continue;
+
+                switch (slot.Config.SourceType)
+                {
+                    case ChartSlotSourceType.BuiltIn:
+                        ProcessBuiltInSlot(i, slot, readings);
+                        break;
+                    case ChartSlotSourceType.External:
+                        ProcessExternalSlot(i, slot);
+                        break;
+                }
+
+                UpdateSlotDisplayProperties(i);
+            }
+
+            // Average summary (from first 3 slots if built-in)
+            UpdateAvgSummary();
+
+            // Notify View
+            ChartDataUpdated?.Invoke();
+
+            // TDP periodic refresh
+            if (ServiceLocator.ProvidersByMode.TryGetValue(HardwareMode.Gpu, out var gpuProv))
+            {
+                _tdpRefreshCounter++;
+                if (_tdpRefreshCounter >= TdpRefreshIntervalSeconds / _timer.Interval.TotalSeconds)
+                {
+                    _tdpRefreshCounter = 0;
+                    gpuProv.RefreshPowerLimit();
+                    UpdatePowerLimitDisplay(gpuProv);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error during chart data reading");
+        }
+    }
+
+    private void ProcessBuiltInSlot(int index, ChartSlotState slot, Dictionary<HardwareMode, GpuReading> readings)
+    {
+        var preset = slot.Config.BuiltInPreset;
+        double value = double.NaN;
+
+        switch (preset)
+        {
+            case BuiltInChartPreset.GpuCoreUtilization:
+                if (readings.TryGetValue(HardwareMode.Gpu, out var gr1)) value = gr1.GpuUtilization;
+                break;
+            case BuiltInChartPreset.GpuTemperature:
+                if (readings.TryGetValue(HardwareMode.Gpu, out var gr2)) value = gr2.Temperature;
+                break;
+            case BuiltInChartPreset.GpuPowerUsage:
+                if (readings.TryGetValue(HardwareMode.Gpu, out var gr3)) value = gr3.PowerUsage;
+                break;
+            case BuiltInChartPreset.CpuUtilization:
+                if (readings.TryGetValue(HardwareMode.CpuNetwork, out var cr1)) value = cr1.GpuUtilization;
+                break;
+            case BuiltInChartPreset.MemoryUsage:
+                if (readings.TryGetValue(HardwareMode.CpuNetwork, out var cr2)) value = cr2.Temperature;
+                break;
+            case BuiltInChartPreset.NetworkIO:
+                if (readings.TryGetValue(HardwareMode.CpuNetwork, out var cr3)) value = cr3.PowerUsage;
+                break;
+        }
+
+        if (!double.IsNaN(value))
+        {
+            slot.CurrentValue = value;
+            slot.LastTickValue = value;
+            slot.WriteBuffer(value, _maxPoints);
+
+            // Dynamic Y-axis for power/network presets
+            UpdateDynamicYAxis(slot, preset, value);
+        }
+        else
+        {
+            slot.LastTickValue = double.NaN;
+            slot.WriteBuffer(double.NaN, _maxPoints);
+        }
+    }
+
+    private void UpdateDynamicYAxis(ChartSlotState slot, BuiltInChartPreset preset, double value)
+    {
+        switch (preset)
+        {
+            case BuiltInChartPreset.GpuPowerUsage:
+                // 50W step, grow at 85%
+                if (value > slot.YMax * 0.85)
+                {
+                    var newMax = Math.Ceiling(value * 1.5 / 50) * 50;
+                    if (newMax > slot.YMax) slot.YMax = newMax;
+                }
+                break;
+
+            case BuiltInChartPreset.NetworkIO:
+                // KB/s → MB/s switch
+                if (!slot.NetworkScaleMB && slot.YMax >= 1024)
+                {
+                    slot.NetworkScaleMB = true;
+                    slot.Unit = "MB/s";
+                    slot.YMax = Math.Max(1, Math.Ceiling(value / 1024.0 * 1.5));
+                }
+
+                if (slot.NetworkScaleMB)
+                {
+                    var currentMB = value / 1024.0;
+                    if (currentMB > slot.YMax * 0.85)
+                    {
+                        var newMax = Math.Ceiling(currentMB * 1.5);
+                        if (newMax > slot.YMax) slot.YMax = newMax;
+                    }
+                }
+                else
+                {
+                    // 100-unit step
+                    if (value > slot.YMax * 0.85)
+                    {
+                        var newMax = Math.Ceiling(value * 1.5 / 100) * 100;
+                        if (newMax > slot.YMax) slot.YMax = newMax;
+                    }
+                }
+                break;
+
+            // Fixed Y-axis presets: no action needed
+        }
+    }
+
+    private void ProcessExternalSlot(int index, ChartSlotState slot)
+    {
+        if (slot.AppliedSensor is not { } sensor)
+        {
+            // No sensor applied yet — retry periodically
+            slot.RetryCounter++;
+            if (slot.RetryCounter % 5 == 0)
+                TryAutoApplyExternalSensor(index);
+            return;
+        }
+
+        var provider = GetExternalProvider(slot.Config.ExternalSource);
+        if (provider is null) return;
+
+        var entry = provider.ReadEntry(sensor.SensorName, sensor.LabelOrig);
+        if (entry is not null)
+        {
+            slot.UnavailableLogged = false;
+            slot.CurrentValue = entry.Value;
+            slot.LastTickValue = entry.Value;
+            slot.WriteBuffer(entry.Value, _maxPoints);
+
+            // Dynamic Y: peak * 1.1
+            if (entry.Value > slot.Peak) slot.Peak = entry.Value;
+            slot.YMax = slot.Peak > 0 ? slot.Peak * 1.1 : 0.1;
+        }
+        else
+        {
+            slot.LastTickValue = double.NaN;
+            slot.WriteBuffer(double.NaN, _maxPoints);
+            if (!slot.UnavailableLogged)
+            {
+                Log.Warning("[Chart] Slot {Index} external sensor read failed", index);
+                slot.UnavailableLogged = true;
+            }
+        }
+    }
+
+    private static ISensorDataProvider? GetExternalProvider(ChartSourceType source) => source switch
+    {
+        ChartSourceType.HWiNFO => ServiceLocator.HwinfoProvider as ISensorDataProvider,
+        ChartSourceType.LibreHardwareMonitor => ServiceLocator.LhmSensorProvider,
+        _ => null
+    };
+
+    private void UpdateAvgSummary()
+    {
+        // Build average from active built-in slots (first 3)
+        var parts = new List<string>();
+        for (int i = 0; i < Math.Min(3, 4); i++)
+        {
+            var slot = _slots[i];
+            if (!slot.IsActive || slot.Config.SourceType != ChartSlotSourceType.BuiltIn || slot.BufferCount == 0)
+                continue;
+
+            var avg = slot.Sum / slot.BufferCount;
+            parts.Add($"{avg:F1}{slot.Unit}");
+        }
+
+        AvgSummary = parts.Count > 0 ? $"Avg: {string.Join(" | ", parts)}" : "";
+    }
+
+    // ==========================================================================
+    // Commands
+    // ==========================================================================
+
+    [RelayCommand]
+    private void OpenSlotConfig(string slotIndexStr)
+    {
+        if (int.TryParse(slotIndexStr, out var slotIndex))
+            OpenChartConfigRequested?.Invoke(slotIndex);
+    }
+
     /// <summary>
-    /// TB3-2/TB3-3: 初始化狀態訂閱
+    /// Check if a built-in preset is already used by another slot.
+    /// Returns the slot index using it, or -1 if available.
     /// </summary>
+    public int FindPresetUsedBySlot(BuiltInChartPreset preset, int excludeSlot)
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            if (i == excludeSlot) continue;
+            if (_slots[i].Config.SourceType == ChartSlotSourceType.BuiltIn &&
+                _slots[i].Config.BuiltInPreset == preset)
+                return i;
+        }
+        return -1;
+    }
+
+    /// <summary>
+    /// Check if a HardwareMode has an available provider.
+    /// </summary>
+    public static bool IsPresetAvailable(BuiltInChartPreset preset)
+    {
+        return preset switch
+        {
+            BuiltInChartPreset.GpuCoreUtilization or
+            BuiltInChartPreset.GpuTemperature or
+            BuiltInChartPreset.GpuPowerUsage =>
+                ServiceLocator.ProvidersByMode.ContainsKey(HardwareMode.Gpu),
+            BuiltInChartPreset.CpuUtilization or
+            BuiltInChartPreset.MemoryUsage or
+            BuiltInChartPreset.NetworkIO =>
+                ServiceLocator.ProvidersByMode.ContainsKey(HardwareMode.CpuNetwork),
+            _ => false
+        };
+    }
+
+    public ChartSlotConfig GetSlotConfig(int index) =>
+        index >= 0 && index < 4 ? _slots[index].Config.Clone() : new ChartSlotConfig();
+
+    private void SaveChartSlotConfigs()
+    {
+        var service = ServiceLocator.SettingsService;
+        if (service is null) return;
+
+        var settings = service.Load();
+        settings.ChartSlots.Clear();
+        for (int i = 0; i < 4; i++)
+            settings.ChartSlots.Add(_slots[i].Config.Clone());
+        service.Save(settings);
+    }
+
+    // ==========================================================================
+    // Status subscriptions (TB3-2/TB3-3)
+    // ==========================================================================
+
     private void InitializeStatusSubscriptions()
     {
-        // TB3-2: 訂閱 Pipe 狀態變更
         ServiceLocator.PipeStatusChanged += (_, _) =>
         {
             Dispatcher.UIThread.Post(() =>
@@ -282,144 +747,28 @@ public partial class MainViewModel : ViewModelBase
             });
         };
 
-        // 初始化 Pipe 狀態
         IsPipeServerRunning = ServiceLocator.IsPipeServerRunning;
         UpdateStatusText();
 
-        // TB3-3: 訂閱警報歷史變更
         ServiceLocator.AlertHistoryChanged += (_, _) =>
         {
             Dispatcher.UIThread.Post(RefreshAlertHistory);
         };
-
-        // 載入現有歷史
         RefreshAlertHistory();
     }
 
-    /// <summary>
-    /// TB3-2: 更新狀態列文字
-    /// </summary>
     private void UpdateStatusText()
     {
-        if (IsPipeServerRunning)
-        {
-            StatusText = "Alert Center Ready - Listening for alerts";
-        }
-        else
-        {
-            StatusText = "Display Only Mode";
-        }
+        StatusText = IsPipeServerRunning
+            ? "Alert Center Ready - Listening for alerts"
+            : "Display Only Mode";
     }
 
-    /// <summary>
-    /// TB3-3: 刷新警報歷史清單
-    /// </summary>
     private void RefreshAlertHistory()
     {
         AlertHistoryItems.Clear();
         foreach (var item in ServiceLocator.AlertHistory)
-        {
             AlertHistoryItems.Add(item);
-        }
-    }
-
-    private void UpdatePowerChartYMax()
-    {
-        // 統一初始 Y 軸 = 50（GPU 和 Network 都從 50 開始，動態成長）
-        PowerChartYMax = 50;
-        _networkScaleMB = false;
-    }
-
-    private void ApplyProviderLabels()
-    {
-        PrimaryMetricLabel = _gpuProvider.PrimaryMetricLabel;
-        TemperatureLabel = _gpuProvider.TemperatureLabel;
-        TemperatureUnit = _gpuProvider.TemperatureUnit;
-        SecondaryMetricLabel = _gpuProvider.SecondaryMetricLabel;
-        SecondaryMetricUnit = _gpuProvider.SecondaryMetricUnit;
-        IsGpuMode = _gpuProvider.Mode == HardwareMode.Gpu;
-
-        if (IsGpuMode)
-        {
-            if (PowerLimit <= 0)
-            {
-                // Laptop 或舊 GPU: nvmlDeviceGetPowerManagementLimit 回傳 NOT_SUPPORTED
-                var tdp = GpuTdpLookup.FindTdp(GpuName);
-                PowerLimitDisplay = tdp.HasValue
-                    ? $"(TDP: ~{tdp.Value}W est.)"
-                    : "(TDP: N/A)";
-            }
-            else
-            {
-                PowerLimitDisplay = $"(TDP: {PowerLimit:F0}W)";
-            }
-        }
-        else
-        {
-            PowerLimitDisplay = $"(Mem: {PowerLimit:F0}G)";
-        }
-    }
-
-    private static string GetProviderDisplayName(IGpuProvider provider)
-    {
-        var typeName = provider.GetType().Name;
-        return provider.Mode switch
-        {
-            HardwareMode.Gpu when typeName.Contains("NvApi") => "GPU (NvAPI)",
-            HardwareMode.Gpu when typeName.Contains("Nvml") => "GPU (NVML)",
-            HardwareMode.Gpu when typeName.Contains("Demo") => "Demo",
-            HardwareMode.CpuNetwork => "CPU / Memory / Network",
-            _ => typeName
-        };
-    }
-
-    private void UpdateSwitchTooltip()
-    {
-        var providers = ServiceLocator.AvailableProviders;
-        if (providers.Count <= 1)
-        {
-            SwitchProviderTooltip = _loc["SwitchProvider_NoOther"] ?? "No other provider available";
-            return;
-        }
-
-        var currentIndex = providers.IndexOf(_gpuProvider);
-        var nextIndex = (currentIndex + 1) % providers.Count;
-        var nextName = GetProviderDisplayName(providers[nextIndex]);
-        SwitchProviderTooltip = string.Format(
-            _loc["SwitchProvider_Tooltip"] ?? "Click to switch to: {0}",
-            nextName);
-    }
-
-    [RelayCommand]
-    private void SwitchProvider()
-    {
-        var providers = ServiceLocator.AvailableProviders;
-        if (providers.Count <= 1) return;
-
-        var currentIndex = providers.IndexOf(_gpuProvider);
-        var nextIndex = (currentIndex + 1) % providers.Count;
-        _gpuProvider = providers[nextIndex];
-        ServiceLocator.GpuProvider = _gpuProvider;
-
-        // 更新顯示資訊
-        GpuName = _gpuProvider.GetGpuName();
-        if (GpuName is "Unknown" or "N/A")
-            GpuName = "GPU Detect Error";
-        PowerLimit = _gpuProvider.PowerLimit;
-        CurrentProviderName = GetProviderDisplayName(_gpuProvider);
-        ApplyProviderLabels();
-        UpdateSwitchTooltip();
-
-        // 重算 Power Y 軸上限
-        UpdatePowerChartYMax();
-
-        // 清空 buffer
-        _timer.Stop();
-        InitializeBuffers();
-        ChartDataCleared?.Invoke();
-        _timer.Start();
-
-        Log.Information("Switched provider: {Name} ({Type})", CurrentProviderName, _gpuProvider.GetType().Name);
     }
 
     private static string GetVersionString()
@@ -428,451 +777,4 @@ public partial class MainViewModel : ViewModelBase
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>();
         return info?.InformationalVersion is { } v ? $"v{v}" : "v?";
     }
-
-    /// <summary>
-    /// TC1-1: 定時器回呼 - 純讀取顯示，不觸發警報
-    /// </summary>
-    private void OnTimerTick(object? sender, EventArgs e)
-    {
-        try
-        {
-            // A. 讀取數據
-            var reading = _gpuProvider.GetCurrentReading();
-            CurrentUtilization = reading.GpuUtilization;
-            CurrentTemperature = reading.Temperature;
-            CurrentPower = reading.PowerUsage;
-
-            // B. 寫入環形 buffer
-            // 若 buffer 已滿，先減去即將被覆蓋的舊值
-            if (_bufferCount >= _maxPoints)
-            {
-                _utilizationSum -= _utilizationBuffer[_bufferIndex];
-                _temperatureSum -= _temperatureBuffer[_bufferIndex];
-                _powerSum -= _powerBuffer[_bufferIndex];
-            }
-
-            _utilizationBuffer[_bufferIndex] = CurrentUtilization;
-            _temperatureBuffer[_bufferIndex] = CurrentTemperature;
-            _powerBuffer[_bufferIndex] = CurrentPower;
-
-            _utilizationSum += CurrentUtilization;
-            _temperatureSum += CurrentTemperature;
-            _powerSum += CurrentPower;
-
-            _bufferIndex = (_bufferIndex + 1) % _maxPoints;
-            if (_bufferCount < _maxPoints) _bufferCount++;
-
-            // C. 更新平均值摘要
-            if (_bufferCount > 0)
-            {
-                var avgUtil = _utilizationSum / _bufferCount;
-                var avgTemp = _temperatureSum / _bufferCount;
-                var avgPower = _powerSum / _bufferCount;
-                AvgSummary = $"Avg: {avgUtil:F0}% | {avgTemp:F1}{TemperatureUnit} | {avgPower:F1}{SecondaryMetricUnit}";
-            }
-
-            // D. 通知 View 刷新圖表
-            ChartDataUpdated?.Invoke();
-
-            // E. TDP 定時重測 (僅 GPU 模式)
-            if (IsGpuMode)
-            {
-                var samplingInterval = _timer.Interval.TotalSeconds;
-                _tdpRefreshCounter++;
-                if (_tdpRefreshCounter >= TdpRefreshIntervalSeconds / samplingInterval)
-                {
-                    _tdpRefreshCounter = 0;
-                    _gpuProvider.RefreshPowerLimit();
-                    var newLimit = _gpuProvider.PowerLimit;
-                    if (Math.Abs(newLimit - PowerLimit) > 0.1f)
-                    {
-                        PowerLimit = newLimit;
-                        PowerLimitDisplay = $"(TDP: {PowerLimit:F0}W)";
-                    }
-                }
-            }
-
-            // F. Chart 讀取 (HWiNFO / LHM)
-            if (IsHwinfoChartVisible && AppliedHwinfoSensor is { } appliedSensor)
-            {
-                var provider = GetActiveProvider();
-                if (provider is null) return;
-
-                var entry = provider.ReadEntry(appliedSensor.SensorName, appliedSensor.LabelOrig);
-                if (entry is not null)
-                {
-                    _hwinfoUnavailableLogged = false;
-                    IsHwinfoReadable = true;
-                    CurrentHwinfoValue = entry.Value;
-                    _lastHwinfoTickValue = entry.Value;
-
-                    // Write to ring buffer
-                    WriteHwinfoBuffer(entry.Value);
-
-                    // Dynamic Y axis: peak * 1.1, min 0.1
-                    if (entry.Value > _hwinfoPeak)
-                        _hwinfoPeak = entry.Value;
-                    HwinfoChartYMax = _hwinfoPeak > 0 ? _hwinfoPeak * 1.1 : 0.1;
-
-                    HwinfoChartDataUpdated?.Invoke();
-                }
-                else
-                {
-                    // HWiNFO unavailable — 寫入 NaN 產生斷線而非假的 0 值
-                    IsHwinfoReadable = false;
-                    _lastHwinfoTickValue = double.NaN;
-                    WriteHwinfoBuffer(double.NaN);
-                    HwinfoChartDataUpdated?.Invoke();
-
-                    if (!_hwinfoUnavailableLogged)
-                    {
-                        Log.Warning("[HWiNFO] Sensor read failed, HWiNFO64 may be closed or 12-hour limit reached");
-                        _hwinfoUnavailableLogged = true;
-                    }
-                }
-            }
-            // 啟動時等待 HWiNFO：chart 已啟用但尚未有 applied sensor（等待 SHM 可用再自動套用）
-            else if (IsHwinfoChartVisible && AppliedHwinfoSensor is null)
-            {
-                _hwinfoRetryCounter++;
-                if (_hwinfoRetryCounter % 5 == 0) // 每 5 秒嘗試一次
-                {
-                    TryAutoApplyHwinfoSensor();
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Error during data reading");
-        }
-    }
-
-    #region HWiNFO Chart
-
-    private ISensorDataProvider? GetActiveProvider() => ChartSource switch
-    {
-        ChartSourceType.HWiNFO => ServiceLocator.HwinfoProvider as ISensorDataProvider,
-        ChartSourceType.LibreHardwareMonitor => ServiceLocator.LhmSensorProvider,
-        _ => null
-    };
-
-    private void UpdateChartSourceDisplay()
-    {
-        ChartSourceDisplayName = ChartSource switch
-        {
-            ChartSourceType.HWiNFO => "HWiNFO",
-            ChartSourceType.LibreHardwareMonitor => "LHM",
-            _ => _loc["Chart_SensorChart"]
-        };
-        ChartTitleText = ChartSource switch
-        {
-            ChartSourceType.HWiNFO => "HWiNFO:",
-            ChartSourceType.LibreHardwareMonitor => "LHM:",
-            _ => ""
-        };
-    }
-
-    [RelayCommand]
-    private void SetChartSource(ChartSourceType source)
-    {
-        var previousSource = ChartSource;
-        ChartSource = source;
-        UpdateChartSourceDisplay();
-
-        if (source == ChartSourceType.Off)
-        {
-            IsHwinfoChartVisible = false;
-            SaveChartSettings();
-            return;
-        }
-
-        // Check if provider is available
-        var provider = GetActiveProvider();
-        if (provider is null || !provider.IsAvailable)
-        {
-            // Defer to avoid re-entrancy
-            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-            {
-                ChartSource = ChartSourceType.Off;
-                UpdateChartSourceDisplay();
-                IsHwinfoChartVisible = false;
-
-                var msg = source == ChartSourceType.HWiNFO
-                    ? _loc["HWiNFO_ShmNotFound"]
-                    : "LibreHardwareMonitor is not available.";
-                HwinfoShmNotFound?.Invoke(msg);
-            });
-            return;
-        }
-
-        // If source changed, clear buffer and reset
-        if (previousSource != source)
-        {
-            ClearHwinfoBuffer();
-            _hwinfoPeak = 0;
-            HwinfoChartYMax = 0.1;
-            CurrentHwinfoValue = 0;
-            _hwinfoUnavailableLogged = false;
-            AppliedHwinfoSensor = null;
-            AppliedHwinfoDisplay = "";
-        }
-
-        _hwinfoInitializing = true;
-        try
-        {
-            IsHwinfoChartVisible = true;
-            RefreshHwinfoSensorList();
-        }
-        finally
-        {
-            _hwinfoInitializing = false;
-        }
-
-        SaveChartSettings();
-    }
-
-    private void InitializeHwinfo()
-    {
-        var settings = ServiceLocator.SettingsService?.Load();
-        if (settings is null) return;
-
-        // Use new ChartSource if available, fallback to legacy HwinfoChartEnabled
-        var source = settings.ChartSource;
-        if (source == ChartSourceType.Off && settings.HwinfoChartEnabled)
-            source = ChartSourceType.HWiNFO;
-
-        if (source == ChartSourceType.Off) return;
-
-        var selectedSensor = settings.ChartSelectedSensor ?? settings.HwinfoSelectedSensor;
-        var selectedEntry = settings.ChartSelectedEntry ?? settings.HwinfoSelectedEntry;
-
-        _hwinfoInitializing = true;
-        try
-        {
-            ChartSource = source;
-            UpdateChartSourceDisplay();
-            IsHwinfoChartVisible = true;
-
-            // 嘗試從設定還原 applied sensor 名稱（用於顯示）
-            if (!string.IsNullOrEmpty(selectedSensor) &&
-                !string.IsNullOrEmpty(selectedEntry))
-            {
-                AppliedHwinfoDisplay = $"{selectedEntry} [{selectedSensor}]";
-            }
-
-            // 嘗試立即套用
-            TryAutoApplyHwinfoSensor();
-        }
-        finally
-        {
-            _hwinfoInitializing = false;
-        }
-    }
-
-    /// <summary>
-    /// 啟動時嘗試自動套用上次選擇的感測器
-    /// </summary>
-    private void TryAutoApplyHwinfoSensor()
-    {
-        var provider = GetActiveProvider();
-        if (provider is null || !provider.IsAvailable) return;
-
-        var settings = ServiceLocator.SettingsService?.Load();
-        if (settings is null) return;
-
-        var selectedSensor = settings.ChartSelectedSensor ?? settings.HwinfoSelectedSensor;
-        var selectedEntry = settings.ChartSelectedEntry ?? settings.HwinfoSelectedEntry;
-        if (string.IsNullOrEmpty(selectedSensor) || string.IsNullOrEmpty(selectedEntry))
-            return;
-
-        // 刷新清單
-        RefreshHwinfoSensorList();
-
-        // 找到上次的選擇
-        foreach (var item in _allHwinfoItems)
-        {
-            if (item.SensorName == selectedSensor &&
-                item.LabelOrig == selectedEntry)
-            {
-                ApplyHwinfoSensorInternal(item);
-                Log.Information("[HWiNFO] Auto-restored sensor: {Name}", item.DisplayName);
-                return;
-            }
-        }
-    }
-
-    [RelayCommand]
-    private void RefreshHwinfoSensorList()
-    {
-        var provider = GetActiveProvider();
-        if (provider is null || !provider.IsAvailable)
-        {
-            Log.Debug("[HWiNFO] Provider unavailable, cannot list sensors");
-            return;
-        }
-
-        var previousComboSelection = SelectedHwinfoSensor;
-        _allHwinfoItems.Clear();
-        HwinfoSensorItems.Clear();
-
-        var groups = provider.GetSensorGroups();
-        foreach (var group in groups)
-        {
-            foreach (var entry in group.Entries)
-            {
-                var item = new HwinfoSensorItem(
-                    group.SensorName, entry.LabelOrig, entry.Label, entry.Unit);
-                _allHwinfoItems.Add(item);
-                HwinfoSensorItems.Add(item);
-            }
-        }
-
-        ApplyHwinfoFilter();
-
-        // 嘗試還原 ComboBox 選擇
-        if (previousComboSelection is not null)
-        {
-            foreach (var item in HwinfoFilteredItems)
-            {
-                if (item.SensorName == previousComboSelection.SensorName &&
-                    item.LabelOrig == previousComboSelection.LabelOrig)
-                {
-                    SelectedHwinfoSensor = item;
-                    break;
-                }
-            }
-        }
-
-        Log.Information("[HWiNFO] Sensor list refreshed, {Count} items", _allHwinfoItems.Count);
-    }
-
-    partial void OnHwinfoFilterTextChanged(string value)
-    {
-        ApplyHwinfoFilter();
-    }
-
-    private void ApplyHwinfoFilter()
-    {
-        // 記住目前 ComboBox 選擇
-        var prev = SelectedHwinfoSensor;
-        HwinfoFilteredItems.Clear();
-        var filter = HwinfoFilterText?.Trim() ?? "";
-
-        foreach (var item in _allHwinfoItems)
-        {
-            if (filter.Length == 0 ||
-                item.DisplayName.Contains(filter, StringComparison.OrdinalIgnoreCase))
-            {
-                HwinfoFilteredItems.Add(item);
-            }
-        }
-
-        // 嘗試保留選擇（若仍在過濾結果中）
-        if (prev is not null && HwinfoFilteredItems.Contains(prev))
-        {
-            SelectedHwinfoSensor = prev;
-        }
-    }
-
-    /// <summary>
-    /// Apply 按鈕：將 ComboBox 選擇套用為實際繪圖的感測器
-    /// </summary>
-    [RelayCommand]
-    private void ApplyHwinfoSensor()
-    {
-        if (SelectedHwinfoSensor is null) return;
-        ApplyHwinfoSensorInternal(SelectedHwinfoSensor);
-    }
-
-    private void ApplyHwinfoSensorInternal(HwinfoSensorItem item)
-    {
-        // 判斷是否為不同的感測器
-        var isDifferent = AppliedHwinfoSensor is null ||
-                          AppliedHwinfoSensor.SensorName != item.SensorName ||
-                          AppliedHwinfoSensor.LabelOrig != item.LabelOrig;
-
-        AppliedHwinfoSensor = item;
-        AppliedHwinfoDisplay = $"{item.Label} ({item.Unit}) [{item.SensorName}]";
-        HwinfoChartLabel = item.Label;
-        HwinfoChartUnit = item.Unit;
-
-        if (isDifferent)
-        {
-            // 清空 buffer + 重設 Y 軸
-            ClearHwinfoBuffer();
-            _hwinfoPeak = 0;
-            HwinfoChartYMax = 0.1;
-            CurrentHwinfoValue = 0;
-            _hwinfoUnavailableLogged = false;
-            Log.Information("[HWiNFO] Applied sensor: {Name}", item.DisplayName);
-        }
-
-        SaveChartSettings();
-    }
-
-    private void ClearHwinfoBuffer()
-    {
-        // 填入 NaN 使 ScottPlot 不繪製舊資料
-        Array.Fill(_hwinfoBuffer, double.NaN);
-        _hwinfoBufferIndex = 0;
-        _hwinfoBufferCount = 0;
-        _hwinfoSum = 0;
-        HwinfoChartCleared?.Invoke();
-    }
-
-    private void WriteHwinfoBuffer(double value)
-    {
-        if (_hwinfoBufferCount >= _maxPoints)
-        {
-            var old = _hwinfoBuffer[_hwinfoBufferIndex];
-            if (!double.IsNaN(old))
-                _hwinfoSum -= old;
-        }
-
-        _hwinfoBuffer[_hwinfoBufferIndex] = value;
-        if (!double.IsNaN(value))
-            _hwinfoSum += value;
-
-        _hwinfoBufferIndex = (_hwinfoBufferIndex + 1) % _maxPoints;
-        if (_hwinfoBufferCount < _maxPoints) _hwinfoBufferCount++;
-    }
-
-    partial void OnIsHwinfoChartVisibleChanged(bool value)
-    {
-        if (value && !_hwinfoInitializing)
-        {
-            var provider = GetActiveProvider();
-            if (provider is null || !provider.IsAvailable)
-            {
-                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-                {
-                    IsHwinfoChartVisible = false;
-                    HwinfoShmNotFound?.Invoke(_loc["HWiNFO_ShmNotFound"]);
-                });
-                return;
-            }
-            RefreshHwinfoSensorList();
-        }
-        SaveChartSettings();
-    }
-
-    private void SaveChartSettings()
-    {
-        if (_hwinfoInitializing) return;
-
-        var service = ServiceLocator.SettingsService;
-        if (service is null) return;
-
-        var settings = service.Load();
-        settings.ChartSource = ChartSource;
-        settings.ChartSelectedSensor = AppliedHwinfoSensor?.SensorName;
-        settings.ChartSelectedEntry = AppliedHwinfoSensor?.LabelOrig;
-        // Keep legacy fields in sync
-        settings.HwinfoChartEnabled = ChartSource != ChartSourceType.Off;
-        settings.HwinfoSelectedSensor = settings.ChartSelectedSensor;
-        settings.HwinfoSelectedEntry = settings.ChartSelectedEntry;
-        service.Save(settings);
-    }
-
-    #endregion
 }
