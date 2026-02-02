@@ -132,27 +132,36 @@ sealed class Program
         }
         finally
         {
-            // Cleanup — 每個步驟獨立 try-catch，確保不因清理失敗而中斷後續清理
-            try { ShutdownWatchdogIfEnabled(); } catch (Exception ex) { Log.Warning(ex, "通知 Watchdog 關閉失敗"); }
-            try { ShutdownHttpApiServer(); } catch (Exception ex) { Log.Warning(ex, "清理 HttpApiServer 失敗"); }
-            try { ShutdownTrayIcon(); } catch (Exception ex) { Log.Warning(ex, "清理 TrayIcon 失敗"); }
-            try { ShutdownNamedPipeServer(); } catch (Exception ex) { Log.Warning(ex, "清理 NamedPipeServer 失敗"); }
-            try { ServiceLocator.HwinfoProvider?.Dispose(); ServiceLocator.HwinfoProvider = null; }
-            catch (Exception ex) { Log.Warning(ex, "清理 HwinfoProvider 失敗"); }
-            try { ServiceLocator.LhmSensorProvider?.Dispose(); ServiceLocator.LhmSensorProvider = null; }
-            catch (Exception ex) { Log.Warning(ex, "清理 LhmSensorProvider 失敗"); }
-            try
+            // OS 關機/登出時跳過耗時 cleanup，直接退出 — OS 會回收所有資源
+            if (ServiceLocator.IsSessionEnding)
             {
-                foreach (var provider in ServiceLocator.AvailableProviders)
-                {
-                    provider.Dispose();
-                }
-                ServiceLocator.AvailableProviders.Clear();
+                Log.Information("=== SendAlerts session ending, skipping cleanup ===");
+                Log.CloseAndFlush();
             }
-            catch (Exception ex) { Log.Warning(ex, "清理 GpuProviders 失敗"); }
-            _singleInstanceManager?.Dispose();
-            Log.Information("=== SendAlerts 應用程式結束 ===");
-            Log.CloseAndFlush();
+            else
+            {
+                // Cleanup — 每個步驟獨立 try-catch，確保不因清理失敗而中斷後續清理
+                try { ShutdownWatchdogIfEnabled(); } catch (Exception ex) { Log.Warning(ex, "通知 Watchdog 關閉失敗"); }
+                try { ShutdownHttpApiServer(); } catch (Exception ex) { Log.Warning(ex, "清理 HttpApiServer 失敗"); }
+                try { ShutdownTrayIcon(); } catch (Exception ex) { Log.Warning(ex, "清理 TrayIcon 失敗"); }
+                try { ShutdownNamedPipeServer(); } catch (Exception ex) { Log.Warning(ex, "清理 NamedPipeServer 失敗"); }
+                try { ServiceLocator.HwinfoProvider?.Dispose(); ServiceLocator.HwinfoProvider = null; }
+                catch (Exception ex) { Log.Warning(ex, "清理 HwinfoProvider 失敗"); }
+                try { ServiceLocator.LhmSensorProvider?.Dispose(); ServiceLocator.LhmSensorProvider = null; }
+                catch (Exception ex) { Log.Warning(ex, "清理 LhmSensorProvider 失敗"); }
+                try
+                {
+                    foreach (var provider in ServiceLocator.AvailableProviders)
+                    {
+                        provider.Dispose();
+                    }
+                    ServiceLocator.AvailableProviders.Clear();
+                }
+                catch (Exception ex) { Log.Warning(ex, "清理 GpuProviders 失敗"); }
+                _singleInstanceManager?.Dispose();
+                Log.Information("=== SendAlerts 應用程式結束 ===");
+                Log.CloseAndFlush();
+            }
         }
     }
 
