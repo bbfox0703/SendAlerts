@@ -45,11 +45,9 @@ public partial class App : Application
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
         {
-            // For mobile/browser - use ServiceLocator or fallback
-            var gpuProvider = ServiceLocator.GpuProvider ?? new Implementations.DemoGpuProvider();
             singleViewPlatform.MainView = new MainView
             {
-                DataContext = new MainViewModel(gpuProvider)
+                DataContext = new MainViewModel(true)
             };
         }
 
@@ -88,12 +86,9 @@ public partial class App : Application
 
     private void ShowMainWindow(IClassicDesktopStyleApplicationLifetime desktop)
     {
-        // T1-1: Use ServiceLocator for GPU Provider (initialized by Platform Head)
-        var gpuProvider = ServiceLocator.GpuProvider ?? new Implementations.DemoGpuProvider();
-
         desktop.MainWindow = new MainWindow
         {
-            DataContext = new MainViewModel(gpuProvider)
+            DataContext = new MainViewModel(true)
         };
         desktop.MainWindow.Show();
     }

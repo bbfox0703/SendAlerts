@@ -398,6 +398,12 @@ sealed class Program
         ServiceLocator.AvailableProviders = providers;
         ServiceLocator.GpuProvider = providers[0];
 
+        // Populate ProvidersByMode (first available provider per mode)
+        foreach (var p in providers)
+        {
+            ServiceLocator.ProvidersByMode.TryAdd(p.Mode, p);
+        }
+
         Log.Information("GPU Provider: {ProviderType}, Available: {IsAvailable}, Total Providers: {Count}",
             ServiceLocator.GpuProvider.GetType().Name,
             ServiceLocator.GpuProvider.IsAvailable,

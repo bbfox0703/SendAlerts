@@ -53,6 +53,24 @@ public class StatusColorConverter : IValueConverter
 }
 
 /// <summary>
+/// Enabled/Disabled foreground converter for list items
+/// </summary>
+public class EnabledForegroundConverter : IValueConverter
+{
+    public static readonly EnabledForegroundConverter Instance = new();
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool enabled && enabled)
+            return Brushes.White;
+        return Brushes.DimGray;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+/// <summary>
 /// TB3-3: 大於零轉換器 - 用於控制元素可見性
 /// </summary>
 public class GreaterThanZeroConverter : IValueConverter

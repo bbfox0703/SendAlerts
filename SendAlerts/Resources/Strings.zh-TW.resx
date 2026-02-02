@@ -440,4 +440,7 @@
   <data name="Chart_SensorChart" xml:space="preserve">
     <value>感測器繪圖</value>
   </data>
+  <data name="Chart_ConfigTitle" xml:space="preserve">
+    <value>圖表設定</value>
+  </data>
 </root>

@@ -1,0 +1,72 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:SendAlerts.ViewModels"
+        xmlns:conv="clr-namespace:SendAlerts.Converters"
+        x:Class="SendAlerts.Views.ChartConfigDialog"
+        x:DataType="vm:ChartConfigDialogViewModel"
+        Title="{Binding Title}"
+        Width="500" Height="460"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Background="#2b2b2b">
+
+  <Design.DataContext>
+    <vm:ChartConfigDialogViewModel />
+  </Design.DataContext>
+
+  <DockPanel Margin="15">
+    <!-- Buttons -->
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
+      <Button Content="OK" Width="80" Click="OnOkClick" />
+      <Button Content="Cancel" Width="80" Click="OnCancelClick" />
+    </StackPanel>
+
+    <StackPanel Spacing="10">
+      <!-- Source Type Radio Buttons -->
+      <TextBlock Text="Source Type" FontWeight="Bold" Foreground="White" FontSize="14"/>
+      <StackPanel Orientation="Horizontal" Spacing="20">
+        <RadioButton Content="Off" IsChecked="{Binding IsOffSelected}" GroupName="Source"/>
+        <RadioButton Content="Built-in" IsChecked="{Binding IsBuiltInSelected}" GroupName="Source"/>
+        <RadioButton Content="External Sensor" IsChecked="{Binding IsExternalSelected}" GroupName="Source"/>
+      </StackPanel>
+
+      <!-- Built-in Presets -->
+      <Border Background="#222" CornerRadius="4" Padding="8" IsVisible="{Binding IsBuiltInSelected}">
+        <StackPanel Spacing="4">
+          <TextBlock Text="Select Preset" Foreground="#aaa" FontSize="12"/>
+          <ListBox ItemsSource="{Binding PresetItems}"
+                   SelectedItem="{Binding SelectedPreset}"
+                   MaxHeight="200" Background="#1a1a1a">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding FullDisplay}"
+                           IsEnabled="{Binding IsEnabled}"
+                           Foreground="{Binding IsEnabled, Converter={x:Static conv:EnabledForegroundConverter.Instance}}"
+                           FontSize="13" Padding="4,3"/>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </StackPanel>
+      </Border>
+
+      <!-- External Sensor -->
+      <Border Background="#222" CornerRadius="4" Padding="8" IsVisible="{Binding IsExternalSelected}">
+        <StackPanel Spacing="6">
+          <TextBlock Text="External Source" Foreground="#aaa" FontSize="12"/>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <ComboBox SelectedIndex="{Binding SelectedExternalSourceIndex}" MinWidth="180">
+              <ComboBoxItem Content="HWiNFO"/>
+              <ComboBoxItem Content="LibreHardwareMonitor"/>
+            </ComboBox>
+            <Button Content="&#x21BB;" Command="{Binding RefreshSensorListCommand}" FontSize="14" Padding="4,2"
+                    ToolTip.Tip="Refresh sensor list"/>
+          </StackPanel>
+          <TextBox Text="{Binding SensorFilterText}" Watermark="Filter..." FontSize="11"/>
+          <ComboBox ItemsSource="{Binding FilteredSensorItems}"
+                    SelectedItem="{Binding SelectedSensor}"
+                    MinWidth="400" MaxDropDownHeight="300" FontSize="11"/>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </DockPanel>
+</Window>
