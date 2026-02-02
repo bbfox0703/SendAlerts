@@ -23,6 +23,12 @@ public static class ServiceLocator
     public static List<IGpuProvider> AvailableProviders { get; set; } = new();
 
     /// <summary>
+    /// Per-mode provider lookup (each HardwareMode maps to its first available provider).
+    /// Populated at startup by Program.cs.
+    /// </summary>
+    public static Dictionary<HardwareMode, IGpuProvider> ProvidersByMode { get; set; } = new();
+
+    /// <summary>
     /// 設定服務
     /// </summary>
     public static ISettingsService? SettingsService { get; set; }

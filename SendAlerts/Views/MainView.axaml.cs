@@ -6,6 +6,7 @@ using Avalonia.Interactivity;
 using ScottPlot;
 using ScottPlot.Avalonia;
 using ScottPlot.Plottables;
+using SendAlerts.Models;
 using SendAlerts.ViewModels;
 using SendAlerts.Services;
 using Serilog;
@@ -14,25 +15,13 @@ namespace SendAlerts.Views;
 
 public partial class MainView : UserControl
 {
-    private const int Capacity = 1800; // 30 min at 1s interval
+    private const int Capacity = 1800;
 
-    // Fixed-length arrays for plots (shared by reference with ScottPlot)
     private readonly double[] _xs;
-    private readonly double[] _utilizationData = new double[Capacity];
-    private readonly double[] _temperatureData = new double[Capacity];
-    private readonly double[] _powerData = new double[Capacity];
+    private readonly double[][] _chartData = new double[4][];
+    private ChartInfo?[] _charts = new ChartInfo?[4];
 
-    private readonly double[] _hwinfoData;  // initialized with NaN
-
-    // Chart info bundles
-    private ChartInfo? _utilInfo;
-    private ChartInfo? _tempInfo;
-    private ChartInfo? _powerInfo;
-    private ChartInfo? _hwinfoInfo;
-
-    // Current sampling interval (for tooltip time calculation)
     private int _currentInterval = 1;
-
     private MainViewModel? _vm;
 
     public MainView()
@@ -40,8 +29,11 @@ public partial class MainView : UserControl
         _xs = new double[Capacity];
         for (int i = 0; i < Capacity; i++) _xs[i] = i;
 
-        _hwinfoData = new double[Capacity];
-        Array.Fill(_hwinfoData, double.NaN);
+        for (int i = 0; i < 4; i++)
+        {
+            _chartData[i] = new double[Capacity];
+            Array.Fill(_chartData[i], double.NaN);
+        }
 
         InitializeComponent();
         Loaded += OnLoaded;
@@ -49,92 +41,84 @@ public partial class MainView : UserControl
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
-        var utilizationChart = this.FindControl<AvaPlot>("UtilizationChart");
-        var temperatureChart = this.FindControl<AvaPlot>("TemperatureChart");
-        var powerChart = this.FindControl<AvaPlot>("PowerChart");
-        var hwinfoChart = this.FindControl<AvaPlot>("HwinfoChart");
-
-        if (utilizationChart is null || temperatureChart is null || powerChart is null)
-            return;
-
         _vm = DataContext as MainViewModel;
         if (_vm is null) return;
 
         _currentInterval = ServiceLocator.SettingsService?.Load().SamplingIntervalSeconds ?? 1;
 
-        _utilInfo = SetupChart(utilizationChart, _utilizationData, Colors.LimeGreen, 0, 100);
-        _tempInfo = SetupChart(temperatureChart, _temperatureData, Colors.OrangeRed, 0, 100);
-        _powerInfo = SetupChart(powerChart, _powerData, Colors.Cyan, 0, _vm.PowerChartYMax);
+        // Find chart controls by name
+        var chartControls = new[]
+        {
+            this.FindControl<AvaPlot>("Chart0"),
+            this.FindControl<AvaPlot>("Chart1"),
+            this.FindControl<AvaPlot>("Chart2"),
+            this.FindControl<AvaPlot>("Chart3")
+        };
 
-        if (hwinfoChart is not null)
-            _hwinfoInfo = SetupChart(hwinfoChart, _hwinfoData, Colors.Gold, 0, _vm.HwinfoChartYMax);
+        for (int i = 0; i < 4; i++)
+        {
+            if (chartControls[i] is not null)
+            {
+                var lineColor = Color.FromHex(ChartColors.SlotLineColors[i]);
+                var yMax = i switch
+                {
+                    0 => _vm.Slot0YMax,
+                    1 => _vm.Slot1YMax,
+                    2 => _vm.Slot2YMax,
+                    3 => _vm.Slot3YMax,
+                    _ => 100
+                };
+                _charts[i] = SetupChart(chartControls[i]!, _chartData[i], lineColor, 0, yMax);
+            }
+        }
 
         _vm.ChartDataUpdated += OnChartDataUpdated;
         _vm.ChartDataCleared += OnChartDataCleared;
         _vm.SamplingIntervalChanged += OnSamplingIntervalChanged;
-        _vm.HwinfoChartDataUpdated += OnHwinfoChartDataUpdated;
-        _vm.HwinfoChartCleared += OnHwinfoChartCleared;
-
-        _vm.HwinfoShmNotFound += OnHwinfoShmNotFound;
-
-        // Dynamic row visibility for HWiNFO chart (Row 3)
+        _vm.OpenChartConfigRequested += OnOpenChartConfigRequested;
         _vm.PropertyChanged += OnVmPropertyChanged;
-        UpdateHwinfoRowVisibility();
+
+        UpdateRowVisibility();
     }
 
     private ChartInfo SetupChart(AvaPlot chart, double[] data, Color lineColor, double yMin, double yMax)
     {
         var plot = chart.Plot;
 
-        // Disable benchmark text ("Rendered in X ms")
         plot.Benchmark.IsVisible = false;
-
-        // Disable default user interaction (pan, zoom, right-click menu)
         chart.UserInputProcessor.IsEnabled = false;
 
-        // Dark theme
-        plot.FigureBackground.Color = Color.FromHex("#1a1a1a");
-        plot.DataBackground.Color = Color.FromHex("#1a1a1a");
-        plot.Axes.Color(Color.FromHex("#888888"));
+        plot.FigureBackground.Color = Color.FromHex(ChartColors.Background);
+        plot.DataBackground.Color = Color.FromHex(ChartColors.Background);
+        plot.Axes.Color(Color.FromHex(ChartColors.AxisColor));
 
-        // Grid lines — dotted
-        plot.Grid.MajorLineColor = Color.FromHex("#333333");
+        plot.Grid.MajorLineColor = Color.FromHex(ChartColors.GridLine);
         plot.Grid.MajorLineWidth = 1;
         plot.Grid.MajorLinePattern = LinePattern.Dotted;
 
-        // Hide top/right axes
         plot.Axes.Top.IsVisible = false;
         plot.Axes.Right.IsVisible = false;
 
-        // Y axis
         plot.Axes.SetLimitsY(yMin, yMax);
 
-        // X axis — dynamic time labels based on interval
         var (tickPositions, tickLabels) = CalculateXTicks(_currentInterval);
         plot.Axes.Bottom.SetTicks(tickPositions, tickLabels);
-        plot.Axes.Bottom.TickLabelStyle.ForeColor = Color.FromHex("#666666");
+        plot.Axes.Bottom.TickLabelStyle.ForeColor = Color.FromHex(ChartColors.TickLabel);
         plot.Axes.Bottom.TickLabelStyle.FontSize = 10;
         plot.Axes.Bottom.MajorTickStyle.Length = 4;
         plot.Axes.Bottom.MinorTickStyle.Length = 0;
 
-        // X axis range fixed
         plot.Axes.SetLimitsX(0, Capacity);
-
-        // Padding: left for Y labels, bottom for X time labels
         plot.Layout.Fixed(new PixelPadding(45, 8, 20, 5));
 
-        // Scatter plot with fill
         var scatter = plot.Add.Scatter(_xs, data);
         scatter.Color = lineColor;
         scatter.LineWidth = 1;
         scatter.MarkerSize = 0;
-
-        // Fill under the curve
         scatter.FillY = true;
         scatter.FillYValue = 0;
         scatter.FillYColor = lineColor.WithAlpha(40);
 
-        // Crosshair tooltip (hidden by default)
         var crosshair = plot.Add.Crosshair(0, 0);
         crosshair.IsVisible = false;
         crosshair.LineColor = Colors.White.WithAlpha(120);
@@ -147,22 +131,19 @@ public partial class MainView : UserControl
         crosshair.TextBackgroundColor = lineColor.WithAlpha(200);
         crosshair.FontSize = 12;
 
-        // Tooltip annotation (positioned near crosshair, hidden by default)
         var tooltip = plot.Add.Annotation("");
         tooltip.IsVisible = false;
         tooltip.LabelFontColor = Colors.White;
-        tooltip.LabelBackgroundColor = Color.FromHex("#333333").WithAlpha(220);
+        tooltip.LabelBackgroundColor = Color.FromHex(ChartColors.TooltipBg).WithAlpha(220);
         tooltip.LabelFontSize = 12;
         tooltip.LabelBorderColor = lineColor;
         tooltip.LabelBorderWidth = 1;
         tooltip.LabelPadding = 4;
 
-        // Hook pointer events for tooltip
         chart.PointerMoved += (_, args) => OnChartPointerMoved(chart, data, crosshair, tooltip, args);
         chart.PointerExited += (_, _) => OnChartPointerExited(chart, crosshair, tooltip);
 
         chart.Refresh();
-
         return new ChartInfo(chart, data, scatter, crosshair, tooltip);
     }
 
@@ -188,10 +169,8 @@ public partial class MainView : UserControl
     {
         _currentInterval = seconds;
         var (positions, labels) = CalculateXTicks(seconds);
-        UpdateChartXTicks(_utilInfo, positions, labels);
-        UpdateChartXTicks(_tempInfo, positions, labels);
-        UpdateChartXTicks(_powerInfo, positions, labels);
-        UpdateChartXTicks(_hwinfoInfo, positions, labels);
+        for (int i = 0; i < 4; i++)
+            UpdateChartXTicks(_charts[i], positions, labels);
     }
 
     private static void UpdateChartXTicks(ChartInfo? info, double[] positions, string[] labels)
@@ -229,14 +208,12 @@ public partial class MainView : UserControl
             crosshair.IsVisible = true;
             crosshair.Position = new Coordinates(index, value);
 
-            // Format tooltip: show value and time offset
             var secondsAgo = (Capacity - index) * _currentInterval;
             var timeLabel = secondsAgo < 60
                 ? $"{secondsAgo}s ago"
                 : $"{secondsAgo / 60}m {secondsAgo % 60}s ago";
             tooltip.IsVisible = true;
             tooltip.Text = $"{value:F3}  ({timeLabel})";
-            // Flip tooltip side: right-half → show left, left-half → show right
             if (index > Capacity / 2)
             {
                 tooltip.Alignment = Alignment.UpperRight;
@@ -268,25 +245,12 @@ public partial class MainView : UserControl
 
     private void OnChartDataCleared()
     {
-        Array.Clear(_utilizationData);
-        Array.Clear(_temperatureData);
-        Array.Clear(_powerData);
-        Array.Fill(_hwinfoData, double.NaN);
-
-        // Hide crosshairs/tooltips
-        HideCrosshair(_utilInfo);
-        HideCrosshair(_tempInfo);
-        HideCrosshair(_powerInfo);
-        HideCrosshair(_hwinfoInfo);
-
-        // Refresh with updated Y limits
-        if (_vm is not null)
+        for (int i = 0; i < 4; i++)
         {
-            RefreshChart(_utilInfo, 0, 100);
-            RefreshChart(_tempInfo, 0, 100);
-            RefreshChart(_powerInfo, 0, _vm.PowerChartYMax);
-            RefreshChart(_hwinfoInfo, 0, _vm.HwinfoChartYMax);
+            Array.Fill(_chartData[i], double.NaN);
+            HideCrosshair(_charts[i]);
         }
+        RefreshAllCharts();
     }
 
     private static void HideCrosshair(ChartInfo? info)
@@ -300,54 +264,31 @@ public partial class MainView : UserControl
     {
         if (_vm is null) return;
 
-        // Shift left and append new value
-        ShiftAndAppend(_utilizationData, _vm.CurrentUtilization);
-        ShiftAndAppend(_temperatureData, _vm.CurrentTemperature);
-        ShiftAndAppend(_powerData, _vm.CurrentPower);
-
-        // Dynamic Y max for power chart (GPU and Network modes, only-grow)
-        if (_powerInfo is not null)
+        for (int i = 0; i < 4; i++)
         {
-            var current = (double)_vm.CurrentPower;
+            var slot = _vm._slots[i];
+            if (!slot.IsActive || _charts[i] is null) continue;
 
-            // Network mode: KB/s → MB/s 切換 (只向上不縮回)
-            if (!_vm.IsGpuMode && !_vm._networkScaleMB && _vm.PowerChartYMax >= 1024)
-            {
-                _vm._networkScaleMB = true;
-                _vm.SecondaryMetricUnit = "MB/s";
-                // Reset Y max for MB/s scale
-                _vm.PowerChartYMax = Math.Ceiling(current / 1024.0 * 1.5);
-                if (_vm.PowerChartYMax < 1) _vm.PowerChartYMax = 1;
-            }
+            ShiftAndAppend(_chartData[i], slot.LastTickValue);
 
-            if (!_vm.IsGpuMode && _vm._networkScaleMB)
+            var yMax = i switch
             {
-                // 顯示值已在 KB/s，轉換為 MB/s 用於 Y 軸判斷
-                var currentMB = current / 1024.0;
-                if (currentMB > _vm.PowerChartYMax * 0.85)
-                {
-                    var newMax = Math.Ceiling(currentMB * 1.5);
-                    if (newMax > _vm.PowerChartYMax)
-                        _vm.PowerChartYMax = newMax;
-                }
-            }
-            else
-            {
-                // GPU mode: 50W 單位; Network (KB/s): 100 單位
-                var step = _vm.IsGpuMode ? 50.0 : 100.0;
-                if (current > _vm.PowerChartYMax * 0.85)
-                {
-                    var newMax = Math.Ceiling(current * 1.5 / step) * step;
-                    if (newMax > _vm.PowerChartYMax)
-                        _vm.PowerChartYMax = newMax;
-                }
-            }
+                0 => _vm.Slot0YMax,
+                1 => _vm.Slot1YMax,
+                2 => _vm.Slot2YMax,
+                3 => _vm.Slot3YMax,
+                _ => 100
+            };
+            RefreshChart(_charts[i], 0, yMax);
         }
+    }
 
-        // Refresh each chart + update crosshair if visible
-        RefreshChart(_utilInfo, 0, 100);
-        RefreshChart(_tempInfo, 0, 100);
-        RefreshChart(_powerInfo, 0, _vm.PowerChartYMax);
+    private void RefreshAllCharts()
+    {
+        if (_vm is null) return;
+        var yMaxes = new[] { _vm.Slot0YMax, _vm.Slot1YMax, _vm.Slot2YMax, _vm.Slot3YMax };
+        for (int i = 0; i < 4; i++)
+            RefreshChart(_charts[i], 0, yMaxes[i]);
     }
 
     private void RefreshChart(ChartInfo? info, double yMin, double yMax)
@@ -356,7 +297,6 @@ public partial class MainView : UserControl
 
         info.Chart.Plot.Axes.SetLimitsY(yMin, yMax);
 
-        // If crosshair visible, update Y value (data shifted since last frame)
         if (info.Crosshair.IsVisible)
         {
             var index = (int)Math.Round(info.Crosshair.Position.X);
@@ -372,7 +312,6 @@ public partial class MainView : UserControl
                 }
                 info.Crosshair.Position = new Coordinates(index, value);
 
-                // Update tooltip text
                 var secondsAgo = (Capacity - index) * _currentInterval;
                 var timeLabel = secondsAgo < 60
                     ? $"{secondsAgo}s ago"
@@ -390,42 +329,19 @@ public partial class MainView : UserControl
         data[^1] = newValue;
     }
 
-    private void OnHwinfoChartDataUpdated()
-    {
-        if (_vm is null || _hwinfoInfo is null) return;
-
-        ShiftAndAppend(_hwinfoData, _vm._lastHwinfoTickValue);
-        RefreshChart(_hwinfoInfo, 0, _vm.HwinfoChartYMax);
-    }
-
-    private void OnHwinfoChartCleared()
-    {
-        Array.Fill(_hwinfoData, double.NaN);
-        HideCrosshair(_hwinfoInfo);
-        if (_vm is not null)
-            RefreshChart(_hwinfoInfo, 0, _vm.HwinfoChartYMax);
-    }
-
-    private async void OnHwinfoShmNotFound(string message)
-    {
-        var parentWindow = TopLevel.GetTopLevel(this) as Window;
-        if (parentWindow is null) return;
-
-        var loc = LocalizationService.Instance;
-        var dialog = new ConfirmDialog("HWiNFO", message, loc["OK"]);
-        dialog.HideCancelButton();
-        await dialog.ShowDialog(parentWindow);
-    }
-
     private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MainViewModel.IsHwinfoChartVisible))
-            UpdateHwinfoRowVisibility();
+        if (e.PropertyName is nameof(MainViewModel.Slot0IsVisible) or
+            nameof(MainViewModel.Slot1IsVisible) or
+            nameof(MainViewModel.Slot2IsVisible) or
+            nameof(MainViewModel.Slot3IsVisible))
+        {
+            UpdateRowVisibility();
+        }
     }
 
-    private void UpdateHwinfoRowVisibility()
+    private void UpdateRowVisibility()
     {
-        // Find the main Grid (parent of chart borders)
         var content = this.Content as Avalonia.Controls.DockPanel;
         if (content is null) return;
 
@@ -438,12 +354,61 @@ public partial class MainView : UserControl
                 break;
             }
         }
-        if (mainGrid is null) return;
+        if (mainGrid is null || _vm is null) return;
 
-        var visible = _vm?.IsHwinfoChartVisible == true;
-        mainGrid.RowDefinitions[3].Height = visible
-            ? new GridLength(1, GridUnitType.Star)
-            : new GridLength(0);
+        var visible = new[] { _vm.Slot0IsVisible, _vm.Slot1IsVisible, _vm.Slot2IsVisible, _vm.Slot3IsVisible };
+        for (int i = 0; i < 4; i++)
+        {
+            mainGrid.RowDefinitions[i].Height = visible[i]
+                ? new GridLength(1, GridUnitType.Star)
+                : new GridLength(0);
+        }
+    }
+
+    private async void OnOpenChartConfigRequested(int slotIndex)
+    {
+        if (_vm is null) return;
+
+        var parentWindow = TopLevel.GetTopLevel(this) as Window;
+        if (parentWindow is null) return;
+
+        var dialogVm = new ChartConfigDialogViewModel(slotIndex, _vm);
+        var dialog = new ChartConfigDialog(dialogVm);
+        var result = await dialog.ShowDialog<bool?>(parentWindow);
+
+        if (result == true && dialogVm.Result is { } config)
+        {
+            // Duplicate check for built-in
+            if (config.SourceType == ChartSlotSourceType.BuiltIn)
+            {
+                var usedBy = _vm.FindPresetUsedBySlot(config.BuiltInPreset, slotIndex);
+                if (usedBy >= 0)
+                {
+                    _vm.StatusText = $"Warning: {config.BuiltInPreset} already used in Chart {usedBy + 1}";
+                    return;
+                }
+            }
+
+            _vm.ApplySlotConfig(slotIndex, config);
+
+            // Clear and reinitialize the chart display data
+            Array.Fill(_chartData[slotIndex], double.NaN);
+            if (_charts[slotIndex] is not null)
+            {
+                HideCrosshair(_charts[slotIndex]);
+                var yMax = slotIndex switch
+                {
+                    0 => _vm.Slot0YMax,
+                    1 => _vm.Slot1YMax,
+                    2 => _vm.Slot2YMax,
+                    3 => _vm.Slot3YMax,
+                    _ => 100
+                };
+                RefreshChart(_charts[slotIndex], 0, yMax);
+            }
+
+            UpdateRowVisibility();
+        }
     }
 
     protected override void OnDataContextChanged(EventArgs e)
@@ -455,21 +420,18 @@ public partial class MainView : UserControl
             _vm.ChartDataUpdated -= OnChartDataUpdated;
             _vm.ChartDataCleared -= OnChartDataCleared;
             _vm.SamplingIntervalChanged -= OnSamplingIntervalChanged;
-            _vm.HwinfoChartDataUpdated -= OnHwinfoChartDataUpdated;
-            _vm.HwinfoChartCleared -= OnHwinfoChartCleared;
-            _vm.HwinfoShmNotFound -= OnHwinfoShmNotFound;
+            _vm.OpenChartConfigRequested -= OnOpenChartConfigRequested;
             _vm.PropertyChanged -= OnVmPropertyChanged;
         }
 
         _vm = DataContext as MainViewModel;
 
-        if (_vm is not null && _utilInfo is not null)
+        if (_vm is not null && _charts[0] is not null)
         {
             _vm.ChartDataUpdated += OnChartDataUpdated;
             _vm.ChartDataCleared += OnChartDataCleared;
             _vm.SamplingIntervalChanged += OnSamplingIntervalChanged;
-            _vm.HwinfoChartDataUpdated += OnHwinfoChartDataUpdated;
-            _vm.HwinfoChartCleared += OnHwinfoChartCleared;
+            _vm.OpenChartConfigRequested += OnOpenChartConfigRequested;
             _vm.PropertyChanged += OnVmPropertyChanged;
         }
     }
@@ -496,7 +458,6 @@ public partial class MainView : UserControl
 
                     if (newInterval != oldInterval)
                     {
-                        // Interval changed — show confirm dialog before clearing chart
                         var loc = LocalizationService.Instance;
                         var dialog = new ConfirmDialog(
                             loc["Confirm_IntervalChange_Title"],
@@ -511,7 +472,6 @@ public partial class MainView : UserControl
                         }
                         else
                         {
-                            // Revert setting
                             settings.SamplingIntervalSeconds = oldInterval;
                             settingsService.Save(settings);
                         }
@@ -521,7 +481,7 @@ public partial class MainView : UserControl
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "[MainView] 開啟設定視窗失敗");
+            Log.Error(ex, "[MainView] Failed to open settings window");
         }
     }
 
@@ -536,7 +496,7 @@ public partial class MainView : UserControl
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "[MainView] 開啟 Alert Actions 視窗失敗");
+            Log.Error(ex, "[MainView] Failed to open Alert Actions window");
         }
     }
 
@@ -551,7 +511,7 @@ public partial class MainView : UserControl
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "[MainView] 開啟 Alert Groups 視窗失敗");
+            Log.Error(ex, "[MainView] Failed to open Alert Groups window");
         }
     }
 
@@ -572,7 +532,7 @@ public partial class MainView : UserControl
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "[MainView] 開啟診斷視窗失敗");
+            Log.Error(ex, "[MainView] Failed to open diagnostics window");
         }
     }
 
