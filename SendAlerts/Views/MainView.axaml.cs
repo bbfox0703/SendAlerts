@@ -88,8 +88,9 @@ public partial class MainView : UserControl
         plot.Benchmark.IsVisible = false;
         chart.UserInputProcessor.IsEnabled = false;
 
-        plot.FigureBackground.Color = Color.FromHex(ChartColors.Background);
-        plot.DataBackground.Color = Color.FromHex(ChartColors.Background);
+        var bgColor = Color.FromHex(ChartColors.ChartBackground);
+        plot.FigureBackground.Color = bgColor;
+        plot.DataBackground.Color = bgColor;
         plot.Axes.Color(Color.FromHex(ChartColors.AxisColor));
 
         plot.Grid.MajorLineColor = Color.FromHex(ChartColors.GridLine);
@@ -111,30 +112,39 @@ public partial class MainView : UserControl
         plot.Axes.SetLimitsX(0, Capacity);
         plot.Layout.Fixed(new PixelPadding(45, 8, 20, 5));
 
+        // Gradient fill (rendered first, behind the line)
+        var gradientFill = new GradientFillPlottable(
+            _xs, data, lineColor, ChartColors.FillAlphaTop, ChartColors.FillAlphaBottom);
+        plot.Add.Plottable(gradientFill);
+
+        // Scatter line (no built-in fill — gradient plottable handles it)
         var scatter = plot.Add.Scatter(_xs, data);
         scatter.Color = lineColor;
         scatter.LineWidth = 1;
         scatter.MarkerSize = 0;
-        scatter.FillY = true;
-        scatter.FillYValue = 0;
-        scatter.FillYColor = lineColor.WithAlpha(ChartColors.FillAlpha);
+
+        var crosshairLineColor = Color.FromHex(ChartColors.CrosshairLine).WithAlpha(ChartColors.CrosshairLineAlpha);
+        var crosshairTextColor = Color.FromHex(ChartColors.CrosshairText);
 
         var crosshair = plot.Add.Crosshair(0, 0);
         crosshair.IsVisible = false;
-        crosshair.LineColor = Colors.White.WithAlpha(120);
+        crosshair.LineColor = crosshairLineColor;
         crosshair.LineWidth = 1;
         crosshair.LinePattern = LinePattern.Dashed;
         crosshair.MarkerShape = MarkerShape.FilledCircle;
         crosshair.MarkerSize = 6;
         crosshair.MarkerColor = lineColor;
-        crosshair.TextColor = Colors.White;
-        crosshair.TextBackgroundColor = lineColor.WithAlpha(200);
+        crosshair.TextColor = crosshairTextColor;
+        crosshair.TextBackgroundColor = lineColor.WithAlpha(ChartColors.CrosshairTextBgAlpha);
         crosshair.FontSize = 12;
+
+        var tooltipFgColor = Color.FromHex(ChartColors.TooltipFg);
+        var tooltipBgColor = Color.FromHex(ChartColors.TooltipBg).WithAlpha(ChartColors.TooltipBgAlpha);
 
         var tooltip = plot.Add.Annotation("");
         tooltip.IsVisible = false;
-        tooltip.LabelFontColor = Colors.White;
-        tooltip.LabelBackgroundColor = Color.FromHex(ChartColors.TooltipBg).WithAlpha(220);
+        tooltip.LabelFontColor = tooltipFgColor;
+        tooltip.LabelBackgroundColor = tooltipBgColor;
         tooltip.LabelFontSize = 12;
         tooltip.LabelBorderColor = lineColor;
         tooltip.LabelBorderWidth = 1;

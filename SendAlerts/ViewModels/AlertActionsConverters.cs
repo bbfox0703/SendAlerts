@@ -3,6 +3,7 @@ using System.Globalization;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
 using SendAlerts.Core.Interfaces;
+using SendAlerts.Models;
 
 namespace SendAlerts.ViewModels;
 
@@ -84,15 +85,14 @@ public class EnabledColorConverter : IValueConverter
 {
     public static readonly EnabledColorConverter Instance = new();
 
+    private static readonly SolidColorBrush EnabledBrush = new(Color.Parse(ChartColors.EnabledGreen));
+    private static readonly SolidColorBrush DisabledBrush = new(Color.Parse(ChartColors.DisabledGray));
+
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is bool isEnabled)
-        {
-            return isEnabled
-                ? new SolidColorBrush(Color.FromRgb(46, 125, 50))   // Green
-                : new SolidColorBrush(Color.FromRgb(120, 120, 120)); // Gray
-        }
-        return new SolidColorBrush(Color.FromRgb(120, 120, 120));
+        if (value is bool isEnabled && isEnabled)
+            return EnabledBrush;
+        return DisabledBrush;
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

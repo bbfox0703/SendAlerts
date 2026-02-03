@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using SendAlerts.Models;
 using SendAlerts.Services;
 using Serilog;
 
@@ -51,7 +52,7 @@ public class TrayIconManager : IDisposable
             _trayIcon = new TrayIcon
             {
                 ToolTipText = "SendAlerts - Alert Relay Station",
-                IsVisible = false,
+                IsVisible = true, // 初始化後立即顯示
                 Menu = CreateContextMenu()
             };
 
@@ -149,7 +150,7 @@ public class TrayIconManager : IDisposable
         Dispatcher.UIThread.Post(() =>
         {
             _mainWindow.Hide();
-            _trayIcon.IsVisible = true;
+            // TrayIcon 永遠保持可見，不需要切換
             ShowTrayToast("SendAlerts", LocalizationService.Instance["Tray_MinimizedToast"]);
         });
 
@@ -172,7 +173,7 @@ public class TrayIconManager : IDisposable
             CanResize = false,
             ShowInTaskbar = false,
             Topmost = true,
-            Background = new SolidColorBrush(Color.FromRgb(45, 45, 48)),
+            Background = new SolidColorBrush(Color.Parse(ChartColors.ToastBg)),
             Width = 300,
             Height = 60,
             WindowStartupLocation = WindowStartupLocation.Manual,
@@ -187,13 +188,13 @@ public class TrayIconManager : IDisposable
                         Text = title,
                         FontWeight = FontWeight.Bold,
                         FontSize = 13,
-                        Foreground = Brushes.White
+                        Foreground = new SolidColorBrush(Color.Parse(ChartColors.ToastTitleFg))
                     },
                     new TextBlock
                     {
                         Text = message,
                         FontSize = 12,
-                        Foreground = new SolidColorBrush(Color.FromRgb(200, 200, 200))
+                        Foreground = new SolidColorBrush(Color.Parse(ChartColors.ToastMessageFg))
                     }
                 }
             }
@@ -230,35 +231,20 @@ public class TrayIconManager : IDisposable
             _mainWindow.Show();
             _mainWindow.WindowState = WindowState.Normal;
             _mainWindow.Activate();
-
-            if (_trayIcon != null)
-            {
-                _trayIcon.IsVisible = false;
-            }
+            // TrayIcon 永遠保持可見，不需要隱藏
         });
 
         Log.Debug("[TrayIcon] 已顯示主視窗");
     }
 
     /// <summary>
-    /// 隱藏系統匣圖示
+    /// 隱藏系統匣圖示 (僅用於退出時)
     /// </summary>
-    public void Hide()
+    internal void HideForExit()
     {
         if (_trayIcon != null)
         {
             _trayIcon.IsVisible = false;
-        }
-    }
-
-    /// <summary>
-    /// 顯示系統匣圖示
-    /// </summary>
-    public void Show()
-    {
-        if (_trayIcon != null)
-        {
-            _trayIcon.IsVisible = true;
         }
     }
 
@@ -283,10 +269,8 @@ public class TrayIconManager : IDisposable
 
         Dispatcher.UIThread.Post(() =>
         {
-            if (_trayIcon != null)
-            {
-                _trayIcon.IsVisible = false;
-            }
+            // 隱藏 TrayIcon
+            HideForExit();
 
             // 清除系統匣狀態，讓 MainWindow.OnWindowClosing 不再攔截關閉
             ServiceLocator.IsTrayAvailable = false;
