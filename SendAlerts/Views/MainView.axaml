@@ -20,42 +20,42 @@
 
   <DockPanel>
     <!-- Navigation bar -->
-    <StackPanel DockPanel.Dock="Top" Height="40" Background="#2b2b2b" Orientation="Horizontal" Spacing="10">
+    <StackPanel DockPanel.Dock="Top" Height="40" Background="{x:Static conv:AppColorResources.NavBarBg}" Orientation="Horizontal" Spacing="10">
       <Button Content="{Binding Loc_Settings}" Margin="10,0,0,0" Click="OnSettingsClick" />
       <Button Content="{Binding Loc_AlertActions}" Click="OnAlertActionsClick" />
       <Button Content="{Binding Loc_AlertGroups}" Click="OnAlertGroupsClick" />
       <Button Content="{Binding Loc_Log}" Click="OnLogClick" />
       <Button Content="Diag" Click="OnDiagnosticsClick" />
-      <TextBlock Text="{Binding GpuName}" VerticalAlignment="Center" Foreground="White" FontWeight="Bold" Margin="10,0,0,0"/>
-      <TextBlock Text="{Binding PowerLimitDisplay}" VerticalAlignment="Center" Foreground="#888" Margin="10,0,0,0"/>
+      <TextBlock Text="{Binding GpuName}" VerticalAlignment="Center" Foreground="{x:Static conv:AppColorResources.GpuNameFg}" FontWeight="Bold" Margin="10,0,0,0"/>
+      <TextBlock Text="{Binding PowerLimitDisplay}" VerticalAlignment="Center" Foreground="{x:Static conv:AppColorResources.PowerLimitFg}" Margin="10,0,0,0"/>
       <!-- Display mode hint -->
-      <Border Background="#3a3a00" CornerRadius="3" Padding="8,2" Margin="10,0,0,0" VerticalAlignment="Center">
-        <TextBlock Text="{Binding Loc_DisplayModeHint}" Foreground="#ffcc00" FontSize="11"/>
+      <Border Background="{x:Static conv:AppColorResources.DisplayModeHintBg}" CornerRadius="3" Padding="8,2" Margin="10,0,0,0" VerticalAlignment="Center">
+        <TextBlock Text="{Binding Loc_DisplayModeHint}" Foreground="{x:Static conv:AppColorResources.DisplayModeHintFg}" FontSize="11"/>
       </Border>
     </StackPanel>
 
     <!-- Status bar -->
-    <Border DockPanel.Dock="Bottom" Height="30" Background="#1e1e1e" BorderBrush="#333" BorderThickness="0,1,0,0">
+    <Border DockPanel.Dock="Bottom" Height="30" Background="{x:Static conv:AppColorResources.StatusBarBg}" BorderBrush="{x:Static conv:AppColorResources.StatusBarBorder}" BorderThickness="0,1,0,0">
       <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
         <Ellipse Grid.Column="0" Width="8" Height="8" Margin="10,0,5,0"
                  Fill="{Binding IsPipeServerRunning, Converter={StaticResource StatusColorConverter}}"/>
-        <TextBlock Grid.Column="1" Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="#aaa" FontSize="12"/>
-        <TextBlock Grid.Column="2" Text="{Binding AvgSummary}" VerticalAlignment="Center" Foreground="#888" FontSize="11" Margin="10,0"/>
-        <TextBlock Grid.Column="3" VerticalAlignment="Center" Foreground="#666" FontSize="12" Margin="10,0">
+        <TextBlock Grid.Column="1" Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="{x:Static conv:AppColorResources.StatusTextFg}" FontSize="12"/>
+        <TextBlock Grid.Column="2" Text="{Binding AvgSummary}" VerticalAlignment="Center" Foreground="{x:Static conv:AppColorResources.AvgSummaryFg}" FontSize="11" Margin="10,0"/>
+        <TextBlock Grid.Column="3" VerticalAlignment="Center" Foreground="{x:Static conv:AppColorResources.AlertCountFg}" FontSize="12" Margin="10,0">
           <TextBlock.Text>
             <MultiBinding StringFormat="Alerts: {0}">
               <Binding Path="AlertHistoryItems.Count"/>
             </MultiBinding>
           </TextBlock.Text>
         </TextBlock>
-        <TextBlock Grid.Column="4" Text="{Binding VersionDisplay}" Margin="10,0" VerticalAlignment="Center" Foreground="#555" FontSize="12"/>
+        <TextBlock Grid.Column="4" Text="{Binding VersionDisplay}" Margin="10,0" VerticalAlignment="Center" Foreground="{x:Static conv:AppColorResources.VersionFg}" FontSize="12"/>
       </Grid>
     </Border>
 
     <Grid RowDefinitions="*, *, *, *, Auto">
 
       <!-- Chart Slot 0 -->
-      <Border Grid.Row="0" Margin="5" Background="#1a1a1a" CornerRadius="5"
+      <Border Grid.Row="0" Margin="5" Background="{x:Static conv:AppColorResources.SlotBorderBg}" CornerRadius="5"
               IsVisible="{Binding Slot0IsVisible}">
         <DockPanel>
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,5">
@@ -76,7 +76,7 @@
       </Border>
 
       <!-- Chart Slot 1 -->
-      <Border Grid.Row="1" Margin="5" Background="#1a1a1a" CornerRadius="5"
+      <Border Grid.Row="1" Margin="5" Background="{x:Static conv:AppColorResources.SlotBorderBg}" CornerRadius="5"
               IsVisible="{Binding Slot1IsVisible}">
         <DockPanel>
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,5">
@@ -97,7 +97,7 @@
       </Border>
 
       <!-- Chart Slot 2 -->
-      <Border Grid.Row="2" Margin="5" Background="#1a1a1a" CornerRadius="5"
+      <Border Grid.Row="2" Margin="5" Background="{x:Static conv:AppColorResources.SlotBorderBg}" CornerRadius="5"
               IsVisible="{Binding Slot2IsVisible}">
         <DockPanel>
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,5">
@@ -118,7 +118,7 @@
       </Border>
 
       <!-- Chart Slot 3 -->
-      <Border Grid.Row="3" Margin="5" Background="#1a1a1a" CornerRadius="5"
+      <Border Grid.Row="3" Margin="5" Background="{x:Static conv:AppColorResources.SlotBorderBg}" CornerRadius="5"
               IsVisible="{Binding Slot3IsVisible}">
         <DockPanel>
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,5">
@@ -139,7 +139,7 @@
       </Border>
 
       <!-- Alert History Panel -->
-      <Border Grid.Row="4" Margin="5,0,5,5" Background="#1a1a1a" CornerRadius="5"
+      <Border Grid.Row="4" Margin="5,0,5,5" Background="{x:Static conv:AppColorResources.HistoryPanelBg}" CornerRadius="5"
               IsVisible="{Binding AlertHistoryItems.Count, Converter={x:Static conv:GreaterThanZeroConverter.Instance}}">
         <Expander Header="{Binding Loc_RecentAlerts}" IsExpanded="False" Padding="5">
           <ItemsControl ItemsSource="{Binding AlertHistoryItems}" MaxHeight="120">
@@ -148,8 +148,8 @@
                 <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,2">
                   <Ellipse Grid.Column="0" Width="6" Height="6" Margin="0,0,8,0"
                            Fill="{Binding Success, Converter={StaticResource StatusColorConverter}}"/>
-                  <TextBlock Grid.Column="1" Text="{Binding TimeString}" Foreground="#888" FontSize="11" Margin="0,0,10,0"/>
-                  <TextBlock Grid.Column="2" Text="{Binding DisplayText}" Foreground="#ccc" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                  <TextBlock Grid.Column="1" Text="{Binding TimeString}" Foreground="{x:Static conv:AppColorResources.HistoryTimeFg}" FontSize="11" Margin="0,0,10,0"/>
+                  <TextBlock Grid.Column="2" Text="{Binding DisplayText}" Foreground="{x:Static conv:AppColorResources.HistoryTextFg}" FontSize="11" TextTrimming="CharacterEllipsis"/>
                 </Grid>
               </DataTemplate>
             </ItemsControl.ItemTemplate>

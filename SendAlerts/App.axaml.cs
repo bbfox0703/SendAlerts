@@ -27,6 +27,14 @@ public partial class App : Application
         {
             DisableAvaloniaDataAnnotationValidation();
 
+            // 處理 OS 關機 / 登出時的 ShutdownRequested 事件
+            desktop.ShutdownRequested += (_, e) =>
+            {
+                // 設定旗標讓 MainWindow.OnWindowClosing 不再攔截
+                ServiceLocator.IsSessionEnding = true;
+                Log.Information("[App] ShutdownRequested received");
+            };
+
             // T1-1: Use ServiceLocator for settings (initialized by Platform Head)
             var settingsService = ServiceLocator.SettingsService ?? new JsonSettingsService();
             var settings = settingsService.Load();

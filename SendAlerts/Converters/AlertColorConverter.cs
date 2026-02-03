@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
+using SendAlerts.Models;
 
 namespace SendAlerts.Converters;
 
@@ -10,23 +11,18 @@ namespace SendAlerts.Converters;
 /// </summary>
 public class AlertColorConverter : IValueConverter
 {
-    /// <summary>
-    /// 當 IsVoltageAlert 為 true 時，回傳紅色；否則回傳預設顏色（白色或灰色）。
-    /// </summary>
+    private static readonly SolidColorBrush AlertBrush = new(Color.Parse(ChartColors.AlertRed));
+    private static readonly SolidColorBrush NormalBrush = new(Color.Parse(ChartColors.NormalWhite));
+
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is bool isAlert && isAlert)
-        {
-            return Brushes.Red;
-        }
-
-        return Brushes.White;
+            return AlertBrush;
+        return NormalBrush;
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        throw new NotImplementedException();
-    }
+        => throw new NotImplementedException();
 }
 
 /// <summary>
@@ -36,20 +32,18 @@ public class StatusColorConverter : IValueConverter
 {
     public static readonly StatusColorConverter Instance = new();
 
+    private static readonly SolidColorBrush ActiveBrush = new(Color.Parse(ChartColors.StatusActive));
+    private static readonly SolidColorBrush InactiveBrush = new(Color.Parse(ChartColors.StatusInactive));
+
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is bool isActive && isActive)
-        {
-            return Brushes.LimeGreen;
-        }
-
-        return Brushes.Gray;
+            return ActiveBrush;
+        return InactiveBrush;
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        throw new NotImplementedException();
-    }
+        => throw new NotImplementedException();
 }
 
 /// <summary>
@@ -59,11 +53,14 @@ public class EnabledForegroundConverter : IValueConverter
 {
     public static readonly EnabledForegroundConverter Instance = new();
 
+    private static readonly SolidColorBrush EnabledBrush = new(Color.Parse(ChartColors.EnabledFg));
+    private static readonly SolidColorBrush DisabledBrush = new(Color.Parse(ChartColors.DisabledFg));
+
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is bool enabled && enabled)
-            return Brushes.White;
-        return Brushes.DimGray;
+            return EnabledBrush;
+        return DisabledBrush;
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -89,7 +86,5 @@ public class GreaterThanZeroConverter : IValueConverter
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        throw new NotImplementedException();
-    }
+        => throw new NotImplementedException();
 }
