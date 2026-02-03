@@ -32,7 +32,7 @@ public partial class MainView : UserControl
         for (int i = 0; i < 4; i++)
         {
             _chartData[i] = new double[Capacity];
-            Array.Fill(_chartData[i], double.NaN);
+            // Default 0 — NaN breaks ScottPlot FillY rendering
         }
 
         InitializeComponent();
@@ -117,7 +117,7 @@ public partial class MainView : UserControl
         scatter.MarkerSize = 0;
         scatter.FillY = true;
         scatter.FillYValue = 0;
-        scatter.FillYColor = lineColor.WithAlpha(40);
+        scatter.FillYColor = lineColor.WithAlpha(ChartColors.FillAlpha);
 
         var crosshair = plot.Add.Crosshair(0, 0);
         crosshair.IsVisible = false;
@@ -247,7 +247,7 @@ public partial class MainView : UserControl
     {
         for (int i = 0; i < 4; i++)
         {
-            Array.Fill(_chartData[i], double.NaN);
+            Array.Clear(_chartData[i]);
             HideCrosshair(_charts[i]);
         }
         RefreshAllCharts();
@@ -392,7 +392,7 @@ public partial class MainView : UserControl
             _vm.ApplySlotConfig(slotIndex, config);
 
             // Clear and reinitialize the chart display data
-            Array.Fill(_chartData[slotIndex], double.NaN);
+            Array.Clear(_chartData[slotIndex]);
             if (_charts[slotIndex] is not null)
             {
                 HideCrosshair(_charts[slotIndex]);
