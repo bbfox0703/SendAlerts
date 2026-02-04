@@ -670,19 +670,38 @@ public partial class MainViewModel : ViewModelBase
 
     private void UpdateAvgSummary()
     {
-        // Build average from active built-in slots (first 3)
+        // Build average from all active slots (BuiltIn or External)
         var parts = new List<string>();
-        for (int i = 0; i < Math.Min(3, 4); i++)
+        for (int i = 0; i < 4; i++)
         {
             var slot = _slots[i];
-            if (!slot.IsActive || slot.Config.SourceType != ChartSlotSourceType.BuiltIn || slot.BufferCount == 0)
+            if (!slot.IsActive || slot.Config.SourceType == ChartSlotSourceType.Off || slot.BufferCount == 0)
                 continue;
 
             var avg = slot.Sum / slot.BufferCount;
-            parts.Add($"{avg:F1}{slot.Unit}");
+            // Use short label (first word or abbreviation)
+            var shortLabel = GetShortLabel(slot.Label);
+            parts.Add($"{shortLabel}: {avg:F1}{slot.Unit}");
         }
 
         AvgSummary = parts.Count > 0 ? $"Avg: {string.Join(" | ", parts)}" : "";
+    }
+
+    private static string GetShortLabel(string label)
+    {
+        if (string.IsNullOrEmpty(label)) return "?";
+
+        // Common abbreviations
+        return label switch
+        {
+            "GPU Core Utilization" => "GPU",
+            "GPU Temperature" => "Temp",
+            "GPU Power Usage" => "Power",
+            "CPU Utilization" => "CPU",
+            "Memory Usage" => "Mem",
+            "Network I/O" => "Net",
+            _ => label.Length > 8 ? label[..8] : label
+        };
     }
 
     // ==========================================================================
