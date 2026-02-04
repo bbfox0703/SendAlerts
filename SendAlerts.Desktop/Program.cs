@@ -9,6 +9,7 @@ using System.Threading;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Win32;
 using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -765,5 +766,12 @@ sealed class Program
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .WithInterFont()
-            .LogToTrace();
+            .LogToTrace()
+            .With(new Win32PlatformOptions
+            {
+                // Use DirectX composition for smoother rendering, reduce flicker
+                CompositionMode = [Win32CompositionMode.WinUIComposition, Win32CompositionMode.RedirectionSurface],
+                // Overlay popups use composition to avoid z-order issues
+                OverlayPopups = true
+            });
 }

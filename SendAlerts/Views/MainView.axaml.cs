@@ -274,23 +274,52 @@ public partial class MainView : UserControl
     {
         if (_vm is null) return;
 
+        // Phase 1: Update all data arrays (no rendering)
         for (int i = 0; i < 4; i++)
         {
             var slot = _vm._slots[i];
             if (!slot.IsActive || _charts[i] is null) continue;
-
             ShiftAndAppend(_chartData[i], slot.LastTickValue);
-
-            var yMax = i switch
-            {
-                0 => _vm.Slot0YMax,
-                1 => _vm.Slot1YMax,
-                2 => _vm.Slot2YMax,
-                3 => _vm.Slot3YMax,
-                _ => 100
-            };
-            RefreshChart(_charts[i], 0, yMax);
         }
+
+        // Phase 2: Update Y limits (no rendering)
+        var yMaxes = new[] { _vm.Slot0YMax, _vm.Slot1YMax, _vm.Slot2YMax, _vm.Slot3YMax };
+        for (int i = 0; i < 4; i++)
+        {
+            if (_charts[i] is null || !_vm._slots[i].IsActive) continue;
+            _charts[i]!.Chart.Plot.Axes.SetLimitsY(0, yMaxes[i]);
+            UpdateCrosshairIfVisible(_charts[i]!);
+        }
+
+        // Phase 3: Single batch refresh (reduces flicker)
+        for (int i = 0; i < 4; i++)
+        {
+            if (_charts[i] is null || !_vm._slots[i].IsActive) continue;
+            _charts[i]!.Chart.Refresh();
+        }
+    }
+
+    private void UpdateCrosshairIfVisible(ChartInfo info)
+    {
+        if (!info.Crosshair.IsVisible) return;
+
+        var index = (int)Math.Round(info.Crosshair.Position.X);
+        if (index < 0 || index >= Capacity) return;
+
+        var value = info.Data[index];
+        if (double.IsNaN(value))
+        {
+            info.Crosshair.IsVisible = false;
+            info.Tooltip.IsVisible = false;
+            return;
+        }
+
+        info.Crosshair.Position = new Coordinates(index, value);
+        var secondsAgo = (Capacity - index) * _currentInterval;
+        var timeLabel = secondsAgo < 60
+            ? $"{secondsAgo}s ago"
+            : $"{secondsAgo / 60}m {secondsAgo % 60}s ago";
+        info.Tooltip.Text = $"{value:F3}  ({timeLabel})";
     }
 
     private void RefreshAllCharts()
@@ -304,32 +333,8 @@ public partial class MainView : UserControl
     private void RefreshChart(ChartInfo? info, double yMin, double yMax)
     {
         if (info is null) return;
-
         info.Chart.Plot.Axes.SetLimitsY(yMin, yMax);
-
-        if (info.Crosshair.IsVisible)
-        {
-            var index = (int)Math.Round(info.Crosshair.Position.X);
-            if (index >= 0 && index < Capacity)
-            {
-                var value = info.Data[index];
-                if (double.IsNaN(value))
-                {
-                    info.Crosshair.IsVisible = false;
-                    info.Tooltip.IsVisible = false;
-                    info.Chart.Refresh();
-                    return;
-                }
-                info.Crosshair.Position = new Coordinates(index, value);
-
-                var secondsAgo = (Capacity - index) * _currentInterval;
-                var timeLabel = secondsAgo < 60
-                    ? $"{secondsAgo}s ago"
-                    : $"{secondsAgo / 60}m {secondsAgo % 60}s ago";
-                info.Tooltip.Text = $"{value:F3}  ({timeLabel})";
-            }
-        }
-
+        UpdateCrosshairIfVisible(info);
         info.Chart.Refresh();
     }
 
