@@ -57,7 +57,7 @@ public class DiscordWebhookAlertAction : IAlertAction
             (uri.Scheme != "http" && uri.Scheme != "https"))
             return AlertActionValidationResult.Invalid("Webhook URL 格式無效");
 
-        if (!WebhookUrl.Contains("discord.com/api/webhooks/") && !WebhookUrl.Contains("discordapp.com/api/webhooks/"))
+        if (!IsValidDiscordWebhookUri(uri))
             return AlertActionValidationResult.Invalid("這不是有效的 Discord Webhook URL");
 
         return AlertActionValidationResult.Valid();
@@ -111,6 +111,13 @@ public class DiscordWebhookAlertAction : IAlertAction
     {
         try
         {
+            // Runtime SSRF check
+            if (!Uri.TryCreate(WebhookUrl, UriKind.Absolute, out var webhookUri) || !IsValidDiscordWebhookUri(webhookUri))
+            {
+                Log.Warning("[DiscordWebhookAlertAction] Blocked request to non-Discord URL: {Url}", WebhookUrl);
+                return AlertActionExecuteResult.Fail("Webhook URL is not a valid Discord endpoint");
+            }
+
             var payload = new
             {
                 content = text,
@@ -155,6 +162,17 @@ public class DiscordWebhookAlertAction : IAlertAction
             Log.Warning(ex, "[DiscordWebhookAlertAction] 網路請求失敗");
             return AlertActionExecuteResult.Fail($"網路錯誤: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Validate Discord webhook URL using precise URI host matching (SSRF protection)
+    /// </summary>
+    internal static bool IsValidDiscordWebhookUri(Uri uri)
+    {
+        var host = uri.Host.ToLowerInvariant();
+        var isDiscordHost = host == "discord.com" || host == "discordapp.com" ||
+                            host.EndsWith(".discord.com") || host.EndsWith(".discordapp.com");
+        return isDiscordHost && uri.AbsolutePath.StartsWith("/api/webhooks/");
     }
 
     /// <summary>
