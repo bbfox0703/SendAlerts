@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Text;
 using System.Threading.Tasks;
 using SendAlerts.Core.Interfaces;
 using Serilog;
@@ -104,12 +105,16 @@ public class CommandLineAlertAction : IAlertAction
         {
             _lastExecutionTime = DateTime.Now;
 
-            Log.Information("[CommandLineAlertAction] 執行警報命令: {Command}", Command);
+            // Sanitize external message before substituting into shell command
+            var sanitizedMessage = SanitizeShellInput(message);
+            var finalCommand = Command.Replace("{message}", sanitizedMessage);
+
+            Log.Information("[CommandLineAlertAction] Executing alert command: {Command}", finalCommand);
 
             var processStartInfo = new ProcessStartInfo
             {
                 FileName = GetShellExecutable(),
-                Arguments = GetShellArguments(Command),
+                Arguments = GetShellArguments(finalCommand),
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
@@ -162,9 +167,27 @@ public class CommandLineAlertAction : IAlertAction
         return command
             .Replace("{power}", power.ToString("F1"))
             .Replace("{temperature}", temperature.ToString("F1"))
-            .Replace("{gpu_name}", gpuName)
-            .Replace("{alert_type}", alertType)
+            .Replace("{gpu_name}", SanitizeShellInput(gpuName))
+            .Replace("{alert_type}", SanitizeShellInput(alertType))
             .Replace("{timestamp}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+    }
+
+    /// <summary>
+    /// 清理外部來源的變數值，移除 shell metacharacters 以防止命令注入
+    /// </summary>
+    internal static string SanitizeShellInput(string input)
+    {
+        if (string.IsNullOrEmpty(input)) return input;
+
+        // Shell metacharacters that could enable command injection
+        var dangerous = new[] { '&', '|', ';', '$', '`', '>', '<', '(', ')', '{', '}', '\n', '\r' };
+        var sanitized = new StringBuilder(input.Length);
+        foreach (var c in input)
+        {
+            if (Array.IndexOf(dangerous, c) < 0)
+                sanitized.Append(c);
+        }
+        return sanitized.ToString();
     }
 
     private static string GetShellExecutable()

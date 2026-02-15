@@ -219,6 +219,14 @@ public class AlertActionConfig
         if (!Uri.TryCreate(DiscordWebhookUrl, UriKind.Absolute, out var uri) ||
             (uri.Scheme != "http" && uri.Scheme != "https"))
             return AlertActionValidationResult.Invalid("Discord Webhook URL 格式無效");
+
+        // SSRF protection: validate host is actually Discord
+        var host = uri.Host.ToLowerInvariant();
+        var isDiscordHost = host == "discord.com" || host == "discordapp.com" ||
+                            host.EndsWith(".discord.com") || host.EndsWith(".discordapp.com");
+        if (!isDiscordHost || !uri.AbsolutePath.StartsWith("/api/webhooks/"))
+            return AlertActionValidationResult.Invalid("這不是有效的 Discord Webhook URL");
+
         return AlertActionValidationResult.Valid();
     }
 

@@ -222,6 +222,7 @@ public sealed class NamedPipeServer : IDisposable
     private async Task<string> ReadMessageAsync(NamedPipeServerStream pipeServer, CancellationToken cancellationToken)
     {
         const int bufferSize = 4096;
+        const int maxMessageSize = 64 * 1024; // 64 KB
         var buffer = new byte[bufferSize];
         var messageBuilder = new StringBuilder();
 
@@ -232,6 +233,13 @@ public sealed class NamedPipeServer : IDisposable
             {
                 string chunk = Encoding.UTF8.GetString(buffer, 0, bytesRead);
                 messageBuilder.Append(chunk);
+
+                // Reject messages that exceed maximum size to prevent DoS
+                if (messageBuilder.Length > maxMessageSize)
+                {
+                    Log.Warning("[NamedPipe] Message exceeds maximum size of {MaxSize} bytes, discarding", maxMessageSize);
+                    return string.Empty;
+                }
 
                 // 如果讀取的數據少於緩衝區大小，可能已經讀完
                 // 但為了安全，我們檢查是否有更多數據

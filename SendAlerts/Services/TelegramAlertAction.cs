@@ -160,8 +160,8 @@ public class TelegramAlertAction : IAlertAction
             }
             catch { /* 無法解析就用原始 body */ }
 
-            Log.Warning("[TelegramAlertAction] API 回應錯誤: {StatusCode} - {Body}",
-                statusCode, responseBody);
+            Log.Warning("[TelegramAlertAction] API error response: {StatusCode} - {Body}",
+                statusCode, TruncateForLog(responseBody));
             return AlertActionExecuteResult.Fail($"HTTP {statusCode}: {errorDetail}", statusCode);
         }
         catch (TaskCanceledException)
@@ -174,6 +174,12 @@ public class TelegramAlertAction : IAlertAction
             Log.Warning(ex, "[TelegramAlertAction] 網路請求失敗");
             return AlertActionExecuteResult.Fail($"網路錯誤: {ex.Message}");
         }
+    }
+
+    private static string TruncateForLog(string value, int maxLength = 200)
+    {
+        if (string.IsNullOrEmpty(value) || value.Length <= maxLength) return value;
+        return value[..maxLength] + "...(truncated)";
     }
 
     /// <summary>

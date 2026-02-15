@@ -229,7 +229,17 @@ class Program
         var desktopExeName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
             ? "SendAlerts.Desktop.exe"
             : "SendAlerts.Desktop";
-        var desktopPath = Path.Combine(cliDir, desktopExeName);
+        var desktopPath = Path.GetFullPath(Path.Combine(cliDir, desktopExeName));
+
+        // Path traversal protection: ensure resolved path stays within the CLI directory
+        var resolvedDir = Path.GetDirectoryName(desktopPath);
+        if (resolvedDir == null || !resolvedDir.Equals(Path.GetFullPath(cliDir), StringComparison.OrdinalIgnoreCase))
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("[SendAlerts-cli] ERROR: Desktop executable path is outside the expected directory.");
+            Console.ResetColor();
+            return false;
+        }
 
         if (!File.Exists(desktopPath))
         {

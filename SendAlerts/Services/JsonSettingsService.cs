@@ -63,6 +63,9 @@ public class JsonSettingsService : ISettingsService
                 return new AppSettings();
             }
 
+            // Decrypt sensitive fields after loading
+            CredentialProtector.UnprotectSensitiveFields(settings);
+
             // TA4-2: 自動遷移舊版設定
             if (SettingsMigrator.NeedsMigration(settings))
             {
@@ -99,12 +102,20 @@ public class JsonSettingsService : ISettingsService
     {
         try
         {
+            // Encrypt sensitive fields before saving
+            CredentialProtector.ProtectSensitiveFields(settings);
+
             var json = JsonSerializer.Serialize(settings, _jsonOptions);
             File.WriteAllText(_settingsFilePath, json);
             Log.Information("設定已儲存: {Path}", _settingsFilePath);
+
+            // Decrypt back so in-memory settings remain usable
+            CredentialProtector.UnprotectSensitiveFields(settings);
         }
         catch (Exception ex)
         {
+            // Ensure settings are decrypted even on failure
+            CredentialProtector.UnprotectSensitiveFields(settings);
             Log.Error(ex, "儲存設定檔時發生錯誤");
             throw;
         }

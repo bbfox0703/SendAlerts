@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -28,6 +30,11 @@ public class HttpApiServer : IDisposable
 
     private const string ApiKeyHeader = "X-API-Key";
     private const long MaxRequestBodySize = 1024 * 1024; // 1 MB
+
+    // Rate limiting: max requests per IP within the sliding window
+    private const int RateLimitMaxRequests = 30;
+    private static readonly TimeSpan RateLimitWindow = TimeSpan.FromMinutes(1);
+    private readonly ConcurrentDictionary<string, List<DateTime>> _requestLog = new();
 
     /// <summary>
     /// 伺服器是否正在運行
@@ -170,18 +177,36 @@ public class HttpApiServer : IDisposable
 
         try
         {
-            // 路由
+            // Rate limiting (skip for health check)
             var path = request.Url?.AbsolutePath ?? "/";
+            if (path != "/api/health" && !CheckRateLimit(remoteIp))
+            {
+                Log.Warning("[HttpApiServer] Rate limit exceeded for {IP}", remoteIp);
+                response.Headers.Add("Retry-After", "60");
+                await SendJsonResponseAsync(response, (HttpStatusCode)429, new
+                {
+                    error = "Too Many Requests",
+                    message = $"Rate limit exceeded. Maximum {RateLimitMaxRequests} requests per minute.",
+                    retryAfterSeconds = 60
+                });
+                return;
+            }
 
+            // 路由
             if (path == "/api/send" && request.HttpMethod == "POST")
             {
                 await HandleSendAsync(context, remoteIp);
             }
             else if (path == "/api/send" && request.HttpMethod == "GET")
             {
-                #pragma warning disable CS0618 // Intentionally keeping deprecated GET endpoint for backward compatibility
-                await HandleSendGetAsync(context, remoteIp);
-                #pragma warning restore CS0618
+                // GET /api/send removed for security — API key in URL is unsafe
+                Log.Warning("[HttpApiServer] Rejected GET /api/send from {IP} - use POST instead", remoteIp);
+                response.Headers.Add("Allow", "POST");
+                await SendJsonResponseAsync(response, HttpStatusCode.MethodNotAllowed, new
+                {
+                    error = "Method Not Allowed",
+                    message = "GET /api/send is no longer supported. Use POST /api/send with X-API-Key header."
+                });
             }
             else if (path == "/api/health" && request.HttpMethod == "GET")
             {
@@ -226,27 +251,25 @@ public class HttpApiServer : IDisposable
     }
 
     /// <summary>
-    /// 驗證 API Key（允許從 Query String 讀取 - 僅用於 GET 端點，已廢棄）
+    /// Sliding window rate limiter per IP. Returns true if request is allowed.
     /// </summary>
-    [Obsolete("Query string API key is deprecated due to security concerns. Use X-API-Key header instead.")]
-    private bool ValidateApiKeyFromQuery(HttpListenerRequest request, out string? providedKey)
+    private bool CheckRateLimit(string remoteIp)
     {
-        // 優先從 Header 讀取
-        providedKey = request.Headers[ApiKeyHeader];
-        if (!string.IsNullOrEmpty(providedKey))
-        {
-            return string.Equals(providedKey, _apiKey, StringComparison.Ordinal);
-        }
+        var now = DateTime.UtcNow;
+        var cutoff = now - RateLimitWindow;
 
-        // Fallback to query string (deprecated)
-        providedKey = request.QueryString["key"];
-        if (!string.IsNullOrEmpty(providedKey))
+        var timestamps = _requestLog.GetOrAdd(remoteIp, _ => new List<DateTime>());
+        lock (timestamps)
         {
-            Log.Warning("[HttpApiServer] API Key sent via URL query string (INSECURE). Use X-API-Key header instead.");
-            return string.Equals(providedKey, _apiKey, StringComparison.Ordinal);
-        }
+            // Remove expired entries
+            timestamps.RemoveAll(t => t < cutoff);
 
-        return false;
+            if (timestamps.Count >= RateLimitMaxRequests)
+                return false;
+
+            timestamps.Add(now);
+            return true;
+        }
     }
 
     /// <summary>
@@ -358,86 +381,13 @@ public class HttpApiServer : IDisposable
     }
 
     /// <summary>
-    /// 處理 GET /api/send?key=...&group=...&message=...
-    /// 適用於 Synology DSM Webhook 等僅支援 URL 欄位的整合場景
-    ///
-    /// ⚠️ SECURITY WARNING: This endpoint accepts API key via URL query string,
-    /// which is insecure (logged in server logs, browser history, referrer headers).
-    /// Use POST /api/send with X-API-Key header for better security.
-    /// </summary>
-    [Obsolete("GET endpoint with API key in URL is deprecated. Use POST with X-API-Key header.")]
-    private async Task HandleSendGetAsync(HttpListenerContext context, string remoteIp)
-    {
-        var request = context.Request;
-        var response = context.Response;
-
-        // 驗證 API Key (允許 query string 但發出警告)
-        #pragma warning disable CS0618 // Type or member is obsolete
-        if (!ValidateApiKeyFromQuery(request, out _))
-        #pragma warning restore CS0618
-        {
-            Log.Warning("[HttpApiServer] Unauthorized GET request from {IP}", remoteIp);
-            await SendJsonResponseAsync(response, HttpStatusCode.Unauthorized, new
-            {
-                error = "Unauthorized",
-                message = "Invalid or missing API Key"
-            });
-            RaiseRequestProcessed(remoteIp, "send-get", false, "Unauthorized");
-            return;
-        }
-
-        var groupName = request.QueryString["group"];
-        var message = request.QueryString["message"];
-
-        if (string.IsNullOrWhiteSpace(groupName))
-        {
-            await SendJsonResponseAsync(response, HttpStatusCode.BadRequest, new
-            {
-                error = "Bad Request",
-                message = "Query parameter 'group' is required"
-            });
-            RaiseRequestProcessed(remoteIp, "send-get", false, "Missing group");
-            return;
-        }
-
-        Log.Information("[HttpApiServer] GET send alert: Group={Group}, Message={Message}, From={IP}",
-            groupName, message ?? "(none)", remoteIp);
-
-        var result = await _alertService.ExecuteGroupAsync(groupName, message);
-
-        if (result.Success)
-        {
-            await SendJsonResponseAsync(response, HttpStatusCode.OK, new
-            {
-                success = true,
-                groupName,
-                executedActions = result.ExecutedActions.Count,
-                message = "Alert sent successfully"
-            });
-            RaiseRequestProcessed(remoteIp, "send-get", true, groupName);
-        }
-        else
-        {
-            await SendJsonResponseAsync(response, HttpStatusCode.BadRequest, new
-            {
-                success = false,
-                error = result.ErrorMessage ?? "Failed to send alert",
-                failedActions = result.FailedActions,
-                missingActions = result.MissingActions
-            });
-            RaiseRequestProcessed(remoteIp, "send-get", false, result.ErrorMessage ?? "Failed");
-        }
-    }
-
-    /// <summary>
     /// 處理 GET /api/health
     /// </summary>
     private async Task HandleHealthAsync(HttpListenerContext context)
     {
         await SendJsonResponseAsync(context.Response, HttpStatusCode.OK, new
         {
-            status = "healthy",
-            timestamp = DateTime.Now.ToString("O")
+            status = "healthy"
         });
     }
 
@@ -479,7 +429,7 @@ public class HttpApiServer : IDisposable
     {
         response.StatusCode = (int)statusCode;
         response.ContentType = "application/json; charset=utf-8";
-        response.Headers.Add("Access-Control-Allow-Origin", "*");
+        response.Headers.Add("Access-Control-Allow-Origin", "http://localhost");
 
         var json = JsonSerializer.Serialize(data, new JsonSerializerOptions
         {
