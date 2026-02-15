@@ -387,8 +387,7 @@ public class HttpApiServer : IDisposable
     {
         await SendJsonResponseAsync(context.Response, HttpStatusCode.OK, new
         {
-            status = "healthy",
-            timestamp = DateTime.Now.ToString("O")
+            status = "healthy"
         });
     }
 
