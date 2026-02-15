@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.IO.Pipes;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -109,13 +111,17 @@ public sealed class NamedPipeServer : IDisposable
 
             try
             {
-                // 建立新的 Pipe 實例等待連線
-                pipeServer = new NamedPipeServerStream(
+                // 建立新的 Pipe 實例等待連線，使用 PipeSecurity 限制訪問
+                var pipeSecurity = CreatePipeSecurity();
+                pipeServer = NamedPipeServerStreamAcl.Create(
                     pipeName: _pipeName,
                     direction: PipeDirection.In,
                     maxNumberOfServerInstances: NamedPipeServerStream.MaxAllowedServerInstances,
                     transmissionMode: PipeTransmissionMode.Byte,
-                    options: PipeOptions.Asynchronous);
+                    options: PipeOptions.Asynchronous,
+                    inBufferSize: 0,
+                    outBufferSize: 0,
+                    pipeSecurity: pipeSecurity);
 
                 Log.Debug("[NamedPipe] 等待連線...");
 
@@ -178,6 +184,36 @@ public sealed class NamedPipeServer : IDisposable
                 pipeServer?.Dispose();
             }
         }
+    }
+
+    /// <summary>
+    /// 建立 Pipe 安全性設定 - 僅允許當前使用者訪問
+    /// </summary>
+    private static PipeSecurity CreatePipeSecurity()
+    {
+        var pipeSecurity = new PipeSecurity();
+
+        // 取得當前使用者的 SID
+        var currentUser = WindowsIdentity.GetCurrent().User;
+        if (currentUser != null)
+        {
+            // 允許當前使用者完整控制
+            pipeSecurity.AddAccessRule(new PipeAccessRule(
+                currentUser,
+                PipeAccessRights.FullControl,
+                AccessControlType.Allow));
+
+            Log.Debug("[NamedPipe] Pipe security configured for user: {UserSid}", currentUser.Value);
+        }
+
+        // 明確拒絕 Everyone 群組的訪問（額外安全層）
+        var everyoneSid = new SecurityIdentifier(WellKnownSidType.WorldSid, null);
+        pipeSecurity.AddAccessRule(new PipeAccessRule(
+            everyoneSid,
+            PipeAccessRights.FullControl,
+            AccessControlType.Deny));
+
+        return pipeSecurity;
     }
 
     /// <summary>
