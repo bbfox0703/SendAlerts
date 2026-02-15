@@ -22,7 +22,7 @@
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageVersion Include="ScottPlot.Avalonia" Version="5.1.57" />
-    <PackageVersion Include="LibreHardwareMonitorLib" Version="0.9.5" />
+    <PackageVersion Include="LibreHardwareMonitorLib" Version="0.9.6" />
     <PackageVersion Include="SkiaSharp.HarfBuzz" Version="3.119.1" />
     <PackageVersion Include="System.CommandLine" Version="2.0.2" />
     <!-- Test packages -->
