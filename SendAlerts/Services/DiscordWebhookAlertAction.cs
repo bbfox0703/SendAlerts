@@ -148,8 +148,8 @@ public class DiscordWebhookAlertAction : IAlertAction
             }
             catch { /* 無法解析就用原始 body */ }
 
-            Log.Warning("[DiscordWebhookAlertAction] API 回應錯誤: {StatusCode} - {Body}",
-                statusCode, responseBody);
+            Log.Warning("[DiscordWebhookAlertAction] API error response: {StatusCode} - {Body}",
+                statusCode, TruncateForLog(responseBody));
             return AlertActionExecuteResult.Fail($"HTTP {statusCode}: {errorDetail}", statusCode);
         }
         catch (TaskCanceledException)
@@ -173,6 +173,12 @@ public class DiscordWebhookAlertAction : IAlertAction
         var isDiscordHost = host == "discord.com" || host == "discordapp.com" ||
                             host.EndsWith(".discord.com") || host.EndsWith(".discordapp.com");
         return isDiscordHost && uri.AbsolutePath.StartsWith("/api/webhooks/");
+    }
+
+    private static string TruncateForLog(string value, int maxLength = 200)
+    {
+        if (string.IsNullOrEmpty(value) || value.Length <= maxLength) return value;
+        return value[..maxLength] + "...(truncated)";
     }
 
     /// <summary>

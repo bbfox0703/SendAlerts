@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -28,6 +30,11 @@ public class HttpApiServer : IDisposable
 
     private const string ApiKeyHeader = "X-API-Key";
     private const long MaxRequestBodySize = 1024 * 1024; // 1 MB
+
+    // Rate limiting: max requests per IP within the sliding window
+    private const int RateLimitMaxRequests = 30;
+    private static readonly TimeSpan RateLimitWindow = TimeSpan.FromMinutes(1);
+    private readonly ConcurrentDictionary<string, List<DateTime>> _requestLog = new();
 
     /// <summary>
     /// 伺服器是否正在運行
@@ -170,9 +177,22 @@ public class HttpApiServer : IDisposable
 
         try
         {
-            // 路由
+            // Rate limiting (skip for health check)
             var path = request.Url?.AbsolutePath ?? "/";
+            if (path != "/api/health" && !CheckRateLimit(remoteIp))
+            {
+                Log.Warning("[HttpApiServer] Rate limit exceeded for {IP}", remoteIp);
+                response.Headers.Add("Retry-After", "60");
+                await SendJsonResponseAsync(response, (HttpStatusCode)429, new
+                {
+                    error = "Too Many Requests",
+                    message = $"Rate limit exceeded. Maximum {RateLimitMaxRequests} requests per minute.",
+                    retryAfterSeconds = 60
+                });
+                return;
+            }
 
+            // 路由
             if (path == "/api/send" && request.HttpMethod == "POST")
             {
                 await HandleSendAsync(context, remoteIp);
@@ -228,6 +248,28 @@ public class HttpApiServer : IDisposable
         providedKey = request.Headers[ApiKeyHeader];
         return !string.IsNullOrEmpty(providedKey) &&
                string.Equals(providedKey, _apiKey, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Sliding window rate limiter per IP. Returns true if request is allowed.
+    /// </summary>
+    private bool CheckRateLimit(string remoteIp)
+    {
+        var now = DateTime.UtcNow;
+        var cutoff = now - RateLimitWindow;
+
+        var timestamps = _requestLog.GetOrAdd(remoteIp, _ => new List<DateTime>());
+        lock (timestamps)
+        {
+            // Remove expired entries
+            timestamps.RemoveAll(t => t < cutoff);
+
+            if (timestamps.Count >= RateLimitMaxRequests)
+                return false;
+
+            timestamps.Add(now);
+            return true;
+        }
     }
 
     /// <summary>
@@ -388,7 +430,7 @@ public class HttpApiServer : IDisposable
     {
         response.StatusCode = (int)statusCode;
         response.ContentType = "application/json; charset=utf-8";
-        response.Headers.Add("Access-Control-Allow-Origin", "*");
+        response.Headers.Add("Access-Control-Allow-Origin", "http://localhost");
 
         var json = JsonSerializer.Serialize(data, new JsonSerializerOptions
         {
