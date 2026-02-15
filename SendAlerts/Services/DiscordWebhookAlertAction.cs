@@ -17,7 +17,7 @@ namespace SendAlerts.Services;
 /// </summary>
 public class DiscordWebhookAlertAction : IAlertAction
 {
-    private readonly HttpClient _httpClient;
+    private static readonly HttpClient SharedHttpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
     private DateTime _lastExecutionTime = DateTime.MinValue;
 
     private const int DefaultCooldownSeconds = AppConstants.DefaultCooldownSeconds;
@@ -43,7 +43,6 @@ public class DiscordWebhookAlertAction : IAlertAction
         CooldownSeconds = cooldownSeconds;
         DebugMode = debugMode;
         IsEnabled = true;
-        _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
     }
 
     /// <summary>
@@ -121,7 +120,7 @@ public class DiscordWebhookAlertAction : IAlertAction
             var json = JsonSerializer.Serialize(payload);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync(WebhookUrl, content);
+            var response = await SharedHttpClient.PostAsync(WebhookUrl, content);
             var statusCode = (int)response.StatusCode;
 
             if (response.IsSuccessStatusCode)

@@ -17,7 +17,7 @@ namespace SendAlerts.Services;
 public class TelegramAlertAction : IAlertAction
 {
     private readonly ISettingsService? _settingsService;
-    private readonly HttpClient _httpClient;
+    private static readonly HttpClient SharedHttpClient = new() { Timeout = TimeSpan.FromSeconds(10) };
     private DateTime _lastExecutionTime = DateTime.MinValue;
 
     private const int DefaultCooldownSeconds = AppConstants.DefaultCooldownSeconds;
@@ -40,7 +40,6 @@ public class TelegramAlertAction : IAlertAction
     public TelegramAlertAction(ISettingsService settingsService)
     {
         _settingsService = settingsService;
-        _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         LoadSettings();
     }
 
@@ -55,7 +54,6 @@ public class TelegramAlertAction : IAlertAction
         CooldownSeconds = cooldownSeconds;
         DebugMode = debugMode;
         IsEnabled = true;
-        _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
     }
 
     private void LoadSettings()
@@ -142,7 +140,7 @@ public class TelegramAlertAction : IAlertAction
 
         try
         {
-            var response = await _httpClient.PostAsync(url, content);
+            var response = await SharedHttpClient.PostAsync(url, content);
             var responseBody = await response.Content.ReadAsStringAsync();
             var statusCode = (int)response.StatusCode;
 
