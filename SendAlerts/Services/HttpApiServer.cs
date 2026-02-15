@@ -27,6 +27,7 @@ public class HttpApiServer : IDisposable
     private bool _disposed;
 
     private const string ApiKeyHeader = "X-API-Key";
+    private const long MaxRequestBodySize = 1024 * 1024; // 1 MB
 
     /// <summary>
     /// 伺服器是否正在運行
@@ -269,11 +270,30 @@ public class HttpApiServer : IDisposable
             return;
         }
 
-        // 讀取 Body
+        // 檢查 Content-Length 防止 DoS
+        if (request.ContentLength64 > MaxRequestBodySize)
+        {
+            Log.Warning("[HttpApiServer] Request body too large from {IP}: {Size} bytes (max: {Max})",
+                remoteIp, request.ContentLength64, MaxRequestBodySize);
+            await SendJsonResponseAsync(response, HttpStatusCode.RequestEntityTooLarge, new
+            {
+                error = "Payload Too Large",
+                message = $"Request body exceeds maximum size of {MaxRequestBodySize} bytes",
+                maxSize = MaxRequestBodySize,
+                receivedSize = request.ContentLength64
+            });
+            RaiseRequestProcessed(remoteIp, "send", false, "Payload too large");
+            return;
+        }
+
+        // 讀取 Body（限制大小）
         string body;
         using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
         {
-            body = await reader.ReadToEndAsync();
+            // 額外防護：使用 char buffer 限制讀取
+            var buffer = new char[MaxRequestBodySize];
+            var charsRead = await reader.ReadAsync(buffer, 0, (int)MaxRequestBodySize);
+            body = new string(buffer, 0, charsRead);
         }
 
         // 解析 JSON
