@@ -178,7 +178,9 @@ public class HttpApiServer : IDisposable
             }
             else if (path == "/api/send" && request.HttpMethod == "GET")
             {
+                #pragma warning disable CS0618 // Intentionally keeping deprecated GET endpoint for backward compatibility
                 await HandleSendGetAsync(context, remoteIp);
+                #pragma warning restore CS0618
             }
             else if (path == "/api/health" && request.HttpMethod == "GET")
             {
@@ -213,17 +215,37 @@ public class HttpApiServer : IDisposable
     }
 
     /// <summary>
-    /// 驗證 API Key (Header 優先，fallback 至 query parameter "key")
+    /// 驗證 API Key（僅從 Header 讀取，不接受 Query String）
     /// </summary>
     private bool ValidateApiKey(HttpListenerRequest request, out string? providedKey)
     {
         providedKey = request.Headers[ApiKeyHeader];
-        if (string.IsNullOrEmpty(providedKey))
-        {
-            providedKey = request.QueryString["key"];
-        }
         return !string.IsNullOrEmpty(providedKey) &&
                string.Equals(providedKey, _apiKey, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// 驗證 API Key（允許從 Query String 讀取 - 僅用於 GET 端點，已廢棄）
+    /// </summary>
+    [Obsolete("Query string API key is deprecated due to security concerns. Use X-API-Key header instead.")]
+    private bool ValidateApiKeyFromQuery(HttpListenerRequest request, out string? providedKey)
+    {
+        // 優先從 Header 讀取
+        providedKey = request.Headers[ApiKeyHeader];
+        if (!string.IsNullOrEmpty(providedKey))
+        {
+            return string.Equals(providedKey, _apiKey, StringComparison.Ordinal);
+        }
+
+        // Fallback to query string (deprecated)
+        providedKey = request.QueryString["key"];
+        if (!string.IsNullOrEmpty(providedKey))
+        {
+            Log.Warning("[HttpApiServer] API Key sent via URL query string (INSECURE). Use X-API-Key header instead.");
+            return string.Equals(providedKey, _apiKey, StringComparison.Ordinal);
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -318,14 +340,21 @@ public class HttpApiServer : IDisposable
     /// <summary>
     /// 處理 GET /api/send?key=...&group=...&message=...
     /// 適用於 Synology DSM Webhook 等僅支援 URL 欄位的整合場景
+    ///
+    /// ⚠️ SECURITY WARNING: This endpoint accepts API key via URL query string,
+    /// which is insecure (logged in server logs, browser history, referrer headers).
+    /// Use POST /api/send with X-API-Key header for better security.
     /// </summary>
+    [Obsolete("GET endpoint with API key in URL is deprecated. Use POST with X-API-Key header.")]
     private async Task HandleSendGetAsync(HttpListenerContext context, string remoteIp)
     {
         var request = context.Request;
         var response = context.Response;
 
-        // 驗證 API Key (從 query parameter "key")
-        if (!ValidateApiKey(request, out _))
+        // 驗證 API Key (允許 query string 但發出警告)
+        #pragma warning disable CS0618 // Type or member is obsolete
+        if (!ValidateApiKeyFromQuery(request, out _))
+        #pragma warning restore CS0618
         {
             Log.Warning("[HttpApiServer] Unauthorized GET request from {IP}", remoteIp);
             await SendJsonResponseAsync(response, HttpStatusCode.Unauthorized, new
