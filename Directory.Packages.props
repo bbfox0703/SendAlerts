@@ -24,7 +24,7 @@
     <PackageVersion Include="ScottPlot.Avalonia" Version="5.1.57" />
     <PackageVersion Include="LibreHardwareMonitorLib" Version="0.9.6" />
     <PackageVersion Include="SkiaSharp.HarfBuzz" Version="3.119.2" />
-    <PackageVersion Include="System.CommandLine" Version="2.0.3" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.5" />
     <!-- Test packages -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageVersion Include="xunit.v3" Version="3.2.2" />
