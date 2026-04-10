@@ -103,7 +103,7 @@ public class TrayIconManager : IDisposable
         if (startupMgr != null && startupMgr.IsSupported)
         {
             var startupItem = new NativeMenuItem(loc["Tray_StartWithWindows"]);
-            startupItem.ToggleType = NativeMenuItemToggleType.CheckBox;
+            startupItem.ToggleType = MenuItemToggleType.CheckBox;
             startupItem.IsChecked = startupMgr.IsStartupEnabled();
             startupItem.Click += (_, _) =>
             {
@@ -169,7 +169,7 @@ public class TrayIconManager : IDisposable
 
         var toast = new Window
         {
-            SystemDecorations = SystemDecorations.None,
+            WindowDecorations = WindowDecorations.None,
             CanResize = false,
             ShowInTaskbar = false,
             Topmost = true,

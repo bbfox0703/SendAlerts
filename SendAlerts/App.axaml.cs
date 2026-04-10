@@ -1,8 +1,7 @@
 using System;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core.Plugins;
-using System.Linq;
+
 using Avalonia.Markup.Xaml;
 using SendAlerts.ViewModels;
 using SendAlerts.Views;
@@ -25,8 +24,6 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            DisableAvaloniaDataAnnotationValidation();
-
             // 處理 OS 關機 / 登出時的 ShutdownRequested 事件
             desktop.ShutdownRequested += (_, e) =>
             {
@@ -99,16 +96,5 @@ public partial class App : Application
             DataContext = new MainViewModel(true)
         };
         desktop.MainWindow.Show();
-    }
-
-    private static void DisableAvaloniaDataAnnotationValidation()
-    {
-        var dataValidationPluginsToRemove =
-            BindingPlugins.DataValidators.OfType<DataAnnotationsValidationPlugin>().ToArray();
-
-        foreach (var plugin in dataValidationPluginsToRemove)
-        {
-            BindingPlugins.DataValidators.Remove(plugin);
-        }
     }
 }
