@@ -11,7 +11,7 @@
         MinWidth="450" MinHeight="500"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
-        SystemDecorations="Full">
+        WindowDecorations="Full">
 
     <Design.DataContext>
         <vm:EditGroupViewModel />
@@ -33,13 +33,13 @@
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Loc_Name}" VerticalAlignment="Center"/>
                         <TextBox Grid.Row="0" Grid.Column="1"
                                  Text="{Binding Name}"
-                                 Watermark="Unique group name"
+                                 PlaceholderText="Unique group name"
                                  IsEnabled="{Binding CanChangeName}"/>
 
                         <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Loc_Description}" VerticalAlignment="Center" Margin="0,8,0,0"/>
                         <TextBox Grid.Row="1" Grid.Column="1"
                                  Text="{Binding Description}"
-                                 Watermark="Optional description"
+                                 PlaceholderText="Optional description"
                                  Margin="0,8,0,0"/>
 
                         <CheckBox Grid.Row="2" Grid.Column="1"
@@ -59,7 +59,7 @@
                 <StackPanel Spacing="8">
                     <TextBlock Text="{Binding Loc_MessageTemplate}" FontWeight="SemiBold"/>
                     <TextBox Text="{Binding MessageTemplate}"
-                             Watermark="[Alert] {message}"
+                             PlaceholderText="[Alert] {message}"
                              AcceptsReturn="True"
                              TextWrapping="Wrap"
                              Height="60"/>

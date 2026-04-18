@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO.MemoryMappedFiles;
 using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Text;
 using SendAlerts.Core.Interfaces;
@@ -116,7 +117,7 @@ public class HwinfoSharedMemoryReader : IHwinfoProvider
 
             var headerSize = Marshal.SizeOf<HwinfoShmHeader>();
             var headerBytes = new byte[headerSize];
-            accessor.Read(headerBytes, 0, headerSize);
+            accessor.ReadExactly(headerBytes, 0, headerSize);
             var header = BytesToStruct<HwinfoShmHeader>(headerBytes);
 
             if (header.Signature != ExpectedSignature)
@@ -129,7 +130,7 @@ public class HwinfoSharedMemoryReader : IHwinfoProvider
                 var offset = header.OffsetOfSensorSection + i * header.SizeOfSensorElement;
                 accessor.Position = offset;
                 var sensorBytes = new byte[header.SizeOfSensorElement];
-                accessor.Read(sensorBytes, 0, (int)Math.Min(header.SizeOfSensorElement, (uint)Marshal.SizeOf<HwinfoShmSensor>()));
+                accessor.ReadExactly(sensorBytes, 0, (int)Math.Min(header.SizeOfSensorElement, (uint)Marshal.SizeOf<HwinfoShmSensor>()));
                 sensors[i] = BytesToStruct<HwinfoShmSensor>(sensorBytes);
             }
 
@@ -140,7 +141,7 @@ public class HwinfoSharedMemoryReader : IHwinfoProvider
                 var offset = header.OffsetOfReadingSection + i * header.SizeOfReadingElement;
                 accessor.Position = offset;
                 var readingBytes = new byte[header.SizeOfReadingElement];
-                accessor.Read(readingBytes, 0, (int)Math.Min(header.SizeOfReadingElement, (uint)Marshal.SizeOf<HwinfoShmReading>()));
+                accessor.ReadExactly(readingBytes, 0, (int)Math.Min(header.SizeOfReadingElement, (uint)Marshal.SizeOf<HwinfoShmReading>()));
                 readings[i] = BytesToStruct<HwinfoShmReading>(readingBytes);
             }
 
@@ -204,7 +205,7 @@ public class HwinfoSharedMemoryReader : IHwinfoProvider
 
             var headerSize = Marshal.SizeOf<HwinfoShmHeader>();
             var headerBytes = new byte[headerSize];
-            accessor.Read(headerBytes, 0, headerSize);
+            accessor.ReadExactly(headerBytes, 0, headerSize);
             var header = BytesToStruct<HwinfoShmHeader>(headerBytes);
 
             if (header.Signature != ExpectedSignature)
@@ -217,7 +218,7 @@ public class HwinfoSharedMemoryReader : IHwinfoProvider
                 var offset = header.OffsetOfSensorSection + i * header.SizeOfSensorElement;
                 accessor.Position = offset;
                 var sensorBytes = new byte[header.SizeOfSensorElement];
-                accessor.Read(sensorBytes, 0, (int)Math.Min(header.SizeOfSensorElement, (uint)Marshal.SizeOf<HwinfoShmSensor>()));
+                accessor.ReadExactly(sensorBytes, 0, (int)Math.Min(header.SizeOfSensorElement, (uint)Marshal.SizeOf<HwinfoShmSensor>()));
                 var sensor = BytesToStruct<HwinfoShmSensor>(sensorBytes);
 
                 var name = string.IsNullOrWhiteSpace(sensor.SensorNameUser)
@@ -239,7 +240,7 @@ public class HwinfoSharedMemoryReader : IHwinfoProvider
                 var offset = header.OffsetOfReadingSection + i * header.SizeOfReadingElement;
                 accessor.Position = offset;
                 var readingBytes = new byte[header.SizeOfReadingElement];
-                accessor.Read(readingBytes, 0, (int)Math.Min(header.SizeOfReadingElement, (uint)Marshal.SizeOf<HwinfoShmReading>()));
+                accessor.ReadExactly(readingBytes, 0, (int)Math.Min(header.SizeOfReadingElement, (uint)Marshal.SizeOf<HwinfoShmReading>()));
                 var reading = BytesToStruct<HwinfoShmReading>(readingBytes);
 
                 if (reading.SensorIndex == targetSensorIndex.Value &&
@@ -265,7 +266,7 @@ public class HwinfoSharedMemoryReader : IHwinfoProvider
         return null;
     }
 
-    private static T BytesToStruct<T>(byte[] bytes) where T : struct
+    private static T BytesToStruct<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)] T>(byte[] bytes) where T : struct
     {
         var handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
         try
