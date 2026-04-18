@@ -61,7 +61,7 @@
             <Button Content="&#x21BB;" Command="{Binding RefreshSensorListCommand}" FontSize="14" Padding="4,2"
                     ToolTip.Tip="Refresh sensor list"/>
           </StackPanel>
-          <TextBox Text="{Binding SensorFilterText}" Watermark="Filter..." FontSize="11"/>
+          <TextBox Text="{Binding SensorFilterText}" PlaceholderText="Filter..." FontSize="11"/>
           <ComboBox ItemsSource="{Binding FilteredSensorItems}"
                     SelectedItem="{Binding SelectedSensor}"
                     MinWidth="400" MaxDropDownHeight="300" FontSize="11"/>

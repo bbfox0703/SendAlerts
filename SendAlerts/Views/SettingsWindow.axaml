@@ -10,7 +10,7 @@
         Width="500" Height="560"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
-        SystemDecorations="Full">
+        WindowDecorations="Full">
 
     <Design.DataContext>
         <vm:SettingsViewModel />
@@ -98,7 +98,7 @@
                                 <TextBox Grid.Column="1"
                                          Text="{Binding HttpApiKey}"
                                          PasswordChar="*"
-                                         Watermark="{Binding Loc_HttpApiApiKeyPlaceholder}"
+                                         PlaceholderText="{Binding Loc_HttpApiApiKeyPlaceholder}"
                                          IsReadOnly="True"
                                          Margin="0,0,8,0"/>
                                 <Button Grid.Column="2"
