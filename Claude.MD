@@ -111,6 +111,26 @@ External Tool (HWiNFO64)
 - **Naming**: `PascalCase` for classes/methods, `_camelCase` for private fields
 - **Log messages**: All `Log.*()` messages MUST be in English only. No Chinese/Japanese/other non-ASCII text in log output. Use structured logging parameters for variable data.
 
+## Known Constraints
+
+### ⚠️ Avalonia Version Pinned to 11.x (Do NOT upgrade to 12.x)
+`ScottPlot.Avalonia 5.1.58` (used in `MainView.axaml`) was built against Avalonia 11 and
+references `Avalonia.Platform.OptionalFeatureProviderExtensions`, which was **removed in
+Avalonia 12**. Upgrading Avalonia to 12.x causes every render tick to throw
+`System.TypeLoadException` from `ScottPlot.Avalonia.AvaPlot.CustomDrawOp.Render`, resulting
+in a fully transparent/black window (both Debug and Release builds).
+
+**Mitigation**: `Directory.Packages.props` pins all Avalonia.* packages with the version
+range `[11.3.14,12.0.0)`. This also prevents the NuGet GUI from offering 12.x as an upgrade.
+
+Before upgrading Avalonia, verify `ScottPlot.Avalonia` has a version that supports the
+target Avalonia major version, or replace it with an alternative charting library
+(e.g. LiveCharts2, already in the tech stack).
+
+Also note: Avalonia 12 renamed `SystemDecorations` → `WindowDecorations` and `Watermark` →
+`PlaceholderText`. If a future upgrade happens, those XAML renames must be reapplied across
+all `Views/*.axaml` and `TrayIconManager.cs`.
+
 ## Tech Stack
 - .NET 10 / C#
 - Avalonia UI (MVVM)
