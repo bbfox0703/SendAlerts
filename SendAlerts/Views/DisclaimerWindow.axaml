@@ -10,7 +10,7 @@
         Width="550" Height="420"
         CanResize="False"
         WindowStartupLocation="CenterScreen"
-        WindowDecorations="Full">
+        SystemDecorations="Full">
 
     <Design.DataContext>
         <vm:DisclaimerViewModel />
