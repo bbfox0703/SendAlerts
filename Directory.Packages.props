@@ -7,8 +7,8 @@
     <!-- Avalonia packages (keep version in sync!) -->
     <!-- Pinned to 11.x: ScottPlot.Avalonia 5.1.58 references OptionalFeatureProviderExtensions
          which was removed in Avalonia 12. Range syntax blocks NuGet GUI from offering 12.x upgrades. -->
-    <PackageVersion Include="Avalonia" Version="[11.3.14,12.0.0)" />
-    <PackageVersion Include="Avalonia.Skia" Version="[11.3.14,12.0.0)" />
+    <PackageVersion Include="Avalonia" Version="12.0.1" />
+    <PackageVersion Include="Avalonia.Skia" Version="12.0.1" />
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="[11.3.14,12.0.0)" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="[11.3.14,12.0.0)" />
     <PackageVersion Include="Avalonia.Diagnostics" Version="[11.3.14,12.0.0)" />
