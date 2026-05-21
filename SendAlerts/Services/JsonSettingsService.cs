@@ -100,13 +100,37 @@ public class JsonSettingsService : ISettingsService
 
     public void Save(AppSettings settings)
     {
+        var tmpPath = _settingsFilePath + ".tmp";
+        var bakPath = _settingsFilePath + ".bak";
         try
         {
             // Encrypt sensitive fields before saving
             CredentialProtector.ProtectSensitiveFields(settings);
 
             var json = JsonSerializer.Serialize(settings, _jsonOptions);
-            File.WriteAllText(_settingsFilePath, json);
+
+            // Atomic write: write to .tmp, fsync, then replace target. A crash mid-write
+            // leaves either the original settings.json untouched OR a leftover .tmp,
+            // never a half-written settings.json that Load() would treat as corrupt.
+            using (var fs = new FileStream(tmpPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            using (var writer = new StreamWriter(fs))
+            {
+                writer.Write(json);
+                writer.Flush();
+                fs.Flush(flushToDisk: true);
+            }
+
+            if (File.Exists(_settingsFilePath))
+            {
+                // File.Replace is atomic on NTFS and ext4. ignoreMetadataErrors=true
+                // tolerates ACL/attribute mismatches between tmp and target.
+                File.Replace(tmpPath, _settingsFilePath, bakPath, ignoreMetadataErrors: true);
+            }
+            else
+            {
+                File.Move(tmpPath, _settingsFilePath);
+            }
+
             Log.Information("設定已儲存: {Path}", _settingsFilePath);
 
             // Decrypt back so in-memory settings remain usable
@@ -116,6 +140,8 @@ public class JsonSettingsService : ISettingsService
         {
             // Ensure settings are decrypted even on failure
             CredentialProtector.UnprotectSensitiveFields(settings);
+            // Best-effort cleanup of orphan tmp
+            try { if (File.Exists(tmpPath)) File.Delete(tmpPath); } catch { /* ignore */ }
             Log.Error(ex, "儲存設定檔時發生錯誤");
             throw;
         }

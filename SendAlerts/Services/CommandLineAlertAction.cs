@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using SendAlerts.Core.Interfaces;
 using Serilog;
@@ -124,32 +125,40 @@ public class CommandLineAlertAction : IAlertAction
             using var process = new Process { StartInfo = processStartInfo };
             process.Start();
 
-            // 非同步等待完成
-            var completed = await Task.Run(() => process.WaitForExit(AppConstants.CommandExecuteTimeoutMs));
+            // Read stdout/stderr concurrently with WaitForExit to avoid the 4KB OS pipe
+            // buffer deadlock: a child that writes >4KB would block on write while we
+            // block on WaitForExit if reads were sequential.
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
 
-            if (completed)
+            using var timeoutCts = new CancellationTokenSource(AppConstants.CommandExecuteTimeoutMs);
+            try
             {
-                var stdout = await process.StandardOutput.ReadToEndAsync();
-                var stderr = await process.StandardError.ReadToEndAsync();
-
-                if (process.ExitCode == 0)
-                {
-                    Log.Information("[CommandLineAlertAction] 命令執行成功 (ExitCode: 0)");
-                    return AlertActionExecuteResult.Ok($"ExitCode: 0");
-                }
-                else
-                {
-                    var errMsg = string.IsNullOrWhiteSpace(stderr) ? "" : $" - {stderr.Trim()}";
-                    Log.Warning("[CommandLineAlertAction] 命令執行失敗 (ExitCode: {ExitCode})", process.ExitCode);
-                    return AlertActionExecuteResult.Fail($"ExitCode: {process.ExitCode}{errMsg}");
-                }
+                await process.WaitForExitAsync(timeoutCts.Token);
             }
-            else
+            catch (OperationCanceledException)
             {
                 var timeoutSec = AppConstants.CommandExecuteTimeoutMs / 1000;
                 Log.Warning("[CommandLineAlertAction] 命令執行逾時 (超過 {Seconds} 秒)", timeoutSec);
-                process.Kill();
+                try { process.Kill(entireProcessTree: true); } catch { /* already exited */ }
+                // Drain reads after kill so handles are released.
+                try { await Task.WhenAll(stdoutTask, stderrTask); } catch { /* ignore */ }
                 return AlertActionExecuteResult.Fail($"命令執行逾時 (超過 {timeoutSec} 秒)");
+            }
+
+            var stdout = await stdoutTask;
+            var stderr = await stderrTask;
+
+            if (process.ExitCode == 0)
+            {
+                Log.Information("[CommandLineAlertAction] 命令執行成功 (ExitCode: 0)");
+                return AlertActionExecuteResult.Ok($"ExitCode: 0");
+            }
+            else
+            {
+                var errMsg = string.IsNullOrWhiteSpace(stderr) ? "" : $" - {stderr.Trim()}";
+                Log.Warning("[CommandLineAlertAction] 命令執行失敗 (ExitCode: {ExitCode})", process.ExitCode);
+                return AlertActionExecuteResult.Fail($"ExitCode: {process.ExitCode}{errMsg}");
             }
         }
         catch (Exception ex)
