@@ -717,11 +717,13 @@ sealed class Program
                 return;
             }
 
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = watchdogPath,
-                UseShellExecute = false
-            });
+            // Dispose the returned Process handle immediately — we don't track the
+            // watchdog as a child here (it's a sibling process with its own lifetime).
+            using (Process.Start(new ProcessStartInfo
+                   {
+                       FileName = watchdogPath,
+                       UseShellExecute = false
+                   })) { }
             Log.Information("[Watchdog] 已啟動 Watchdog");
         }
         catch (Exception ex)

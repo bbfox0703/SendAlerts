@@ -28,6 +28,10 @@ public class HttpApiServer : IDisposable
     private Task? _listenerTask;
     private bool _disposed;
 
+    // Track in-flight request handlers so Stop() can drain them before returning.
+    private readonly ConcurrentDictionary<Task, byte> _inflight = new();
+    private static readonly TimeSpan StopDrainTimeout = TimeSpan.FromSeconds(5);
+
     private const string ApiKeyHeader = "X-API-Key";
     private const long MaxRequestBodySize = 1024 * 1024; // 1 MB
 
@@ -125,6 +129,23 @@ public class HttpApiServer : IDisposable
         {
             _cts?.Cancel();
             _listener?.Stop();
+
+            // Wait briefly for the accept loop and any in-flight handlers to finish so
+            // handlers don't try to write to a closed response after Stop() returns.
+            try
+            {
+                _listenerTask?.Wait(StopDrainTimeout);
+                var pending = _inflight.Keys.ToArray();
+                if (pending.Length > 0)
+                {
+                    Task.WaitAll(pending, StopDrainTimeout);
+                }
+            }
+            catch (AggregateException)
+            {
+                // Handler exceptions are already logged inside ProcessRequestAsync; ignore here.
+            }
+
             _listener?.Close();
             IsRunning = false;
             Log.Information("[HttpApiServer] Stopped");
@@ -145,7 +166,9 @@ public class HttpApiServer : IDisposable
             try
             {
                 var context = await _listener.GetContextAsync().WaitAsync(ct);
-                _ = Task.Run(() => ProcessRequestAsync(context), CancellationToken.None);
+                var handler = Task.Run(() => ProcessRequestAsync(context), CancellationToken.None);
+                _inflight.TryAdd(handler, 0);
+                _ = handler.ContinueWith(t => _inflight.TryRemove(t, out _), TaskScheduler.Default);
             }
             catch (OperationCanceledException)
             {

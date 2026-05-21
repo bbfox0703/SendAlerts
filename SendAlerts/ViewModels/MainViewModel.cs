@@ -18,10 +18,18 @@ namespace SendAlerts.ViewModels;
 /// MainViewModel — Flexible 4-slot chart system.
 /// Each slot can display a built-in preset or an external sensor (HWiNFO/LHM).
 /// </summary>
-public partial class MainViewModel : ViewModelBase
+public partial class MainViewModel : ViewModelBase, IDisposable
 {
     private readonly DispatcherTimer _timer;
     private readonly LocalizationService _loc = LocalizationService.Instance;
+
+    // Held so static-event subscriptions can be unsubscribed in Dispose. Without this
+    // (lambda subscriptions), ServiceLocator's static events would root every VM
+    // instance — harmless for the one-VM-per-process production case but a leak in
+    // design-time / test scenarios that recreate the VM.
+    private EventHandler? _pipeStatusHandler;
+    private EventHandler? _alertHistoryHandler;
+    private bool _disposed;
 
     #region Localized Strings
     public string Loc_Settings => _loc["Settings"];
@@ -156,9 +164,12 @@ public partial class MainViewModel : ViewModelBase
 
     public MainViewModel(bool initialize)
     {
-        _timer = new DispatcherTimer();
         for (int i = 0; i < 4; i++) _slots[i] = new ChartSlotState();
-        if (!initialize) return;
+        if (!initialize)
+        {
+            _timer = new DispatcherTimer();
+            return;
+        }
 
         // Determine GPU name from best provider
         var gpuProvider = ServiceLocator.ProvidersByMode.GetValueOrDefault(HardwareMode.Gpu)
@@ -771,7 +782,7 @@ public partial class MainViewModel : ViewModelBase
 
     private void InitializeStatusSubscriptions()
     {
-        ServiceLocator.PipeStatusChanged += (_, _) =>
+        _pipeStatusHandler = (_, _) =>
         {
             Dispatcher.UIThread.Post(() =>
             {
@@ -779,15 +790,30 @@ public partial class MainViewModel : ViewModelBase
                 UpdateStatusText();
             });
         };
+        ServiceLocator.PipeStatusChanged += _pipeStatusHandler;
 
         IsPipeServerRunning = ServiceLocator.IsPipeServerRunning;
         UpdateStatusText();
 
-        ServiceLocator.AlertHistoryChanged += (_, _) =>
+        _alertHistoryHandler = (_, _) =>
         {
             Dispatcher.UIThread.Post(RefreshAlertHistory);
         };
+        ServiceLocator.AlertHistoryChanged += _alertHistoryHandler;
         RefreshAlertHistory();
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        if (_pipeStatusHandler is not null)
+            ServiceLocator.PipeStatusChanged -= _pipeStatusHandler;
+        if (_alertHistoryHandler is not null)
+            ServiceLocator.AlertHistoryChanged -= _alertHistoryHandler;
+
+        _timer.Stop();
     }
 
     private void UpdateStatusText()
