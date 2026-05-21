@@ -228,6 +228,10 @@ public sealed class NamedPipeServer : IDisposable
 
         try
         {
+            // Pipe is PipeDirection.In and well-behaved clients (CLI, PowerShell `Out-File`)
+            // close their write end after sending one message. ReadAsync then returns 0,
+            // exiting the loop. No content-based framing needed — relying on a `}`
+            // terminator was incorrect because CustomMessage may legitimately contain `}`.
             int bytesRead;
             while ((bytesRead = await pipeServer.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
             {
@@ -239,20 +243,6 @@ public sealed class NamedPipeServer : IDisposable
                 {
                     Log.Warning("[NamedPipe] Message exceeds maximum size of {MaxSize} bytes, discarding", maxMessageSize);
                     return string.Empty;
-                }
-
-                // 如果讀取的數據少於緩衝區大小，可能已經讀完
-                // 但為了安全，我們檢查是否有更多數據
-                if (bytesRead < bufferSize && !pipeServer.IsConnected)
-                {
-                    break;
-                }
-
-                // 簡單的訊息結束檢測：JSON 應該以 } 結尾
-                string currentMessage = messageBuilder.ToString().Trim();
-                if (currentMessage.EndsWith("}") || currentMessage.EndsWith("}\n"))
-                {
-                    break;
                 }
             }
         }

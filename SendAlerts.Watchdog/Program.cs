@@ -12,6 +12,7 @@ sealed class Program
 {
     private const string WatchdogMutexName = "Local\\SendAlerts-watchdog-instance";
     private static Mutex? _mutex;
+    private static bool _mutexOwned;
     private static WatchdogPipeServer? _pipeServer;
     private static IProcessDetector _detector = new MutexProcessDetector();
     private static Timer? _checkTimer;
@@ -34,6 +35,7 @@ sealed class Program
                 Log.Information("Watchdog 已在運行中，退出");
                 return;
             }
+            _mutexOwned = true;
 
             // Start pipe server for shutdown commands
             _pipeServer = new WatchdogPipeServer();
@@ -79,7 +81,11 @@ sealed class Program
                 _trayIcon.IsVisible = false;
                 _trayIcon.Dispose();
             }
-            _mutex?.ReleaseMutex();
+            if (_mutexOwned)
+            {
+                try { _mutex?.ReleaseMutex(); }
+                catch (ApplicationException) { /* not owned by this thread */ }
+            }
             _mutex?.Dispose();
             Log.Information("=== SendAlerts Watchdog 結束 ===");
             Log.CloseAndFlush();

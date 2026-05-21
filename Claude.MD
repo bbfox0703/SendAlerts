@@ -113,7 +113,7 @@ External Tool (HWiNFO64)
 
 ## Known Constraints
 
-### ⚠️ Avalonia Version Pinned to 11.x (Do NOT upgrade to 12.x)
+### ⚠️ Avalonia Version Pinned to 11.x (Do NOT upgrade to 12.x — yet)
 `ScottPlot.Avalonia 5.1.58` (used in `MainView.axaml`) was built against Avalonia 11 and
 references `Avalonia.Platform.OptionalFeatureProviderExtensions`, which was **removed in
 Avalonia 12**. Upgrading Avalonia to 12.x causes every render tick to throw
@@ -123,13 +123,24 @@ in a fully transparent/black window (both Debug and Release builds).
 **Mitigation**: `Directory.Packages.props` pins all Avalonia.* packages with the version
 range `[11.3.14,12.0.0)`. This also prevents the NuGet GUI from offering 12.x as an upgrade.
 
-Before upgrading Avalonia, verify `ScottPlot.Avalonia` has a version that supports the
-target Avalonia major version, or replace it with an alternative charting library
-(e.g. LiveCharts2, already in the tech stack).
+**Upgrade outlook (researched 2026-05-21)**:
+- ScottPlot [PR #5233 "Support Avalonia 12"](https://github.com/ScottPlot/ScottPlot/pull/5233)
+  was merged into `main` on 2026-05-05 but is **not yet released on NuGet** (latest is
+  still `5.1.58` from 2026-03-29). The next release will be a **breaking** change requiring
+  Avalonia 12 (not backward-compatible with 11).
+- Action: watch [ScottPlot Releases](https://github.com/ScottPlot/ScottPlot/releases) for
+  `5.1.59`+ / `5.2.x`. When it ships, upgrade is small: bump pins, apply the two XAML
+  renames below, smoke-test all 4 charts and the custom `GradientFillPlottable`.
+- Switching charting libraries was evaluated and rejected: LiveCharts2's Avalonia-12-capable
+  build is a pre-release (`2.1.0-dev-570`), and rewriting the 4 `AvaPlot` instances +
+  `GradientFillPlottable` + crosshair/tooltip layer is high effort for a regression that
+  doesn't exist yet. Avalonia 11.x is still actively maintained (11.3.16 released
+  2026-05-19), so there is no time pressure.
 
-Also note: Avalonia 12 renamed `SystemDecorations` → `WindowDecorations` and `Watermark` →
-`PlaceholderText`. If a future upgrade happens, those XAML renames must be reapplied across
-all `Views/*.axaml` and `TrayIconManager.cs`.
+When upgrading, also apply these Avalonia 12 renames across `Views/*.axaml` and
+`TrayIconManager.cs`:
+- `SystemDecorations` → `WindowDecorations`
+- `Watermark` → `PlaceholderText`
 
 ## Tech Stack
 - .NET 10 / C#
