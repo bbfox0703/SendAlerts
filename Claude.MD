@@ -142,6 +142,46 @@ When upgrading, also apply these Avalonia 12 renames across `Views/*.axaml` and
 - `SystemDecorations` → `WindowDecorations`
 - `Watermark` → `PlaceholderText`
 
+### ⚠️ Native AOT is NOT supported (ship JIT + single-file)
+
+This project ships **`PublishSingleFile` + JIT** (Desktop), and `PublishTrimmed`
+`partial` (CLI/Watchdog). **No project sets `PublishAot=true`** and none should
+until the blockers below are cleared. There are no *active* AOT errors because AOT
+is never invoked — the items here are the gap list for *if* AOT is ever pursued.
+Doing any of them before the hard blockers are cleared is wasted effort.
+
+**Hard blockers (architectural — must clear first, in order):**
+1. **ScottPlot.Avalonia 5.1.58 pins Avalonia to 11.x** and is reflection-heavy.
+   AOT tooling assumes Avalonia 12. This is the same blocker as the version pin
+   above — clear it the same way (wait for ScottPlot's Avalonia 12 release, or
+   replace charting). Until then everything else is moot.
+2. **Reflection-based JSON is enabled on purpose**
+   (`JsonSerializerIsReflectionEnabledByDefault=true` in `SendAlerts.Desktop`
+   and `SendAlerts.Watchdog`). Most `JsonSerializer.Serialize/Deserialize<T>`
+   calls use the generic reflection overload, not a `JsonSerializerContext`
+   (`JsonSettingsService`, `HardwareDbManager`, `PipeMessage`, `HttpApiServer`,
+   `GpuTdpLookup`, `Discord/Telegram` actions). Only `SendAlerts.Cli` uses a
+   source-gen context (`CliJsonContext`). AOT needs source-gen everywhere.
+3. **`LibreHardwareMonitorLib` + `DiskInfoToolkit`** are reflection/WMI/P-Invoke
+   heavy and not AOT-annotated.
+
+**Code-pattern gaps (only relevant once the blockers above are cleared):**
+- `ViewLocator` uses `Type.GetType` + `Activator.CreateInstance` (already marked
+  `[RequiresUnreferencedCode]`) — replace with a type→view switch expression.
+- Cross-assembly reflection call into `SendAlerts.Desktop.Program.InitializeTrayIconWithWindow`
+  from `MainWindow.axaml.cs` (`GetType`/`GetMethod`/`Invoke`) — trimmer drops the target.
+- `Assembly.GetExecutingAssembly()` (×4: Watchdog `Program.cs`, `DiagnosticsReport`,
+  `GpuTdpLookup`, `MainViewModel`) → must be `GetEntryAssembly()` under single-file/AOT.
+- `[DllImport]` (NvAPI/NVML/CpuNetwork providers) → `[LibraryImport]` source-gen marshalling.
+- `BuildAvaloniaApp()` uses `UsePlatformDetect()` (reflection backend load) and lists
+  `Win32CompositionMode.WinUIComposition` first — AOT needs explicit
+  `.UseWin32().UseSkia().UseHarfBuzz()` and `RedirectionSurface`-only composition.
+- `Avalonia.Desktop` package is referenced (Desktop + Watchdog) — on win-x64 AOT this
+  drags X11/FreeDesktop/DBus; reference Win32/Skia/HarfBuzz explicitly instead.
+
+Reference: `D:\Github\CE-Handwire-Private\docs\aot-pitfalls.md` (the Avalonia 12 +
+Native AOT landmine catalogue this gap list was checked against).
+
 ## Tech Stack
 - .NET 10 / C#
 - Avalonia UI (MVVM)
