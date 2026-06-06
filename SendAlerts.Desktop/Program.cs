@@ -766,7 +766,8 @@ sealed class Program
 
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
-            .UsePlatformDetect()
+            .UseWin32()
+            .UseSkia()
             .WithInterFont()
             .LogToTrace()
             .With(new Win32PlatformOptions
