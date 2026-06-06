@@ -41,7 +41,6 @@
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="HarfBuzzSharp" />
-    <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" />
     <PackageReference Include="ScottPlot.Avalonia" />
     <PackageReference Include="Serilog" />
     <PackageReference Include="Serilog.Sinks.File" />
