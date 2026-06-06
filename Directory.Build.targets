@@ -1,0 +1,19 @@
+<Project>
+  <!--
+    Strip native debug symbols (.pdb) shipped with SkiaSharp / HarfBuzzSharp
+    runtime packages. These are only useful for debugging the native libs
+    themselves (a SkiaSharp/HarfBuzzSharp maintainer's concern, not ours), and
+    they bloat the published output by ~100 MB combined:
+        libSkiaSharp.pdb       ~81 MB
+        libHarfBuzzSharp.pdb   ~20 MB
+    Directory.Build.props already sets DebugType=embedded for our own managed
+    code; this target handles the native NuGet pdbs that property can't reach.
+  -->
+  <Target Name="RemoveNativeDebugSymbols" AfterTargets="Publish">
+    <ItemGroup>
+      <_NativePdbsToRemove Include="$(PublishDir)libSkiaSharp.pdb" />
+      <_NativePdbsToRemove Include="$(PublishDir)libHarfBuzzSharp.pdb" />
+    </ItemGroup>
+    <Delete Files="@(_NativePdbsToRemove)" />
+  </Target>
+</Project>
