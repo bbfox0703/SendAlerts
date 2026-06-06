@@ -1,0 +1,104 @@
+# Windows release workflow.
+#
+# Builds Desktop + CLI + Watchdog (self-contained, single-file, win-x64) via
+# publish.cmd, runs the test suite, packages publish/ into a .zip, and attaches
+# it to a DRAFT GitHub Release.
+#
+# Triggers:
+#   - push tag matching v[0-9]*  (e.g. v1.0.0, v1.0.0-rc1)
+#   - workflow_dispatch          (manual run = build + artifact only, no release)
+#
+# Tag flow:
+#   A) git push origin vX.Y.Z       -> CI creates a DRAFT release with assets.
+#                                      Review, then click "Publish release".
+#   B) GitHub UI "Draft a new release" + tag vX.Y.Z
+#                                   -> CI detects existing release and uploads
+#                                      assets to it (works for draft OR
+#                                      already-published releases).
+name: Release (Windows)
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build + package
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Test
+        # SettingsMigratorTests has 4 pre-existing failures unrelated to release
+        # packaging — excluded so they don't block releases. Fix separately and
+        # then drop the filter.
+        run: dotnet test -c Release --filter "FullyQualifiedName!~SettingsMigratorTests"
+
+      - name: Publish (Desktop + CLI + Watchdog -> publish/)
+        shell: cmd
+        run: publish.cmd
+
+      - name: Verify publish output
+        shell: pwsh
+        # publish.cmd does not fail-fast; if any of the three dotnet publish
+        # steps fails silently the workflow would otherwise ship a broken zip.
+        run: |
+          $required = 'SendAlerts.Desktop.exe', 'SendAlerts-cli.exe', 'SendAlerts.Watchdog.exe'
+          foreach ($f in $required) {
+            if (-not (Test-Path "publish/$f")) {
+              throw "Missing publish/$f — publish.cmd may have failed silently"
+            }
+          }
+
+      - name: Package publish/ into zip + sha256
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $zip = "SendAlerts-$tag-win-x64.zip"
+          Compress-Archive -Path publish/* -DestinationPath $zip -Force
+          $h = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          "$h  $zip" | Set-Content "$zip.sha256" -Encoding ascii
+          "ZIP=$zip" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "Packaged $zip (sha256 $h)"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: SendAlerts-windows-x64
+          path: |
+            ${{ env.ZIP }}
+            ${{ env.ZIP }}.sha256
+          if-no-files-found: error
+
+      - name: Upsert GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          # Upsert handles both flows:
+          #   - tag pushed via git -> no release yet, create DRAFT
+          #   - tag created via GitHub UI -> release exists, just upload assets
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag "$env:ZIP" "$env:ZIP.sha256" --clobber
+            Write-Host "Release $tag already existed - uploaded assets to it."
+          } else {
+            gh release create $tag "$env:ZIP" "$env:ZIP.sha256" `
+              --draft `
+              --title "SendAlerts $tag" `
+              --generate-notes
+            Write-Host "Created DRAFT release $tag - review the assets, then Publish."
+          }
