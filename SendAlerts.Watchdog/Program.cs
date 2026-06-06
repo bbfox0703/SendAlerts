@@ -187,6 +187,7 @@ sealed class Program
 
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<WatchdogApp>()
-            .UsePlatformDetect()
+            .UseWin32()
+            .UseSkia()
             .LogToTrace();
 }

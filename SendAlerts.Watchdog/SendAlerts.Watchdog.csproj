@@ -33,7 +33,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Win32" />
     <PackageReference Include="Microsoft.Win32.SystemEvents" />
   </ItemGroup>
 
