@@ -13,7 +13,8 @@ public class SettingsMigratorTests
     [Fact]
     public void Migrate_NoLegacySettings_ReturnsFalse()
     {
-        var settings = new AppSettings { SettingsVersion = 1 };
+        var settings = new AppSettings { SettingsVersion = SettingsMigrator.CurrentVersion };
+        settings.ChartSlots.Add(new Models.ChartSlotConfig { SourceType = Models.ChartSlotSourceType.Off });
         Assert.False(SettingsMigrator.Migrate(settings));
     }
 
@@ -29,7 +30,7 @@ public class SettingsMigratorTests
         };
 
         Assert.True(SettingsMigrator.Migrate(settings));
-        Assert.Equal(2, settings.SettingsVersion);
+        Assert.Equal(SettingsMigrator.CurrentVersion, settings.SettingsVersion);
         Assert.Single(settings.AlertActions);
         Assert.Equal("CommandLine_Legacy", settings.AlertActions[0].InstanceId);
         Assert.Equal(60, settings.AlertActions[0].CooldownSeconds);
@@ -91,14 +92,15 @@ public class SettingsMigratorTests
     }
 
     [Fact]
-    public void Migrate_AlreadyV2_NoChange()
+    public void Migrate_AlreadyCurrentVersion_NoChange()
     {
         var settings = new AppSettings
         {
-            SettingsVersion = 2,
+            SettingsVersion = SettingsMigrator.CurrentVersion,
             CommandLineAlertEnabled = true,
             CommandLineAlertCommand = "echo test"
         };
+        settings.ChartSlots.Add(new Models.ChartSlotConfig { SourceType = Models.ChartSlotSourceType.Off });
 
         Assert.False(SettingsMigrator.Migrate(settings));
     }
@@ -117,9 +119,9 @@ public class SettingsMigratorTests
     }
 
     [Fact]
-    public void NeedsMigration_V2_ReturnsFalse()
+    public void NeedsMigration_CurrentVersion_ReturnsFalse()
     {
-        var settings = new AppSettings { SettingsVersion = 2 };
+        var settings = new AppSettings { SettingsVersion = SettingsMigrator.CurrentVersion };
         Assert.False(SettingsMigrator.NeedsMigration(settings));
     }
 

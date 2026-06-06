@@ -40,10 +40,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Test
-        # SettingsMigratorTests has 4 pre-existing failures unrelated to release
-        # packaging — excluded so they don't block releases. Fix separately and
-        # then drop the filter.
-        run: dotnet test -c Release --filter "FullyQualifiedName!~SettingsMigratorTests"
+        run: dotnet test -c Release
 
       - name: Publish (Desktop + CLI + Watchdog -> publish/)
         shell: cmd
