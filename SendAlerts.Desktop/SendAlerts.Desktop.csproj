@@ -30,14 +30,23 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Avalonia.Angle.Windows.Natives" />
     <PackageReference Include="Avalonia.Win32" />
     <PackageReference Include="Avalonia.Diagnostics">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="BlackSharp.Core" />
     <PackageReference Include="DiskInfoToolkit" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.macOS" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.WebAssembly" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" />
     <PackageReference Include="Microsoft.Win32.SystemEvents" />
     <PackageReference Include="LibreHardwareMonitorLib" />
+    <PackageReference Include="runtime.native.System.IO.Ports" />
+    <PackageReference Include="System.IO.Ports" />
+    <PackageReference Include="System.Management" />
   </ItemGroup>
 
   <ItemGroup>

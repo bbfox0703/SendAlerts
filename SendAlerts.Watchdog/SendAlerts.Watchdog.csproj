@@ -33,7 +33,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Avalonia.Angle.Windows.Natives" />
     <PackageReference Include="Avalonia.Win32" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.macOS" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.WebAssembly" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" />
     <PackageReference Include="Microsoft.Win32.SystemEvents" />
   </ItemGroup>
 

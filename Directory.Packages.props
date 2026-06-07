@@ -8,17 +8,24 @@
     <!-- Pinned to 11.x: ScottPlot.Avalonia 5.1.58 references OptionalFeatureProviderExtensions
          which was removed in Avalonia 12. Range syntax blocks NuGet GUI from offering 12.x upgrades. -->
     <PackageVersion Include="Avalonia" Version="[11.3.17, 12.0.0)" />
+    <PackageVersion Include="Avalonia.Angle.Windows.Natives" Version="2.1.27548.20260419" />
     <PackageVersion Include="Avalonia.Skia" Version="[11.3.14,12.0.0)" />
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="[11.3.14,12.0.0)" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="[11.3.14,12.0.0)" />
     <PackageVersion Include="Avalonia.Diagnostics" Version="[11.3.17, 12.0.0)" />
     <PackageVersion Include="Avalonia.Win32" Version="[11.3.14,12.0.0)" />
+    <PackageVersion Include="BlackSharp.Core" Version="1.1.1" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageVersion Include="DiskInfoToolkit" Version="2.1.1" />
     <!-- SkiaSharp / HarfBuzz: must match Avalonia.Skia 11.3.11 requirements (2.88.9 / 8.3.1.1) -->
     <PackageVersion Include="HarfBuzzSharp" Version="8.3.1.5" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Linux" Version="8.3.1.5" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.macOS" Version="8.3.1.5" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.WebAssembly" Version="8.3.1.5" />
+    <PackageVersion Include="HarfBuzzSharp.NativeAssets.Win32" Version="8.3.1.5" />
     <PackageVersion Include="Microsoft.Win32.SystemEvents" Version="10.0.8" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageVersion Include="runtime.native.System.IO.Ports" Version="10.0.8" />
     <PackageVersion Include="Serilog" Version="4.3.1" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
@@ -28,6 +35,8 @@
     <PackageVersion Include="System.CommandLine" Version="2.0.8" />
     <!-- Test packages -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
+    <PackageVersion Include="System.IO.Ports" Version="10.0.8" />
+    <PackageVersion Include="System.Management" Version="10.0.8" />
     <PackageVersion Include="xunit.v3" Version="3.2.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
