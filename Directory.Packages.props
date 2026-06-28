@@ -13,7 +13,7 @@
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="[11.3.14,12.0.0)" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="[11.3.14,12.0.0)" />
     <PackageVersion Include="Avalonia.Diagnostics" Version="[11.3.17, 12.0.0)" />
-    <PackageVersion Include="Avalonia.Win32" Version="[11.3.14,12.0.0)" />
+    <PackageVersion Include="Avalonia.Win32" Version="12.0.5" />
     <PackageVersion Include="BlackSharp.Core" Version="1.1.1" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageVersion Include="DiskInfoToolkit" Version="2.1.1" />
