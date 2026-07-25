@@ -134,6 +134,11 @@ bump threw `System.TypeLoadException` from `ScottPlot.Avalonia.AvaPlot.CustomDra
   `SystemDecorations` → `WindowDecorations` (`Views/*.axaml` + `TrayIconManager.cs`),
   `Watermark` → `PlaceholderText` (all dialogs),
   `NativeMenuItemToggleType` → `MenuItemToggleType` (tray menu).
+- **Text shaping is no longer auto-registered** for manual backend config: added the
+  `Avalonia.HarfBuzz` package + `.UseHarfBuzz()` to `BuildAvaloniaApp()` in **both**
+  `SendAlerts.Desktop` and `SendAlerts.Watchdog`. Without it `AppBuilder.Setup()` throws
+  `InvalidOperationException: No text shaping system configured` at startup — the process
+  dies before any window/tray icon appears (builds fine; only fails at runtime).
 - Compiled bindings are enabled by default in Avalonia 12; all existing XAML compiled clean.
 - `Avalonia.Angle.Windows.Natives 2.1.27548.20260419` was already the version Avalonia.Win32
   12.1.0 wants — left unchanged.

@@ -768,6 +768,9 @@ sealed class Program
         => AppBuilder.Configure<App>()
             .UseWin32()
             .UseSkia()
+            // Avalonia 12 no longer auto-registers a text shaper for manual backend
+            // configuration; without this Setup() throws "No text shaping system configured".
+            .UseHarfBuzz()
             .WithInterFont()
             .LogToTrace()
             .With(new Win32PlatformOptions

@@ -35,6 +35,7 @@
   <ItemGroup>
     <PackageReference Include="Avalonia.Angle.Windows.Natives" />
     <PackageReference Include="Avalonia.Win32" />
+    <PackageReference Include="Avalonia.HarfBuzz" />
     <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" />
     <PackageReference Include="HarfBuzzSharp.NativeAssets.macOS" />
     <PackageReference Include="HarfBuzzSharp.NativeAssets.WebAssembly" />
