@@ -10,7 +10,7 @@
         Width="800" Height="500"
         MinWidth="400" MinHeight="300"
         WindowStartupLocation="CenterOwner"
-        SystemDecorations="Full">
+        WindowDecorations="Full">
 
     <Design.DataContext>
         <vm:LogViewModel />

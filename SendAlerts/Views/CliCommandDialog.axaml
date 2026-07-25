@@ -8,7 +8,7 @@
         Width="550" Height="380"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
-        SystemDecorations="Full">
+        WindowDecorations="Full">
 
     <Border Padding="16">
         <Grid RowDefinitions="Auto,*,Auto">

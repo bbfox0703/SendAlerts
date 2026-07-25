@@ -11,7 +11,7 @@
         MinWidth="450" MinHeight="400"
         CanResize="False"
         WindowStartupLocation="CenterOwner"
-        SystemDecorations="Full">
+        WindowDecorations="Full">
 
     <Design.DataContext>
         <vm:EditActionViewModel />
@@ -56,7 +56,7 @@
 
                             <Grid ColumnDefinitions="100,*" RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,8,0,0">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Loc_InstanceId}" VerticalAlignment="Center"/>
-                                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding InstanceId}" Watermark="Unique identifier"/>
+                                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding InstanceId}" PlaceholderText="Unique identifier"/>
 
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Loc_Cooldown}" VerticalAlignment="Center" Margin="0,8,0,0"/>
                                 <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
@@ -83,7 +83,7 @@
                             <TextBlock Text="Command Line Settings" FontWeight="SemiBold"/>
                             <TextBlock Text="Command to execute:"/>
                             <TextBox Text="{Binding Command}"
-                                     Watermark="e.g., powershell -c &quot;...&quot;"
+                                     PlaceholderText="e.g., powershell -c &quot;...&quot;"
                                      AcceptsReturn="True"
                                      TextWrapping="Wrap"
                                      Height="60"/>
@@ -102,11 +102,11 @@
                             <TextBlock Text="Telegram Settings" FontWeight="SemiBold"/>
                             <TextBlock Text="Bot Token:"/>
                             <TextBox Text="{Binding TelegramBotToken}"
-                                     Watermark="123456789:ABC..."
+                                     PlaceholderText="123456789:ABC..."
                                      PasswordChar="*"/>
                             <TextBlock Text="Chat ID:"/>
                             <TextBox Text="{Binding TelegramChatId}"
-                                     Watermark="-123456789"/>
+                                     PlaceholderText="-123456789"/>
                             <TextBlock Text="Get token from @BotFather, Chat ID from /getUpdates API"
                                        FontSize="10"
                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
@@ -122,11 +122,11 @@
                             <TextBlock Text="Discord Webhook Settings" FontWeight="SemiBold"/>
                             <TextBlock Text="Webhook URL:"/>
                             <TextBox Text="{Binding DiscordWebhookUrl}"
-                                     Watermark="https://discord.com/api/webhooks/..."
+                                     PlaceholderText="https://discord.com/api/webhooks/..."
                                      PasswordChar="*"/>
                             <TextBlock Text="Username (optional):"/>
                             <TextBox Text="{Binding DiscordUsername}"
-                                     Watermark="SendAlerts"/>
+                                     PlaceholderText="SendAlerts"/>
                             <TextBlock Text="Get webhook URL from Server Settings → Integrations → Webhooks"
                                        FontSize="10"
                                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
@@ -142,7 +142,7 @@
                             <TextBlock Text="HTTP Webhook Settings" FontWeight="SemiBold"/>
                             <TextBlock Text="URL:"/>
                             <TextBox Text="{Binding WebhookUrl}"
-                                     Watermark="https://example.com/webhook"/>
+                                     PlaceholderText="https://example.com/webhook"/>
                             <TextBlock Text="HTTP Method:"/>
                             <ComboBox SelectedItem="{Binding WebhookHttpMethod}" Width="120">
                                 <ComboBoxItem Content="GET"/>
@@ -151,7 +151,7 @@
                             </ComboBox>
                             <TextBlock Text="Body Template (POST/PUT):"/>
                             <TextBox Text="{Binding WebhookBodyTemplate}"
-                                     Watermark="JSON body template"
+                                     PlaceholderText="JSON body template"
                                      AcceptsReturn="True"
                                      TextWrapping="Wrap"
                                      Height="60"/>

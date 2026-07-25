@@ -113,34 +113,34 @@ External Tool (HWiNFO64)
 
 ## Known Constraints
 
-### ⚠️ Avalonia Version Pinned to 11.x (Do NOT upgrade to 12.x — yet)
-`ScottPlot.Avalonia 5.1.58` (used in `MainView.axaml`) was built against Avalonia 11 and
-references `Avalonia.Platform.OptionalFeatureProviderExtensions`, which was **removed in
-Avalonia 12**. Upgrading Avalonia to 12.x causes every render tick to throw
-`System.TypeLoadException` from `ScottPlot.Avalonia.AvaPlot.CustomDrawOp.Render`, resulting
-in a fully transparent/black window (both Debug and Release builds).
+### ✅ Avalonia 12.x (upgraded 2026-07-25 from 11.x)
+The project ran on Avalonia 11.x until `ScottPlot.Avalonia 5.1.59` (released 2026-06-22)
+added Avalonia 12 support. Earlier ScottPlot (`5.1.58`) referenced
+`Avalonia.Platform.OptionalFeatureProviderExtensions` (removed in Avalonia 12), so any 12.x
+bump threw `System.TypeLoadException` from `ScottPlot.Avalonia.AvaPlot.CustomDrawOp.Render`
+(fully transparent/black window). `5.1.59` is a **breaking** release requiring Avalonia
+>= 12.0.0 and is **not** backward-compatible with 11.x — **do NOT downgrade**.
 
-**Mitigation**: `Directory.Packages.props` pins all Avalonia.* packages with the version
-range `[11.3.14,12.0.0)`. This also prevents the NuGet GUI from offering 12.x as an upgrade.
+**Current state**: `Directory.Packages.props` pins all Avalonia.* packages to
+`[12.1.0, 13.0.0)` (range blocks the NuGet GUI from offering 13.x) and
+`ScottPlot.Avalonia 5.1.59`.
 
-**Upgrade outlook (researched 2026-05-21)**:
-- ScottPlot [PR #5233 "Support Avalonia 12"](https://github.com/ScottPlot/ScottPlot/pull/5233)
-  was merged into `main` on 2026-05-05 but is **not yet released on NuGet** (latest is
-  still `5.1.58` from 2026-03-29). The next release will be a **breaking** change requiring
-  Avalonia 12 (not backward-compatible with 11).
-- Action: watch [ScottPlot Releases](https://github.com/ScottPlot/ScottPlot/releases) for
-  `5.1.59`+ / `5.2.x`. When it ships, upgrade is small: bump pins, apply the two XAML
-  renames below, smoke-test all 4 charts and the custom `GradientFillPlottable`.
-- Switching charting libraries was evaluated and rejected: LiveCharts2's Avalonia-12-capable
-  build is a pre-release (`2.1.0-dev-570`), and rewriting the 4 `AvaPlot` instances +
-  `GradientFillPlottable` + crosshair/tooltip layer is high effort for a regression that
-  doesn't exist yet. Avalonia 11.x is still actively maintained (11.3.16 released
-  2026-05-19), so there is no time pressure.
+**Migration that was applied** (reference for any similar future bump):
+- `Avalonia.Diagnostics` was **removed in Avalonia 12** → replaced with
+  `AvaloniaUI.DiagnosticsSupport 2.2.0`. DevTools now works via the standalone "Avalonia
+  Developer Tools" app + `AttachDeveloperTools()`; this app never called `AttachDevTools()`,
+  so there is no behavioural impact.
+- XAML/code renames (old names kept `[Obsolete]` in 12 but updated anyway):
+  `SystemDecorations` → `WindowDecorations` (`Views/*.axaml` + `TrayIconManager.cs`),
+  `Watermark` → `PlaceholderText` (all dialogs),
+  `NativeMenuItemToggleType` → `MenuItemToggleType` (tray menu).
+- Compiled bindings are enabled by default in Avalonia 12; all existing XAML compiled clean.
+- `Avalonia.Angle.Windows.Natives 2.1.27548.20260419` was already the version Avalonia.Win32
+  12.1.0 wants — left unchanged.
 
-When upgrading, also apply these Avalonia 12 renames across `Views/*.axaml` and
-`TrayIconManager.cs`:
-- `SystemDecorations` → `WindowDecorations`
-- `Watermark` → `PlaceholderText`
+**Still verify after any Avalonia bump**: smoke-test all 4 `AvaPlot` charts + the custom
+`GradientFillPlottable` + crosshair/tooltip layer render correctly (this was the exact
+failure mode of the old 11→12 attempt).
 
 ### ⚠️ Native AOT is NOT supported (ship JIT + single-file)
 
@@ -151,10 +151,10 @@ is never invoked — the items here are the gap list for *if* AOT is ever pursue
 Doing any of them before the hard blockers are cleared is wasted effort.
 
 **Hard blockers (architectural — must clear first, in order):**
-1. **ScottPlot.Avalonia 5.1.58 pins Avalonia to 11.x** and is reflection-heavy.
-   AOT tooling assumes Avalonia 12. This is the same blocker as the version pin
-   above — clear it the same way (wait for ScottPlot's Avalonia 12 release, or
-   replace charting). Until then everything else is moot.
+1. ~~ScottPlot.Avalonia pins Avalonia to 11.x~~ **CLEARED 2026-07-25**: upgraded to
+   `ScottPlot.Avalonia 5.1.59` + Avalonia 12.1.0 (see Known Constraints above). ScottPlot
+   is still reflection-heavy and its AOT-compatibility is unverified, but the Avalonia 11
+   pin that blocked everything else is gone.
 2. **Reflection-based JSON is enabled on purpose**
    (`JsonSerializerIsReflectionEnabledByDefault=true` in `SendAlerts.Desktop`
    and `SendAlerts.Watchdog`). Most `JsonSerializer.Serialize/Deserialize<T>`
