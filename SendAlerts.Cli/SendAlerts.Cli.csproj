@@ -13,6 +13,12 @@
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>partial</TrimMode>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <!-- Same rationale as SendAlerts.Watchdog: with TrimMode=partial neither this app's own
+         assembly nor third-party assemblies are trimmed, so these trim analysis warnings from
+         the referenced Core project are safe to suppress:
+         IL2026/IL2075: reflection / reflection-based JSON in the referenced SendAlerts core
+         IL2104: third-party assemblies (Avalonia, ScottPlot) that are not trim-annotated -->
+    <NoWarn>$(NoWarn);IL2026;IL2075;IL2104</NoWarn>
     <!-- 與 Desktop 共用輸出資料夾 -->
     <OutputPath>..\SendAlerts.Desktop\bin\$(Configuration)\$(TargetFramework)</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
