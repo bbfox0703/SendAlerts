@@ -18,7 +18,7 @@
     <PackageVersion Include="Avalonia.HarfBuzz" Version="[12.1.0, 13.0.0)" />
     <!-- Avalonia 12 removed Avalonia.Diagnostics; the successor is AvaloniaUI.DiagnosticsSupport
          (works with the standalone "Avalonia Developer Tools" app via AttachDeveloperTools()). -->
-    <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.0" />
+    <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3" />
     <PackageVersion Include="Avalonia.Win32" Version="[12.1.0, 13.0.0)" />
     <PackageVersion Include="BlackSharp.Core" Version="1.1.1" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
