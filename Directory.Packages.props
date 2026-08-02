@@ -8,11 +8,11 @@
     <!-- Avalonia 12.x: ScottPlot.Avalonia 5.1.59 (2026-06-22) added Avalonia 12 support and
          now requires Avalonia >= 12.0.0 (no longer compatible with 11.x). Range syntax blocks
          NuGet GUI from offering 13.x upgrades. -->
-    <PackageVersion Include="Avalonia" Version="[12.1.0, 13.0.0)" />
+    <PackageVersion Include="Avalonia" Version="[12.1.1, 13.0.0)" />
     <PackageVersion Include="Avalonia.Angle.Windows.Natives" Version="2.1.27548.20260419" />
     <PackageVersion Include="Avalonia.Skia" Version="[12.1.0, 13.0.0)" />
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="[12.1.0, 13.0.0)" />
-    <PackageVersion Include="Avalonia.Fonts.Inter" Version="[12.1.0, 13.0.0)" />
+    <PackageVersion Include="Avalonia.Fonts.Inter" Version="[12.1.1, 13.0.0)" />
     <!-- Avalonia 12 split HarfBuzz text shaping into its own package (was bundled/auto-registered
          in 11.x). Manual backend config (.UseWin32().UseSkia()) now needs an explicit .UseHarfBuzz(). -->
     <PackageVersion Include="Avalonia.HarfBuzz" Version="[12.1.0, 13.0.0)" />
