@@ -42,21 +42,29 @@
 ### 1.2 專案結構
 
 ```
-SendAlerts/               # 核心邏輯 (跨平台)
-├── Interfaces/           # IAlertAction, IGpuProvider
-├── Models/               # AlertActionConfig, AlertGroup, PipeMessage
-├── Services/             # AlertService, LocalizationService, HttpApiServer
+SendAlerts/               # 核心邏輯 (平台中立，由 Desktop / Cli / Watchdog / Tests 共用)
+├── Interfaces/           # IAlertAction, IGpuProvider, ISensorDataProvider, IHwinfoProvider,
+│                         # IStartupManager, IHttpUrlAclManager
+├── Models/               # AlertActionConfig, AlertGroup, PipeMessage, ChartSlotConfig
+├── Services/             # AlertService, AlertActionFactory, *AlertAction, HttpApiServer,
+│                         # JsonSettingsService, SettingsMigrator, LocalizationService
+├── Implementations/      # DemoGpuProvider (無 GPU 時的模擬數據)
 ├── ViewModels/           # MainViewModel, AlertActionsViewModel, etc.
 ├── Views/                # AXAML UI 定義
 ├── Converters/           # UI 值轉換器
 └── Resources/            # 多語系資源檔 (Strings.resx)
 
-SendAlerts.Desktop/       # Windows 桌面端
-├── Implementations/      # NvmlWindowsProvider, TrayIconManager
+SendAlerts.Desktop/       # Windows 桌面端 (win-x64)
+├── Implementations/      # NamedPipeServer, SingleInstanceManager, NvApi/Nvml/CpuNetwork providers,
+│                         # LhmSensorProvider, HwinfoSharedMemoryReader, StartupManager, TrayIconManager
 └── Program.cs            # 程式進入點
 
 SendAlerts.Cli/           # 命令列工具
 └── Program.cs            # CLI 進入點
+
+SendAlerts.Watchdog/      # Watchdog 監控程式 (偵測主程式異常退出並重啟)
+SendAlerts.Tests/         # xUnit v3 單元測試
+tools/NvI2CScanner/       # 獨立的 NVIDIA I2C 匯流排掃描工具 (唯讀)
 ```
 
 ---
@@ -94,8 +102,8 @@ SendAlerts-cli send -g <GroupName> -m <Message>
 # 列出群組
 SendAlerts-cli list
 
-# 測試群組
-SendAlerts-cli test -g <GroupName>
+# 發送測試訊息至 Default 群組
+SendAlerts-cli test
 ```
 
 ### 2.2 群組層 (Group Tier)
@@ -135,18 +143,19 @@ public class AlertGroup
 | **CommandLine** | 執行本地命令 | Command |
 | **Telegram** | Telegram Bot API | BotToken, ChatId |
 | **Discord** | Discord Webhook | WebhookUrl |
-| **HttpWebhook** | 通用 HTTP Webhook | Url, Method |
+| **HttpWebhook** | 通用 HTTP Webhook (準備中) | Url, Method |
 | **Email** | SMTP 郵件 (準備中) | SmtpHost, From, To |
 
 #### IAlertAction 介面
 ```csharp
-public interface IAlertAction : IDisposable
+public interface IAlertAction
 {
-    string InstanceId { get; }          // 唯一識別碼
-    AlertActionType ActionType { get; } // 動作類型
-    string DisplayName { get; }         // 顯示名稱
-    bool Validate();                    // 驗證設定
-    Task ExecuteAsync(string message);  // 執行動作
+    string InstanceId { get; }                                   // 唯一識別碼
+    AlertActionType ActionType { get; }                          // 動作類型
+    string DisplayName { get; }                                  // 顯示名稱
+    bool IsEnabled { get; set; }                                 // 是否啟用
+    Task<AlertActionExecuteResult> ExecuteAsync(string message); // 執行動作
+    AlertActionValidationResult Validate();                      // 驗證設定
 }
 ```
 
@@ -163,19 +172,24 @@ public interface IAlertAction : IDisposable
 
 主畫面的 GPU/CPU 監控資訊**僅供顯示參考**，不主動觸發警報。
 
-### 3.2 硬體提供者優先順序
+### 3.2 硬體提供者
 
-| 順序 | Provider | 條件 |
-|------|----------|------|
-| 1 | NvApiWindowsProvider | Windows + NVIDIA GPU (RTX 50 系列) |
-| 2 | NvmlWindowsProvider | Windows + NVIDIA GPU |
-| 3 | CpuNetworkWindowsProvider | Windows (無 NVIDIA GPU) |
-| 4 | DemoGpuProvider | Fallback (模擬數據) |
+| Provider | 說明 |
+|----------|------|
+| NvApiWindowsProvider | NVIDIA GPU，優先嘗試 |
+| NvmlWindowsProvider | NVIDIA GPU，NvAPI 不可用時使用 (GPU provider 只保留第一個成功的) |
+| CpuNetworkWindowsProvider | CPU / Network，與 GPU provider 並存 |
+| DemoGpuProvider | 以上皆不可用時的保底 (模擬數據) |
+| HwinfoSharedMemoryReader | HWiNFO64 Shared Memory 感測器 (供圖表的外部來源使用) |
+| LhmSensorProvider | LibreHardwareMonitor 感測器 (供圖表的外部來源使用) |
 
 ### 3.3 顯示指標
 
-- **GPU 模式**: Utilization, Temperature, Power
-- **CPU 模式**: CPU Usage, Temperature, Network I/O
+主畫面有 4 個圖表欄位 (`ChartSlots`)，每個欄位可設定為：
+
+- **Off** - 不顯示
+- **內建預設**: GPU 使用率、GPU 溫度、GPU 功耗、CPU 使用率、記憶體使用率、Network I/O
+- **外部感測器**: 從 HWiNFO64 Shared Memory 或 LibreHardwareMonitor 選擇任一感測器
 
 ---
 
@@ -183,22 +197,22 @@ public interface IAlertAction : IDisposable
 
 ### 4.1 設定檔位置
 
-- **Windows**: `%AppData%\SendAlerts\settings.json`
-- **Linux**: `~/.config/SendAlerts/settings.json`
+- `%AppData%\SendAlerts\settings.json`
 
 ### 4.2 主要設定項目
 
 ```json
 {
-  "SettingsVersion": "2.0",
-  "UseAlertCenterMode": true,
-  "SamplingIntervalSeconds": 1,
-  "HttpApiEnabled": true,
-  "HttpApiPort": 58080,
-  "HttpApiKey": "...",
-  "Language": null,
-  "AlertActions": [...],
-  "AlertGroups": [...]
+  "settingsVersion": 4,
+  "useAlertCenterMode": true,
+  "samplingIntervalSeconds": 1,
+  "httpApiEnabled": false,
+  "httpApiPort": 58080,
+  "httpApiKey": "...",
+  "watchdogEnabled": false,
+  "chartSlots": [...],
+  "alertActions": [...],
+  "alertGroups": [...]
 }
 ```
 
@@ -227,12 +241,12 @@ public interface IAlertAction : IDisposable
 ### 6.1 單一實例
 
 - 使用 Named Mutex 確保只有一個實例運行
-- 第二實例啟動時顯示提示後退出
+- 第二實例啟動時透過 Named Pipe 通知主實例還原視窗，然後退出
 
 ### 6.2 系統匣
 
 - 關閉視窗後縮小至系統匣
-- 右鍵選單：顯示 / 結束
+- 右鍵選單：顯示 / Alert Actions / Alert Groups / 開機自動啟動 / 結束
 - 支援 `--minimized` 參數直接啟動至系統匣
 
 ### 6.3 開機自動啟動
@@ -247,10 +261,10 @@ public interface IAlertAction : IDisposable
 | 類別 | 技術 |
 |------|------|
 | **Framework** | .NET 10 / C# |
-| **UI** | Avalonia UI (MVVM) |
+| **UI** | Avalonia UI 12 (MVVM) |
 | **MVVM** | CommunityToolkit.Mvvm |
-| **Hardware** | NVIDIA NVML / NvAPI |
-| **Charts** | LiveCharts2 (SkiaSharp) |
+| **Hardware** | NVIDIA NVML / NvAPI, LibreHardwareMonitorLib, HWiNFO64 Shared Memory |
+| **Charts** | ScottPlot.Avalonia |
 | **Logging** | Serilog |
 | **HTTP** | System.Net.HttpListener |
 | **IPC** | System.IO.Pipes |
