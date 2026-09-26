@@ -41,27 +41,6 @@ public class AppSettings
     /// </summary>
     public DateTime? DisclaimerAcceptedAt { get; set; }
 
-    // --- Alert Thresholds ---
-    /// <summary>
-    /// 電壓警報門檻 (低於此值觸發)
-    /// </summary>
-    public float VoltageThreshold { get; set; } = 11.8f;
-
-    /// <summary>
-    /// 溫度警報門檻 (高於此值觸發)
-    /// </summary>
-    public float TemperatureThreshold { get; set; } = 88.0f;
-
-    /// <summary>
-    /// 滑動視窗秒數
-    /// </summary>
-    public int AlertWindowSeconds { get; set; } = 3;
-
-    /// <summary>
-    /// 滑動視窗內觸發次數
-    /// </summary>
-    public int AlertTriggerCount { get; set; } = 2;
-
     // --- Sampling ---
     /// <summary>
     /// 取樣間隔（秒）
