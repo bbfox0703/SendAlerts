@@ -61,14 +61,14 @@ SendAlerts 是一款「硬體警報中繼站」，接收來自外部工具（如
 
 ### 系統需求
 
-- Windows 10/11 (Linux 需自行建置)
-- .NET 10 Runtime
+- Windows 10/11 (x64)
+- 執行檔為 self-contained，不需另外安裝 .NET Runtime；從原始碼建置需 .NET 10 SDK
 - (選用) NVIDIA 驅動程式 - 用於 GPU 監控顯示
 
 ### 從原始碼建置
 
 ```bash
-git clone https://github.com/user/SendAlerts.git
+git clone https://github.com/bbfox0703/SendAlerts.git
 cd SendAlerts
 dotnet build
 dotnet run --project SendAlerts.Desktop
@@ -148,7 +148,7 @@ curl -X POST http://localhost:58080/api/send \
 
 - **Framework**: .NET 10 / C#
 - **UI**: Avalonia UI (MVVM + CommunityToolkit.Mvvm)
-- **Hardware API**: NVIDIA NVML / NvAPI
+- **Hardware API**: NVIDIA NVML / NvAPI, LibreHardwareMonitorLib, HWiNFO64 Shared Memory
 - **Charts**: ScottPlot (SkiaSharp)
 - **Logging**: Serilog
 - **HTTP Server**: System.Net.HttpListener
@@ -172,12 +172,10 @@ curl -X POST http://localhost:58080/api/send \
 
 展開後通常是 C:\Users\<使用者>\AppData\Roaming\SendAlerts\。
 
-Linux 上對應 ~/.config/SendAlerts/。 (未開發)
-
 ## 開發文件
 
 - 詳細規格請參閱 [`docs/Spec.md`](docs/Spec.md)
-- 開發指南請參閱 [`CLAUDE.md`](CLAUDE.md)
+- 開發指南請參閱 [`CLAUDE.md`](Claude.MD)
 - HWiNFO64 整合請參閱 [`docs/HWiNFO-Setup.md`](docs/HWiNFO-Setup.md)
 
 ## 授權

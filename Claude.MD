@@ -55,7 +55,6 @@ SendAlerts/            (Core - platform-neutral logic, namespace: SendAlerts;
 ├── Services/          AlertService, AlertActionFactory, *AlertAction, HttpApiServer,
 │                      JsonSettingsService, SettingsMigrator, ServiceLocator
 ├── Implementations/   DemoGpuProvider (mock provider for running without a GPU)
-├── Logic/             AlertEvaluator (legacy; nothing references it)
 ├── ViewModels/        MainViewModel, AlertActionsViewModel, AlertGroupsViewModel, dialog VMs
 ├── Views/             MainView (4 ScottPlot charts), AlertActionsWindow, AlertGroupsWindow, dialogs
 └── Converters/        UI value converters
